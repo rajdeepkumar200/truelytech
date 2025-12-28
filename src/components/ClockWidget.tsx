@@ -16,26 +16,26 @@ const ClockWidget = () => {
   return (
     <div className="flex gap-1 animate-slide-up">
       {/* Hours Card */}
-      <div className="relative w-40 h-48 md:w-52 md:h-60 bg-card rounded-2xl overflow-hidden">
+      <div className="relative w-28 h-36 md:w-32 md:h-40 bg-card rounded-xl overflow-hidden">
         <div className="flip-card-divider" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-display text-[6rem] md:text-[8rem] text-card-foreground leading-none">
+          <span className="font-display text-6xl md:text-7xl text-card-foreground leading-none">
             {hours}
           </span>
         </div>
       </div>
 
       {/* Minutes Card */}
-      <div className="relative w-40 h-48 md:w-52 md:h-60 bg-card rounded-2xl overflow-hidden">
+      <div className="relative w-28 h-36 md:w-32 md:h-40 bg-card rounded-xl overflow-hidden">
         <div className="flip-card-divider" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-display text-[6rem] md:text-[8rem] text-card-foreground leading-none">
+          <span className="font-display text-6xl md:text-7xl text-card-foreground leading-none">
             {minutes}
           </span>
         </div>
         {/* Day Label - Bottom Right */}
-        <div className="absolute bottom-4 right-5 md:bottom-6 md:right-6">
-          <span className="font-display text-xl md:text-2xl text-card-foreground tracking-wider">
+        <div className="absolute bottom-2 right-3 md:bottom-3 md:right-4">
+          <span className="font-display text-sm md:text-base text-card-foreground tracking-wider">
             {dayName}
           </span>
         </div>
