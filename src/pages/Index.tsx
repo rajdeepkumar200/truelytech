@@ -64,22 +64,24 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="pt-8 pb-6 px-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-            <div className="animate-fade-in">
-              <p className="text-muted-foreground text-sm font-medium uppercase tracking-wider mb-1">
-                {format(today, 'MMMM yyyy')}
-              </p>
-              <h1 className="font-display text-4xl md:text-5xl text-foreground tracking-tight">
-                Daily Habits
-              </h1>
-            </div>
-            <ClockWidget />
-          </div>
+      {/* Clock Widget - Hero Section */}
+      <header className="pt-8 pb-8 px-6">
+        <div className="max-w-3xl mx-auto flex justify-center">
+          <ClockWidget />
         </div>
       </header>
+
+      {/* Title Section */}
+      <div className="px-6 pb-4">
+        <div className="max-w-2xl mx-auto animate-fade-in">
+          <p className="text-muted-foreground text-sm font-medium uppercase tracking-wider mb-1">
+            {format(today, 'MMMM yyyy')}
+          </p>
+          <h1 className="font-display text-4xl md:text-5xl text-foreground tracking-tight">
+            Daily Habits
+          </h1>
+        </div>
+      </div>
 
       {/* Stats Bar */}
       <div className="px-6 mb-6">
