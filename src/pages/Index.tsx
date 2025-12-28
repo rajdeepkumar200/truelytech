@@ -4,6 +4,8 @@ import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
 import AddHabitRow from '@/components/AddHabitRow';
 import DailySchedule from '@/components/DailySchedule';
+import MotivationModal from '@/components/MotivationModal';
+import NotificationPrompt from '@/components/NotificationPrompt';
 
 interface Habit {
   id: string;
@@ -102,7 +104,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-safe">
+      <MotivationModal />
+      <NotificationPrompt />
+      
       {/* Title */}
       <header className="pt-8 pb-4 px-6">
         <h1 className="font-display text-4xl md:text-5xl text-foreground text-center tracking-tight">

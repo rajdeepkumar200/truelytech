@@ -105,7 +105,13 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Safe area for mobile */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @layer utilities {
