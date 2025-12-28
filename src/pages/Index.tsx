@@ -1,35 +1,67 @@
 import { useState, useEffect } from 'react';
-import { format, getDay } from 'date-fns';
+import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
-import HabitRow from '@/components/HabitRow';
-import AddHabitForm from '@/components/AddHabitForm';
+import HabitTable from '@/components/HabitTable';
+import AddHabitRow from '@/components/AddHabitRow';
+import DailySchedule from '@/components/DailySchedule';
 
 interface Habit {
   id: string;
   name: string;
+  icon: string;
   completedDays: boolean[];
 }
 
+interface ScheduleItem {
+  id: string;
+  time: string;
+  task: string;
+}
+
 const defaultHabits: Habit[] = [
-  { id: '1', name: 'Morning Meditation', completedDays: [true, true, false, false, false, false, false] },
-  { id: '2', name: 'Read 30 Minutes', completedDays: [true, false, true, false, false, false, false] },
-  { id: '3', name: 'Exercise', completedDays: [false, true, false, false, false, false, false] },
+  { id: '1', name: 'clean desk', icon: '🧹', completedDays: [true, true, true, true, true, true, true] },
+  { id: '2', name: 'check into notion', icon: '💻', completedDays: [true, true, true, true, true, false, false] },
+  { id: '3', name: 'journal', icon: '📝', completedDays: [true, true, true, true, false, false, false] },
+  { id: '4', name: 'exercise', icon: '💪', completedDays: [true, true, false, true, false, false, false] },
+  { id: '5', name: 'drink water', icon: '💧', completedDays: [true, true, true, true, false, false, false] },
+  { id: '6', name: 'meditate', icon: '🧘', completedDays: [true, true, true, true, true, true, false] },
+  { id: '7', name: 'listen to uplifting music', icon: '🎵', completedDays: [true, true, false, false, false, true, false] },
+  { id: '8', name: 'brush hair', icon: '💇', completedDays: [true, true, true, true, false, true, false] },
+  { id: '9', name: 'shower', icon: '🚿', completedDays: [true, true, true, true, true, true, false] },
+  { id: '10', name: 'skin care', icon: '😊', completedDays: [true, true, true, true, true, false, false] },
+  { id: '11', name: 'brush teeth', icon: '🦷', completedDays: [true, true, true, true, true, true, false] },
+  { id: '12', name: 'style hair', icon: '💇', completedDays: [true, false, false, false, false, false, false] },
+];
+
+const defaultSchedule: ScheduleItem[] = [
+  { id: '1', time: '05:00', task: 'morning ritual' },
+  { id: '2', time: '06:00', task: '' },
+  { id: '3', time: '07:00', task: '' },
+  { id: '4', time: '09:00', task: 'cleaning ritual' },
+  { id: '5', time: '10:00', task: '' },
+  { id: '6', time: '11:00', task: 'prepare lunch' },
 ];
 
 const Index = () => {
   const [habits, setHabits] = useState<Habit[]>(() => {
-    const saved = localStorage.getItem('habits');
+    const saved = localStorage.getItem('habits-v2');
     return saved ? JSON.parse(saved) : defaultHabits;
   });
 
-  // Get today's index (0 = Monday, 6 = Sunday)
+  const [schedule, setSchedule] = useState<ScheduleItem[]>(() => {
+    const saved = localStorage.getItem('schedule');
+    return saved ? JSON.parse(saved) : defaultSchedule;
+  });
+
   const today = new Date();
-  const dayOfWeek = getDay(today);
-  const todayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert Sunday=0 to index 6
 
   useEffect(() => {
-    localStorage.setItem('habits', JSON.stringify(habits));
+    localStorage.setItem('habits-v2', JSON.stringify(habits));
   }, [habits]);
+
+  useEffect(() => {
+    localStorage.setItem('schedule', JSON.stringify(schedule));
+  }, [schedule]);
 
   const handleToggleDay = (habitId: string, dayIndex: number) => {
     setHabits(prev => prev.map(habit => {
@@ -42,10 +74,11 @@ const Index = () => {
     }));
   };
 
-  const handleAddHabit = (name: string) => {
+  const handleAddHabit = (name: string, icon: string) => {
     const newHabit: Habit = {
       id: Date.now().toString(),
       name,
+      icon,
       completedDays: Array(7).fill(false),
     };
     setHabits(prev => [...prev, newHabit]);
@@ -55,71 +88,67 @@ const Index = () => {
     setHabits(prev => prev.filter(habit => habit.id !== habitId));
   };
 
-  const totalCompleted = habits.reduce(
-    (acc, habit) => acc + habit.completedDays.filter(Boolean).length,
-    0
-  );
-  const totalPossible = habits.length * 7;
-  const overallProgress = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+  const handleAddScheduleItem = (time: string, task: string) => {
+    const newItem: ScheduleItem = {
+      id: Date.now().toString(),
+      time,
+      task,
+    };
+    setSchedule(prev => [...prev, newItem].sort((a, b) => a.time.localeCompare(b.time)));
+  };
+
+  const handleDeleteScheduleItem = (id: string) => {
+    setSchedule(prev => prev.filter(item => item.id !== id));
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Clock Widget - Hero Section */}
-      <header className="pt-8 pb-8 px-6">
-        <div className="max-w-3xl mx-auto flex justify-center">
-          <ClockWidget />
-        </div>
+      {/* Title */}
+      <header className="pt-8 pb-4 px-6">
+        <h1 className="font-display text-4xl md:text-5xl text-foreground text-center tracking-tight">
+          Daily Habits
+        </h1>
       </header>
 
-      {/* Title Section */}
-      <div className="px-6 pb-4">
-        <div className="max-w-2xl mx-auto animate-fade-in">
-          <p className="text-muted-foreground text-sm font-medium uppercase tracking-wider mb-1">
-            {format(today, 'MMMM yyyy')}
-          </p>
-          <h1 className="font-display text-4xl md:text-5xl text-foreground tracking-tight">
-            Daily Habits
-          </h1>
-        </div>
-      </div>
+      {/* Main Content */}
+      <main className="px-4 md:px-6 pb-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+            {/* Left Column - Clock & Schedule */}
+            <div className="space-y-6">
+              {/* Clock Widget */}
+              <div className="flex justify-center lg:justify-start">
+                <ClockWidget />
+              </div>
 
-      {/* Stats Bar */}
-      <div className="px-6 mb-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-popover rounded-xl p-4 shadow-sm flex items-center justify-between animate-slide-up">
-            <div>
-              <p className="text-muted-foreground text-sm">Weekly Progress</p>
-              <p className="font-display text-2xl text-foreground">{overallProgress}%</p>
-            </div>
-            <div className="text-right">
-              <p className="text-muted-foreground text-sm">Completed</p>
-              <p className="font-display text-2xl text-foreground">
-                {totalCompleted}/{totalPossible}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Habits List */}
-      <main className="px-6 pb-12">
-        <div className="max-w-2xl mx-auto space-y-4">
-          {habits.map((habit, index) => (
-            <div 
-              key={habit.id}
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <HabitRow
-                name={habit.name}
-                completedDays={habit.completedDays}
-                todayIndex={todayIndex}
-                onToggleDay={(dayIndex) => handleToggleDay(habit.id, dayIndex)}
-                onDelete={() => handleDeleteHabit(habit.id)}
+              {/* Daily Schedule */}
+              <DailySchedule
+                items={schedule.filter(item => item.task)}
+                onAddItem={handleAddScheduleItem}
+                onDeleteItem={handleDeleteScheduleItem}
               />
             </div>
-          ))}
-          
-          <AddHabitForm onAdd={handleAddHabit} />
+
+            {/* Right Column - Habit Tracker */}
+            <div className="space-y-4 animate-fade-in">
+              {/* Morning Ritual Section */}
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span className="text-sm">▼</span>
+                <span className="font-medium text-foreground">Morning Ritual</span>
+                <span className="text-xs">✦ ☁ ✦ ✿ ☀ ✿ ✦ ✦ ✿ ✿ ✦ ✦ ✦ ✿ ☀ ✿ ✦ ✦ ✿ ✿ ✦ ☁ ✦ ✿ ☁ ✦ ✿ ✿ ✦ ✦ ✿</span>
+              </div>
+
+              {/* Habit Table */}
+              <div className="overflow-x-auto">
+                <HabitTable
+                  habits={habits}
+                  onToggleDay={handleToggleDay}
+                  onDeleteHabit={handleDeleteHabit}
+                />
+                <AddHabitRow onAdd={handleAddHabit} />
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>

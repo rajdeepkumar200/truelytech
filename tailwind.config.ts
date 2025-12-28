@@ -55,6 +55,8 @@ export default {
           complete: "hsl(var(--habit-complete))",
           incomplete: "hsl(var(--habit-incomplete))",
           empty: "hsl(var(--habit-empty))",
+          checkbox: "hsl(var(--habit-checkbox))",
+          progress: "hsl(var(--habit-progress))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
