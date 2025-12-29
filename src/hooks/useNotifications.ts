@@ -34,9 +34,19 @@ const getDayName = (date: Date): string => {
   return days[date.getDay()];
 };
 
+export interface NotificationPreferences {
+  enabled: boolean;
+  reminderTime: number;
+  habitCompletions: boolean;
+  dailyReminder: boolean;
+  scheduleReminders: boolean;
+  customReminders: boolean;
+}
+
 export const useNotifications = (
   reminders: Reminder[],
   schedule: ScheduleItem[],
+  preferences: NotificationPreferences,
   onHabitComplete?: () => void
 ) => {
   const notifiedRef = useRef<Set<string>>(new Set());
@@ -58,65 +68,74 @@ export const useNotifications = (
   }, []);
 
   const checkNotifications = useCallback(() => {
+    if (!preferences.enabled) return;
+    
     const now = new Date();
     const currentDay = getDayName(now);
     const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
-    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-    const fiveMinTime = fiveMinutesFromNow.toTimeString().slice(0, 5);
+    const reminderMinutes = preferences.reminderTime || 5;
+    const preNotifyTime = new Date(now.getTime() + reminderMinutes * 60 * 1000);
+    const preNotifyTimeStr = preNotifyTime.toTimeString().slice(0, 5);
 
-    // Check reminders - notify 5 minutes before
-    reminders.forEach(reminder => {
-      if (reminder.day === currentDay) {
-        const notifyKey = `reminder-${reminder.id}-${currentDay}`;
-        const earlyNotifyKey = `reminder-early-${reminder.id}-${currentDay}`;
+    // Check reminders - notify before based on settings
+    if (preferences.customReminders) {
+      reminders.forEach(reminder => {
+        if (reminder.day === currentDay) {
+          const notifyKey = `reminder-${reminder.id}-${currentDay}`;
+          const earlyNotifyKey = `reminder-early-${reminder.id}-${currentDay}`;
+          
+          // Pre-notification
+          if (reminder.time === preNotifyTimeStr && !notifiedRef.current.has(earlyNotifyKey)) {
+            notifiedRef.current.add(earlyNotifyKey);
+            sendNotification(
+              `${reminder.emoji} Reminder in ${reminderMinutes} minutes`,
+              `"${reminder.name}" is coming up! ${getRandomMotivation()}`
+            );
+          }
+          
+          // Exact time notification
+          if (reminder.time === currentTime && !notifiedRef.current.has(notifyKey)) {
+            notifiedRef.current.add(notifyKey);
+            sendNotification(
+              `${reminder.emoji} Time for: ${reminder.name}`,
+              `It's time! ${getRandomMotivation()}`
+            );
+          }
+        }
+      });
+    }
+
+    // Check schedule items - notify before based on settings
+    if (preferences.scheduleReminders) {
+      schedule.forEach(item => {
+        const notifyKey = `schedule-${item.id}-${now.toDateString()}`;
+        const earlyNotifyKey = `schedule-early-${item.id}-${now.toDateString()}`;
         
-        // 5 minutes before notification
-        if (reminder.time === fiveMinTime && !notifiedRef.current.has(earlyNotifyKey)) {
+        // Pre-notification
+        if (item.time === preNotifyTimeStr && !notifiedRef.current.has(earlyNotifyKey)) {
           notifiedRef.current.add(earlyNotifyKey);
           sendNotification(
-            `${reminder.emoji} Reminder in 5 minutes`,
-            `"${reminder.name}" is coming up! ${getRandomMotivation()}`
+            `${item.emoji || '📌'} Task in ${reminderMinutes} minutes`,
+            `"${item.task}" is coming up! ${getRandomMotivation()}`
           );
         }
         
         // Exact time notification
-        if (reminder.time === currentTime && !notifiedRef.current.has(notifyKey)) {
+        if (item.time === currentTime && !notifiedRef.current.has(notifyKey)) {
           notifiedRef.current.add(notifyKey);
           sendNotification(
-            `${reminder.emoji} Time for: ${reminder.name}`,
-            `It's time! ${getRandomMotivation()}`
+            `${item.emoji || '📌'} Time for: ${item.task}`,
+            `Let's do this! ${getRandomMotivation()}`
           );
         }
-      }
-    });
-
-    // Check schedule items - notify 5 minutes before
-    schedule.forEach(item => {
-      const notifyKey = `schedule-${item.id}-${now.toDateString()}`;
-      const earlyNotifyKey = `schedule-early-${item.id}-${now.toDateString()}`;
-      
-      // 5 minutes before notification
-      if (item.time === fiveMinTime && !notifiedRef.current.has(earlyNotifyKey)) {
-        notifiedRef.current.add(earlyNotifyKey);
-        sendNotification(
-          `${item.emoji || '📌'} Task in 5 minutes`,
-          `"${item.task}" is coming up! ${getRandomMotivation()}`
-        );
-      }
-      
-      // Exact time notification
-      if (item.time === currentTime && !notifiedRef.current.has(notifyKey)) {
-        notifiedRef.current.add(notifyKey);
-        sendNotification(
-          `${item.emoji || '📌'} Time for: ${item.task}`,
-          `Let's do this! ${getRandomMotivation()}`
-        );
-      }
-    });
-  }, [reminders, schedule, sendNotification]);
+      });
+    }
+  }, [reminders, schedule, preferences, sendNotification]);
 
   // Daily reminder at 8 AM for habits
   const checkDailyReminder = useCallback(() => {
+    if (!preferences.enabled || !preferences.dailyReminder) return;
+    
     const now = new Date();
     const currentTime = now.toTimeString().slice(0, 5);
     const dailyKey = `daily-${now.toDateString()}`;
@@ -128,18 +147,20 @@ export const useNotifications = (
         `Time to check on your daily habits! ${getRandomMotivation()}`
       );
     }
-  }, [sendNotification]);
+  }, [preferences, sendNotification]);
 
   // Notify on habit completion
   const notifyHabitComplete = useCallback((habitName: string, emoji: string) => {
+    if (!preferences.enabled || !preferences.habitCompletions) return;
+    
     sendNotification(
       `${emoji} Habit Completed!`,
       `Great job completing "${habitName}"! ${getRandomMotivation()}`
     );
-  }, [sendNotification]);
+  }, [preferences, sendNotification]);
 
   useEffect(() => {
-    if (Notification.permission !== 'granted') return;
+    if (!preferences.enabled || Notification.permission !== 'granted') return;
 
     // Check every 30 seconds
     intervalRef.current = window.setInterval(() => {

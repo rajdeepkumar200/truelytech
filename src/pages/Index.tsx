@@ -3,14 +3,16 @@ import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
 import HabitStatistics from '@/components/HabitStatistics';
+import HabitGoals from '@/components/HabitGoals';
 import AddHabitRow from '@/components/AddHabitRow';
 import DailySchedule from '@/components/DailySchedule';
 import MotivationModal from '@/components/MotivationModal';
 import NotificationPrompt from '@/components/NotificationPrompt';
+import NotificationSettings from '@/components/NotificationSettings';
 import PomodoroTimer from '@/components/PomodoroTimer';
 import ThemeToggle from '@/components/ThemeToggle';
 import Reminders from '@/components/Reminders';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotifications, NotificationPreferences } from '@/hooks/useNotifications';
 
 interface Habit {
   id: string;
@@ -19,6 +21,7 @@ interface Habit {
   completedDays: boolean[];
   activeDays: boolean[];
   category?: string;
+  weeklyGoal?: number;
 }
 
 interface ScheduleItem {
@@ -80,10 +83,22 @@ const Index = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => {
+    const saved = localStorage.getItem('notificationPrefs');
+    return saved ? JSON.parse(saved) : {
+      enabled: true,
+      reminderTime: 5,
+      habitCompletions: true,
+      dailyReminder: true,
+      scheduleReminders: true,
+      customReminders: true,
+    };
+  });
+
   const today = new Date();
 
   // Initialize notifications
-  const { notifyHabitComplete } = useNotifications(reminders, schedule);
+  const { notifyHabitComplete } = useNotifications(reminders, schedule, notificationPrefs);
 
   useEffect(() => {
     localStorage.setItem('habits-v3', JSON.stringify(habits));
@@ -96,6 +111,10 @@ const Index = () => {
   useEffect(() => {
     localStorage.setItem('reminders', JSON.stringify(reminders));
   }, [reminders]);
+
+  useEffect(() => {
+    localStorage.setItem('notificationPrefs', JSON.stringify(notificationPrefs));
+  }, [notificationPrefs]);
 
 
   const handleToggleDay = useCallback((habitId: string, dayIndex: number) => {
@@ -139,6 +158,15 @@ const Index = () => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
         return { ...habit, activeDays };
+      }
+      return habit;
+    }));
+  };
+
+  const handleUpdateGoal = (habitId: string, goal: number) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        return { ...habit, weeklyGoal: goal };
       }
       return habit;
     }));
@@ -225,10 +253,19 @@ const Index = () => {
                 onAdd={handleAddReminder}
                 onDelete={handleDeleteReminder}
               />
+
+              {/* Notification Settings */}
+              <NotificationSettings
+                preferences={notificationPrefs}
+                onUpdate={setNotificationPrefs}
+              />
             </div>
 
             {/* Right Column - Habit Tracker */}
             <div className="space-y-4 animate-fade-in">
+              {/* Habit Goals */}
+              <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
+
               {/* Habit Statistics */}
               <HabitStatistics habits={habits} />
 
@@ -240,6 +277,7 @@ const Index = () => {
                   onDeleteHabit={handleDeleteHabit}
                   onUpdateActiveDays={handleUpdateActiveDays}
                   onReorder={handleReorderHabits}
+                  onUpdateGoal={handleUpdateGoal}
                 />
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
