@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
@@ -10,6 +10,7 @@ import NotificationPrompt from '@/components/NotificationPrompt';
 import PomodoroTimer from '@/components/PomodoroTimer';
 import ThemeToggle from '@/components/ThemeToggle';
 import Reminders from '@/components/Reminders';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Habit {
   id: string;
@@ -81,6 +82,9 @@ const Index = () => {
 
   const today = new Date();
 
+  // Initialize notifications
+  const { notifyHabitComplete } = useNotifications(reminders, schedule);
+
   useEffect(() => {
     localStorage.setItem('habits-v3', JSON.stringify(habits));
   }, [habits]);
@@ -94,16 +98,23 @@ const Index = () => {
   }, [reminders]);
 
 
-  const handleToggleDay = (habitId: string, dayIndex: number) => {
+  const handleToggleDay = useCallback((habitId: string, dayIndex: number) => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
         const newCompletedDays = [...habit.completedDays];
-        newCompletedDays[dayIndex] = !newCompletedDays[dayIndex];
+        const wasCompleted = newCompletedDays[dayIndex];
+        newCompletedDays[dayIndex] = !wasCompleted;
+        
+        // Send notification on completion
+        if (!wasCompleted && Notification.permission === 'granted') {
+          notifyHabitComplete(habit.name, habit.icon);
+        }
+        
         return { ...habit, completedDays: newCompletedDays };
       }
       return habit;
     }));
-  };
+  }, [notifyHabitComplete]);
 
   const handleAddHabit = (name: string, icon: string) => {
     const newHabit: Habit = {
