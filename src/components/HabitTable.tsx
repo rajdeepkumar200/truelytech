@@ -111,82 +111,82 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
     <div className="sm:min-w-0">
       {/* Mobile: Fixed habit name + scrollable days */}
       {isMobile ? (
-        <div className="space-y-0.5">
-          {/* Header: Fixed today + scrollable other days */}
-          <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
-            <div className="w-[100px] flex-shrink-0 pl-2">Habit</div>
-            {/* Today - Fixed */}
-            <div className="w-12 flex-shrink-0 text-center font-semibold text-accent border-r border-border/30 mr-2">
-              {days[currentDayIndex]}
+        <div className="flex">
+          {/* Fixed Left Column: Habit names + Today */}
+          <div className="flex-shrink-0">
+            {/* Header */}
+            <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
+              <div className="w-[100px] pl-2">Habit</div>
+              <div className="w-12 text-center font-semibold text-accent">{days[currentDayIndex]}</div>
             </div>
-            {/* Other days - Scrollable together */}
-            <div className="flex-1 overflow-x-auto touch-pan-x overscroll-x-contain">
-              <div className="flex gap-4 min-w-max px-2">
+            {/* Rows */}
+            {habits.map((habit) => {
+              const activeDays = habit.activeDays || Array(7).fill(true);
+              const streak = calculateStreak(habit.completedDays, activeDays);
+
+              return (
+                <div key={habit.id} className="flex items-center py-2 h-[44px] touch-manipulation">
+                  <div className="w-[100px] flex items-center gap-1 min-w-0 pl-2">
+                    <span className="text-sm">{habit.icon}</span>
+                    <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
+                    {streak > 0 && (
+                      <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
+                        <Flame className="w-2.5 h-2.5 text-orange-500" />
+                        <span className="text-[10px] font-medium text-orange-500">{streak}</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setDeleteConfirmId(habit.id)}
+                      className="p-0.5 hover:bg-destructive/10 rounded flex-shrink-0"
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </button>
+                  </div>
+                  <div className="w-12 flex items-center justify-center touch-manipulation">
+                    {activeDays[currentDayIndex] ? (
+                      <Checkbox
+                        checked={habit.completedDays[currentDayIndex]}
+                        onCheckedChange={() => onToggleDay(habit.id, currentDayIndex)}
+                        className={cn(
+                          "w-6 h-6 border-2 transition-all touch-manipulation",
+                          habit.completedDays[currentDayIndex]
+                            ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
+                            : "border-accent ring-1 ring-accent/30"
+                        )}
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded bg-muted/20" title="Not active" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Scrollable Right Column: Other days */}
+          <div className="flex-1 overflow-x-auto touch-pan-x overscroll-x-contain border-l border-border/30">
+            {/* Header */}
+            <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30 min-w-max">
+              <div className="flex gap-4 px-3">
                 {days.map((day, index) => {
                   if (index === currentDayIndex) return null;
                   return (
-                    <div key={day} className="w-8 text-center font-medium">
-                      {day}
-                    </div>
+                    <div key={day} className="w-8 text-center font-medium">{day}</div>
                   );
                 })}
                 <div className="w-10 text-center">%</div>
               </div>
             </div>
-          </div>
+            {/* Rows */}
+            {habits.map((habit) => {
+              const activeDays = habit.activeDays || Array(7).fill(true);
+              const activeDaysCount = activeDays.filter(Boolean).length;
+              const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
+              const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
 
-          {/* Habit Rows */}
-          {habits.map((habit) => {
-            const activeDays = habit.activeDays || Array(7).fill(true);
-            const activeDaysCount = activeDays.filter(Boolean).length;
-            const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
-            const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
-            const streak = calculateStreak(habit.completedDays, activeDays);
-
-            return (
-              <div
-                key={habit.id}
-                className="flex items-center py-2 group hover:bg-muted/40 rounded-lg transition-colors touch-manipulation"
-              >
-                {/* Fixed Habit Name */}
-                <div className="w-[100px] flex-shrink-0 flex items-center gap-1 min-w-0 pl-2">
-                  <span className="text-sm">{habit.icon}</span>
-                  <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
-                  {streak > 0 && (
-                    <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
-                      <Flame className="w-2.5 h-2.5 text-orange-500" />
-                      <span className="text-[10px] font-medium text-orange-500">{streak}</span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setDeleteConfirmId(habit.id)}
-                    className="p-0.5 hover:bg-destructive/10 rounded flex-shrink-0"
-                  >
-                    <Trash2 className="w-3 h-3 text-destructive" />
-                  </button>
-                </div>
-
-                {/* Today Checkbox - Fixed */}
-                <div className="w-12 flex-shrink-0 flex items-center justify-center border-r border-border/30 mr-2 touch-manipulation">
-                  {activeDays[currentDayIndex] ? (
-                    <Checkbox
-                      checked={habit.completedDays[currentDayIndex]}
-                      onCheckedChange={() => onToggleDay(habit.id, currentDayIndex)}
-                      className={cn(
-                        "w-6 h-6 border-2 transition-all touch-manipulation",
-                        habit.completedDays[currentDayIndex]
-                          ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
-                          : "border-accent ring-1 ring-accent/30"
-                      )}
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded bg-muted/20" title="Not active" />
-                  )}
-                </div>
-
-                {/* Other Days - Scrollable together */}
-                <div className="flex-1 overflow-x-auto touch-pan-x overscroll-x-contain">
-                  <div className="flex gap-4 min-w-max px-2">
+              return (
+                <div key={habit.id} className="flex items-center py-2 h-[44px] min-w-max touch-manipulation">
+                  <div className="flex gap-4 px-3">
                     {habit.completedDays.map((isComplete, dayIndex) => {
                       if (dayIndex === currentDayIndex) return null;
                       const isFutureDay = dayIndex > currentDayIndex;
@@ -213,8 +213,6 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                         </div>
                       );
                     })}
-
-                    {/* Progress */}
                     <div className="w-10 flex items-center justify-center">
                       <span className={cn(
                         "text-xs font-medium",
@@ -226,9 +224,9 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       ) : (
         <>
