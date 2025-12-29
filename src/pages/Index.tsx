@@ -29,6 +29,7 @@ interface ScheduleItem {
   time: string;
   task: string;
   emoji?: string;
+  completed?: boolean;
 }
 
 interface Reminder {
@@ -37,6 +38,7 @@ interface Reminder {
   time: string;
   name: string;
   emoji: string;
+  completed?: boolean;
 }
 
 const defaultHabits: Habit[] = [
@@ -207,6 +209,18 @@ const Index = () => {
     setReminders(prev => prev.filter(r => r.id !== id));
   };
 
+  const handleToggleScheduleComplete = (id: string) => {
+    setSchedule(prev => prev.map(item => 
+      item.id === id ? { ...item, completed: !item.completed } : item
+    ));
+  };
+
+  const handleToggleReminderComplete = (id: string) => {
+    setReminders(prev => prev.map(r => 
+      r.id === id ? { ...r, completed: !r.completed } : r
+    ));
+  };
+
   return (
     <div className="min-h-screen bg-background pb-safe">
       <MotivationModal />
@@ -245,12 +259,14 @@ const Index = () => {
                   onAddItem={handleAddScheduleItem}
                   onDeleteItem={handleDeleteScheduleItem}
                   onEditItem={handleEditScheduleItem}
+                  onToggleComplete={handleToggleScheduleComplete}
                   compact
                 />
                 <Reminders
                   reminders={reminders}
                   onAdd={handleAddReminder}
                   onDelete={handleDeleteReminder}
+                  onToggleComplete={handleToggleReminderComplete}
                   compact
                 />
               </div>
@@ -301,11 +317,13 @@ const Index = () => {
                 onAddItem={handleAddScheduleItem}
                 onDeleteItem={handleDeleteScheduleItem}
                 onEditItem={handleEditScheduleItem}
+                onToggleComplete={handleToggleScheduleComplete}
               />
               <Reminders
                 reminders={reminders}
                 onAdd={handleAddReminder}
                 onDelete={handleDeleteReminder}
+                onToggleComplete={handleToggleReminderComplete}
               />
               <NotificationSettings
                 preferences={notificationPrefs}
