@@ -106,7 +106,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
   };
 
   return (
-    <div className="overflow-hidden">
+    <div className="min-w-[560px] sm:min-w-0">
       {/* Table Header */}
       <div className="grid grid-cols-[16px_minmax(60px,1fr)_repeat(7,24px)_40px] sm:grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-0.5 sm:gap-1 px-1 sm:px-2 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
         <div></div>
