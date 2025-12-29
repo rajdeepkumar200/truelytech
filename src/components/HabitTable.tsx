@@ -260,13 +260,12 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                           return (
                             <div key={dayIndex} className="flex items-center justify-center">
                               {activeDays[dayIndex] ? (
-                                <Checkbox
+                              <Checkbox
                                   checked={isComplete}
                                   onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
                                   disabled={isFutureDay}
-                                                  className={cn(
-                                                    "w-4 h-4 sm:w-5 sm:h-5 border-2 transition-all",
-                                    "w-5 h-5 border-2 transition-all",
+                                  className={cn(
+                                    "w-4 h-4 sm:w-5 sm:h-5 border-2 transition-all",
                                     isComplete 
                                       ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
                                       : "border-border",
