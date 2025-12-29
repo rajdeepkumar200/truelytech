@@ -12,7 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 const emailSchema = z.string().trim().email({ message: "Invalid email address" }).max(255);
 const passwordSchema = z.string().min(6, { message: "Password must be at least 6 characters" }).max(72);
 
-type AuthMode = 'login' | 'signup' | 'otp-request' | 'otp-verify' | 'forgot-password';
+type AuthMode = 'login' | 'signup' | 'otp-request' | 'otp-verify' | 'forgot-password' | 'reset-verify' | 'new-password';
 
 const RESEND_COOLDOWN = 60; // seconds
 
@@ -25,9 +25,11 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
   
-  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp, resetPassword } = useAuth();
+  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -223,20 +225,110 @@ const Auth = () => {
     if (!validateEmail()) return;
     
     setLoading(true);
-    const { error } = await resetPassword(email);
+    // Use OTP for password reset instead of magic link
+    const { error } = await signInWithOtp(email);
     setLoading(false);
     
     if (error) {
       toast({
-        title: 'Failed to send reset email',
+        title: 'Failed to send reset code',
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Reset email sent!',
-        description: 'Check your email for the password reset link.',
+        title: 'Code sent!',
+        description: 'Check your email for the 6-digit verification code.',
       });
+      setMode('reset-verify');
+      startResendCooldown();
+    }
+  };
+
+  const handleResetVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode.length !== 6) {
+      toast({
+        title: 'Invalid code',
+        description: 'Please enter the 6-digit code from your email.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setLoading(true);
+    const { error } = await verifyOtp(email, otpCode);
+    setLoading(false);
+    
+    if (error) {
+      toast({
+        title: 'Verification failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      setMode('new-password');
+      setOtpCode('');
+    }
+  };
+
+  const handleSetNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const passwordResult = passwordSchema.safeParse(newPassword);
+    if (!passwordResult.success) {
+      setErrors({ password: passwordResult.error.errors[0].message });
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setErrors({ password: 'Passwords do not match' });
+      return;
+    }
+    
+    setErrors({});
+    setLoading(true);
+    
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    
+    setLoading(false);
+    
+    if (error) {
+      toast({
+        title: 'Failed to update password',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Password updated!',
+        description: 'Your password has been successfully changed.',
+      });
+      navigate('/');
+    }
+  };
+
+  const handleResendResetCode = async () => {
+    if (resendCooldown > 0) return;
+    
+    setLoading(true);
+    const { error } = await signInWithOtp(email);
+    setLoading(false);
+    
+    if (error) {
+      toast({
+        title: 'Failed to resend code',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Code resent!',
+        description: 'Check your email for the new 6-digit verification code.',
+      });
+      setOtpCode('');
+      startResendCooldown();
     }
   };
 
@@ -417,7 +509,7 @@ const Auth = () => {
       </div>
 
       <Button type="submit" className="w-full h-11" disabled={loading}>
-        {loading ? 'Sending...' : 'Send reset link'}
+        {loading ? 'Sending code...' : 'Send verification code'}
       </Button>
 
       <button
@@ -430,12 +522,117 @@ const Auth = () => {
     </form>
   );
 
+  const renderResetVerify = () => (
+    <form onSubmit={handleResetVerify} className="space-y-6">
+      <div className="space-y-4">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground mb-1">Code sent to</p>
+          <p className="font-medium">{email}</p>
+        </div>
+        
+        <div className="flex justify-center">
+          <InputOTP
+            maxLength={6}
+            value={otpCode}
+            onChange={setOtpCode}
+            disabled={loading}
+          >
+            <InputOTPGroup>
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+              <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
+            </InputOTPGroup>
+          </InputOTP>
+        </div>
+      </div>
+
+      <Button type="submit" className="w-full h-11" disabled={loading || otpCode.length !== 6}>
+        {loading ? 'Verifying...' : 'Verify code'}
+      </Button>
+
+      <div className="flex flex-col items-center gap-2">
+        <button
+          type="button"
+          onClick={handleResendResetCode}
+          disabled={loading || resendCooldown > 0}
+          className="text-sm text-primary hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('forgot-password');
+            setOtpCode('');
+            setResendCooldown(0);
+            if (cooldownRef.current) {
+              clearInterval(cooldownRef.current);
+            }
+          }}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Use a different email
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderNewPassword = () => (
+    <form onSubmit={handleSetNewPassword} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="newPassword" className="text-sm">New Password</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="newPassword"
+            type="password"
+            placeholder="••••••••"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="pl-10"
+            disabled={loading}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword" className="text-sm">Confirm Password</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="confirmPassword"
+            type="password"
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="pl-10"
+            disabled={loading}
+          />
+        </div>
+        {errors.password && (
+          <p className="text-xs text-destructive">{errors.password}</p>
+        )}
+      </div>
+
+      <Button type="submit" className="w-full h-11" disabled={loading}>
+        {loading ? 'Updating...' : 'Set new password'}
+      </Button>
+    </form>
+  );
+
   const getHeaderText = () => {
     switch (mode) {
       case 'otp-verify':
         return 'Enter code';
       case 'forgot-password':
         return 'Reset password';
+      case 'reset-verify':
+        return 'Enter code';
+      case 'new-password':
+        return 'New password';
       default:
         return 'Welcome';
     }
@@ -452,7 +649,11 @@ const Auth = () => {
       case 'signup':
         return 'Create an account with email and password';
       case 'forgot-password':
-        return 'Enter your email to receive a password reset link';
+        return 'Enter your email to receive a verification code';
+      case 'reset-verify':
+        return 'Enter the 6-digit code from your email';
+      case 'new-password':
+        return 'Create a new password for your account';
       default:
         return '';
     }
@@ -529,9 +730,11 @@ const Auth = () => {
         {mode === 'otp-verify' && renderOtpVerify()}
         {(mode === 'login' || mode === 'signup') && renderPasswordAuth()}
         {mode === 'forgot-password' && renderForgotPassword()}
+        {mode === 'reset-verify' && renderResetVerify()}
+        {mode === 'new-password' && renderNewPassword()}
 
         {/* Mode toggles */}
-        {mode !== 'otp-verify' && mode !== 'forgot-password' && (
+        {mode !== 'otp-verify' && mode !== 'forgot-password' && mode !== 'reset-verify' && mode !== 'new-password' && (
           <div className="space-y-3 text-center">
             {mode === 'otp-request' && (
               <p className="text-sm text-muted-foreground">
