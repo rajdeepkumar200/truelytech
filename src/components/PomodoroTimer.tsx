@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Settings } from 'lucide-react';
+import { Play, Pause, RotateCcw, Settings, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { playTick, playComplete, playBreakOver, triggerHaptic, resumeAudioContext } from '@/hooks/useSound';
 
 const presetTimes = [5, 10, 15, 20, 25, 30, 45, 60];
 
@@ -11,7 +12,9 @@ const PomodoroTimer = () => {
   const [timeLeft, setTimeLeft] = useState(workMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTickRef = useRef<number>(0);
 
   useEffect(() => {
     if (!isRunning && !isBreak) {
@@ -22,9 +25,30 @@ const PomodoroTimer = () => {
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
       intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => {
+          const newTime = prev - 1;
+          
+          // Play tick sound every 60 seconds
+          if (soundEnabled && newTime > 0 && newTime % 60 === 0 && newTime !== lastTickRef.current) {
+            lastTickRef.current = newTime;
+            playTick();
+            triggerHaptic(30);
+          }
+          
+          return newTime;
+        });
       }, 1000);
     } else if (timeLeft === 0) {
+      // Timer completed
+      if (soundEnabled) {
+        if (isBreak) {
+          playBreakOver();
+        } else {
+          playComplete();
+        }
+        triggerHaptic([100, 50, 100, 50, 100]);
+      }
+      
       if (isBreak) {
         setTimeLeft(workMinutes * 60);
         setIsBreak(false);
@@ -44,9 +68,14 @@ const PomodoroTimer = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, timeLeft, isBreak, workMinutes, breakMinutes]);
+  }, [isRunning, timeLeft, isBreak, workMinutes, breakMinutes, soundEnabled]);
 
   const toggleTimer = () => {
+    resumeAudioContext();
+    if (!isRunning && soundEnabled) {
+      playTick();
+      triggerHaptic(50);
+    }
     setIsRunning(!isRunning);
   };
 
@@ -54,6 +83,9 @@ const PomodoroTimer = () => {
     setIsRunning(false);
     setIsBreak(false);
     setTimeLeft(workMinutes * 60);
+    if (soundEnabled) {
+      triggerHaptic(30);
+    }
   };
 
   const minutes = Math.floor(timeLeft / 60);
@@ -67,59 +99,70 @@ const PomodoroTimer = () => {
         <div className="text-sm font-medium text-muted-foreground">
           {isBreak ? '☕ Break' : '🍅 Focus'}
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="p-1.5 rounded-lg hover:bg-muted transition-colors">
-              <Settings className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-4" align="end">
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                  Work (min)
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {presetTimes.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setWorkMinutes(t)}
-                      className={cn(
-                        "px-2 py-1 text-xs rounded-md transition-colors",
-                        workMinutes === t
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted hover:bg-muted/80 text-foreground"
-                      )}
-                    >
-                      {t}
-                    </button>
-                  ))}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={cn(
+              "p-1.5 rounded-lg transition-colors",
+              soundEnabled ? "hover:bg-muted text-foreground" : "hover:bg-muted text-muted-foreground"
+            )}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                <Settings className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-4" align="end">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">
+                    Work (min)
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {presetTimes.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setWorkMinutes(t)}
+                        className={cn(
+                          "px-2 py-1 text-xs rounded-md transition-colors",
+                          workMinutes === t
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted hover:bg-muted/80 text-foreground"
+                        )}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block">
+                    Break (min)
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[3, 5, 10, 15].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setBreakMinutes(t)}
+                        className={cn(
+                          "px-2 py-1 text-xs rounded-md transition-colors",
+                          breakMinutes === t
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-muted hover:bg-muted/80 text-foreground"
+                        )}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                  Break (min)
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {[3, 5, 10, 15].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setBreakMinutes(t)}
-                      className={cn(
-                        "px-2 py-1 text-xs rounded-md transition-colors",
-                        breakMinutes === t
-                          ? "bg-accent text-accent-foreground"
-                          : "bg-muted hover:bg-muted/80 text-foreground"
-                      )}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
       
       {/* Timer Display */}
