@@ -127,12 +127,13 @@ const Index = () => {
         const newCompletedDays = [...habit.completedDays];
         const wasCompleted = newCompletedDays[dayIndex];
         newCompletedDays[dayIndex] = !wasCompleted;
-        
-        // Send notification on completion
-        if (!wasCompleted && Notification.permission === 'granted') {
+
+        // Send notification on completion (guarded for mobile browsers that don't support Notifications)
+        const canUseNotifications = typeof window !== 'undefined' && 'Notification' in window;
+        if (!wasCompleted && canUseNotifications && window.Notification.permission === 'granted') {
           notifyHabitComplete(habit.name, habit.icon);
         }
-        
+
         return { ...habit, completedDays: newCompletedDays };
       }
       return habit;
@@ -281,7 +282,7 @@ const Index = () => {
             {/* Mobile: Habit Table (main section) */}
             <div className="lg:hidden space-y-4 animate-fade-in">
               <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
-                <div className="overflow-x-auto max-h-[50vh] overflow-y-auto scrollbar-thin">
+                <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
                   <HabitTable
                     habits={habits}
                     onToggleDay={handleToggleDay}
