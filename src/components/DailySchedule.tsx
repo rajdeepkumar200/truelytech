@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Pencil, Check, X, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmojiPicker from './EmojiPicker';
 
@@ -15,10 +15,11 @@ interface DailyScheduleProps {
   onAddItem: (time: string, task: string, emoji: string) => void;
   onDeleteItem: (id: string) => void;
   onEditItem: (id: string, time: string, task: string, emoji: string) => void;
+  compact?: boolean;
 }
 
-const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem }: DailyScheduleProps) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = false }: DailyScheduleProps) => {
+  const [isExpanded, setIsExpanded] = useState(!compact);
   const [newTime, setNewTime] = useState('');
   const [newTask, setNewTask] = useState('');
   const [newEmoji, setNewEmoji] = useState('📌');
@@ -62,33 +63,74 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem }: DailySche
     setEditEmoji('');
   };
 
+  // Compact version for mobile
+  if (compact) {
+    return (
+      <div className="bg-gradient-to-br from-primary/5 via-popover to-accent/5 rounded-2xl border border-border/50 overflow-hidden shadow-sm h-full">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-muted/30 transition-colors"
+        >
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <span className="font-medium text-foreground text-sm flex-1 text-left">Today's Plan</span>
+          <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{items.length}</span>
+          <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", !isExpanded && "-rotate-90")} />
+        </button>
+        
+        {isExpanded && (
+          <div className="px-3 pb-3 max-h-28 overflow-y-auto scrollbar-thin">
+            {items.slice(0, 3).map((item) => (
+              <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs">
+                <span>{item.emoji || '📌'}</span>
+                <span className="text-muted-foreground font-mono">{item.time}</span>
+                <span className="text-foreground truncate flex-1">{item.task}</span>
+              </div>
+            ))}
+            {items.length > 3 && (
+              <p className="text-xs text-muted-foreground">+{items.length - 3} more</p>
+            )}
+            {items.length === 0 && (
+              <p className="text-xs text-muted-foreground italic py-1">No tasks yet</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-popover rounded-2xl overflow-hidden border border-border/50">
+    <div className="bg-gradient-to-br from-primary/5 via-popover to-accent/5 rounded-2xl overflow-hidden border border-border/50 shadow-sm">
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors"
       >
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Calendar className="w-4 h-4 text-primary" />
+        </div>
+        <span className="font-semibold text-foreground flex-1 text-left">Today's Plan</span>
+        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{items.length} tasks</span>
         <ChevronDown
           className={cn(
             "w-4 h-4 text-muted-foreground transition-transform",
             !isExpanded && "-rotate-90"
           )}
         />
-        <span className="font-medium text-foreground">📅 Today's Plan</span>
       </button>
 
       {/* Content */}
       {isExpanded && (
         <div className="px-5 pb-5">
-          <div className="space-y-2">
+          <div className="space-y-1">
             {items.map((item) => (
               <div
                 key={item.id}
                 className="group"
               >
                 {editingId === item.id ? (
-                  <div className="flex gap-2 items-center py-2 px-3 bg-muted/30 rounded-xl">
+                  <div className="flex gap-2 items-center py-2 px-3 bg-muted/40 rounded-xl border border-border/50">
                     <EmojiPicker value={editEmoji} onChange={setEditEmoji} />
                     <input
                       type="time"
@@ -118,9 +160,9 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem }: DailySche
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-muted/30 transition-all duration-200 border border-transparent hover:border-border/30">
                     <span className="text-lg">{item.emoji || '📌'}</span>
-                    <span className="text-sm text-muted-foreground font-mono w-14">
+                    <span className="text-sm text-primary/80 font-mono w-14 font-medium">
                       {item.time}
                     </span>
                     <span className="flex-1 text-sm text-foreground">{item.task}</span>
@@ -145,7 +187,7 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem }: DailySche
 
             {/* Add New Item */}
             {isAdding ? (
-              <div className="flex gap-2 items-center py-2 px-3 bg-muted/30 rounded-xl">
+              <div className="flex gap-2 items-center py-2 px-3 bg-muted/40 rounded-xl border border-border/50">
                 <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
                 <input
                   type="time"
@@ -183,7 +225,7 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem }: DailySche
             ) : (
               <button
                 onClick={() => setIsAdding(true)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors py-2 px-3 w-full rounded-xl hover:bg-muted/30"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors py-2.5 px-3 w-full rounded-xl hover:bg-muted/30 border border-dashed border-border/50 hover:border-primary/30"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add task</span>
