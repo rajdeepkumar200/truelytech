@@ -1,7 +1,17 @@
 import { useState } from 'react';
-import { Plus, Trash2, Bell, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Bell, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmojiPicker from './EmojiPicker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Reminder {
   id: string;
@@ -9,25 +19,28 @@ interface Reminder {
   time: string;
   name: string;
   emoji: string;
+  completed?: boolean;
 }
 
 interface RemindersProps {
   reminders: Reminder[];
   onAdd: (reminder: Omit<Reminder, 'id'>) => void;
   onDelete: (id: string) => void;
+  onToggleComplete?: (id: string) => void;
   compact?: boolean;
 }
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const Reminders = ({ reminders, onAdd, onDelete, compact = false }: RemindersProps) => {
+const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = false }: RemindersProps) => {
   const [isExpanded, setIsExpanded] = useState(!compact);
   const [isAdding, setIsAdding] = useState(false);
   const [newDay, setNewDay] = useState('Monday');
   const [newTime, setNewTime] = useState('');
   const [newName, setNewName] = useState('');
   const [newEmoji, setNewEmoji] = useState('🔔');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (newTime && newName.trim()) {
@@ -44,13 +57,21 @@ const Reminders = ({ reminders, onAdd, onDelete, compact = false }: RemindersPro
     }
   };
 
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      onDelete(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
+
   // Group reminders by day
   const remindersByDay = daysOfWeek.reduce((acc, day) => {
-    acc[day] = reminders.filter(r => r.day === day).sort((a, b) => a.time.localeCompare(b.time));
+    acc[day] = reminders.filter(r => r.day === day && !r.completed).sort((a, b) => a.time.localeCompare(b.time));
     return acc;
   }, {} as Record<string, Reminder[]>);
 
-  const hasReminders = reminders.length > 0;
+  const pendingReminders = reminders.filter(r => !r.completed);
+  const hasReminders = pendingReminders.length > 0;
 
   // Compact version for mobile
   if (compact) {
@@ -65,33 +86,64 @@ const Reminders = ({ reminders, onAdd, onDelete, compact = false }: RemindersPro
           </div>
           <span className="font-medium text-foreground text-sm flex-1 text-left">Reminders</span>
           {hasReminders && (
-            <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">{reminders.length}</span>
+            <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">{pendingReminders.length}</span>
           )}
           <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", !isExpanded && "-rotate-90")} />
         </button>
         
         {isExpanded && (
-          <div className="px-3 pb-3 max-h-28 overflow-y-auto scrollbar-thin">
-            {reminders.slice(0, 3).map((reminder) => (
-              <div key={reminder.id} className="flex items-center gap-2 py-1.5 text-xs">
-                <span>{reminder.emoji}</span>
+          <div className="px-3 pb-3 max-h-32 overflow-y-auto scrollbar-thin">
+            {pendingReminders.slice(0, 3).map((reminder) => (
+              <div key={reminder.id} className="flex items-center gap-2 py-1.5 text-xs group">
+                <button 
+                  onClick={() => onToggleComplete?.(reminder.id)}
+                  className="hover:scale-110 transition-transform"
+                >
+                  <span>{reminder.emoji}</span>
+                </button>
                 <span className="text-muted-foreground">{shortDays[daysOfWeek.indexOf(reminder.day)]}</span>
                 <span className="text-foreground truncate flex-1">{reminder.name}</span>
               </div>
             ))}
-            {reminders.length > 3 && (
-              <p className="text-xs text-muted-foreground">+{reminders.length - 3} more</p>
+            {pendingReminders.length > 3 && (
+              <p className="text-xs text-muted-foreground">+{pendingReminders.length - 3} more</p>
             )}
             {!hasReminders && (
               <p className="text-xs text-muted-foreground italic py-1">No reminders</p>
             )}
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center gap-1 text-xs text-accent hover:underline mt-2"
+            >
+              <Plus className="w-3 h-3" />
+              Add more
+            </button>
           </div>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this reminder?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this reminder? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
 
   return (
+    <>
     <div className="bg-gradient-to-br from-accent/5 via-popover to-primary/5 rounded-2xl overflow-hidden border border-border/50 shadow-sm">
       {/* Header */}
       <button
@@ -104,7 +156,7 @@ const Reminders = ({ reminders, onAdd, onDelete, compact = false }: RemindersPro
         <span className="font-semibold text-foreground flex-1 text-left">Reminders</span>
         {hasReminders && (
           <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
-            {reminders.length} active
+            {pendingReminders.length} active
           </span>
         )}
         <ChevronDown
@@ -134,23 +186,68 @@ const Reminders = ({ reminders, onAdd, onDelete, compact = false }: RemindersPro
                           key={reminder.id}
                           className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-muted/30 transition-all duration-200 group border border-transparent hover:border-border/30"
                         >
-                          <span className="text-lg">{reminder.emoji}</span>
+                          <button
+                            onClick={() => onToggleComplete?.(reminder.id)}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            <span className="text-lg">{reminder.emoji}</span>
+                          </button>
                           <span className="text-sm text-accent/80 font-mono w-14 font-medium">
                             {reminder.time}
                           </span>
                           <span className="flex-1 text-sm text-foreground">{reminder.name}</span>
-                          <button
-                            onClick={() => onDelete(reminder.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 rounded-lg"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => onToggleComplete?.(reminder.id)}
+                              className="p-1.5 hover:bg-accent/10 rounded-lg"
+                              title="Mark as done"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(reminder.id)}
+                              className="p-1.5 hover:bg-destructive/10 rounded-lg"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Completed Reminders */}
+          {reminders.filter(r => r.completed).length > 0 && (
+            <div className="mb-3 pt-3 border-t border-border/30">
+              <p className="text-xs text-muted-foreground mb-2 font-medium">Completed</p>
+              {reminders.filter(r => r.completed).map(reminder => (
+                <div
+                  key={reminder.id}
+                  className="flex items-center gap-3 py-2 px-3 rounded-xl bg-muted/20 group"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-accent" />
+                  <span className="text-sm text-muted-foreground line-through flex-1">{reminder.name}</span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => onToggleComplete?.(reminder.id)}
+                      className="p-1.5 hover:bg-primary/10 rounded-lg text-xs text-primary"
+                      title="Undo"
+                    >
+                      Undo
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(reminder.id)}
+                      className="p-1.5 hover:bg-destructive/10 rounded-lg"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -216,6 +313,25 @@ const Reminders = ({ reminders, onAdd, onDelete, compact = false }: RemindersPro
         </div>
       )}
     </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this reminder?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this reminder? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

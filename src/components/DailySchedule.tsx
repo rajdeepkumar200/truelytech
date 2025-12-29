@@ -1,13 +1,24 @@
 import { useState } from 'react';
-import { ChevronDown, Plus, Trash2, Pencil, Check, X, Calendar } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Pencil, Check, X, Calendar, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmojiPicker from './EmojiPicker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ScheduleItem {
   id: string;
   time: string;
   task: string;
   emoji?: string;
+  completed?: boolean;
 }
 
 interface DailyScheduleProps {
@@ -15,10 +26,11 @@ interface DailyScheduleProps {
   onAddItem: (time: string, task: string, emoji: string) => void;
   onDeleteItem: (id: string) => void;
   onEditItem: (id: string, time: string, task: string, emoji: string) => void;
+  onToggleComplete?: (id: string) => void;
   compact?: boolean;
 }
 
-const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = false }: DailyScheduleProps) => {
+const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleComplete, compact = false }: DailyScheduleProps) => {
   const [isExpanded, setIsExpanded] = useState(!compact);
   const [newTime, setNewTime] = useState('');
   const [newTask, setNewTask] = useState('');
@@ -28,6 +40,7 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
   const [editTime, setEditTime] = useState('');
   const [editTask, setEditTask] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (newTime && newTask.trim()) {
@@ -63,6 +76,16 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
     setEditEmoji('');
   };
 
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      onDeleteItem(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
+
+  const completedItems = items.filter(i => i.completed);
+  const pendingItems = items.filter(i => !i.completed);
+
   // Compact version for mobile
   if (compact) {
     return (
@@ -75,32 +98,63 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
             <Calendar className="w-3.5 h-3.5 text-primary" />
           </div>
           <span className="font-medium text-foreground text-sm flex-1 text-left">Today's Plan</span>
-          <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{items.length}</span>
+          <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{pendingItems.length}</span>
           <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", !isExpanded && "-rotate-90")} />
         </button>
         
         {isExpanded && (
-          <div className="px-3 pb-3 max-h-28 overflow-y-auto scrollbar-thin">
-            {items.slice(0, 3).map((item) => (
-              <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs">
-                <span>{item.emoji || '📌'}</span>
+          <div className="px-3 pb-3 max-h-32 overflow-y-auto scrollbar-thin">
+            {pendingItems.slice(0, 3).map((item) => (
+              <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs group">
+                <button 
+                  onClick={() => onToggleComplete?.(item.id)}
+                  className="hover:scale-110 transition-transform"
+                >
+                  <span>{item.emoji || '📌'}</span>
+                </button>
                 <span className="text-muted-foreground font-mono">{item.time}</span>
                 <span className="text-foreground truncate flex-1">{item.task}</span>
               </div>
             ))}
-            {items.length > 3 && (
-              <p className="text-xs text-muted-foreground">+{items.length - 3} more</p>
+            {pendingItems.length > 3 && (
+              <p className="text-xs text-muted-foreground">+{pendingItems.length - 3} more</p>
             )}
-            {items.length === 0 && (
-              <p className="text-xs text-muted-foreground italic py-1">No tasks yet</p>
+            {pendingItems.length === 0 && (
+              <p className="text-xs text-muted-foreground italic py-1">All done! 🎉</p>
             )}
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+            >
+              <Plus className="w-3 h-3" />
+              Add more
+            </button>
           </div>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this task? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
 
   return (
+    <>
     <div className="bg-gradient-to-br from-primary/5 via-popover to-accent/5 rounded-2xl overflow-hidden border border-border/50 shadow-sm">
       {/* Header */}
       <button
@@ -111,7 +165,7 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
           <Calendar className="w-4 h-4 text-primary" />
         </div>
         <span className="font-semibold text-foreground flex-1 text-left">Today's Plan</span>
-        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{items.length} tasks</span>
+        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{pendingItems.length} tasks</span>
         <ChevronDown
           className={cn(
             "w-4 h-4 text-muted-foreground transition-transform",
@@ -124,7 +178,8 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
       {isExpanded && (
         <div className="px-5 pb-5">
           <div className="space-y-1">
-            {items.map((item) => (
+            {/* Pending Items */}
+            {pendingItems.map((item) => (
               <div
                 key={item.id}
                 className="group"
@@ -161,7 +216,12 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-muted/30 transition-all duration-200 border border-transparent hover:border-border/30">
-                    <span className="text-lg">{item.emoji || '📌'}</span>
+                    <button
+                      onClick={() => onToggleComplete?.(item.id)}
+                      className="hover:scale-110 transition-transform"
+                    >
+                      <span className="text-lg">{item.emoji || '📌'}</span>
+                    </button>
                     <span className="text-sm text-primary/80 font-mono w-14 font-medium">
                       {item.time}
                     </span>
@@ -174,7 +234,7 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
                         <Pencil className="w-3.5 h-3.5 text-primary" />
                       </button>
                       <button
-                        onClick={() => onDeleteItem(item.id)}
+                        onClick={() => setDeleteConfirmId(item.id)}
                         className="p-1.5 hover:bg-destructive/10 rounded-lg"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
@@ -184,6 +244,37 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
                 )}
               </div>
             ))}
+
+            {/* Completed Items */}
+            {completedItems.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-border/30">
+                <p className="text-xs text-muted-foreground mb-2 font-medium">Completed</p>
+                {completedItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 py-2 px-3 rounded-xl bg-muted/20 group"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-accent" />
+                    <span className="text-sm text-muted-foreground line-through flex-1">{item.task}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => onToggleComplete?.(item.id)}
+                        className="p-1.5 hover:bg-primary/10 rounded-lg text-xs text-primary"
+                        title="Undo"
+                      >
+                        Undo
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmId(item.id)}
+                        className="p-1.5 hover:bg-destructive/10 rounded-lg"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Add New Item */}
             {isAdding ? (
@@ -235,6 +326,25 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, compact = f
         </div>
       )}
     </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
