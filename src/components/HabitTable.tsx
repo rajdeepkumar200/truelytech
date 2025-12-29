@@ -112,22 +112,24 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
       {/* Mobile: Fixed habit name + scrollable days */}
       {isMobile ? (
         <div className="space-y-0.5">
-          {/* Header */}
+          {/* Header: Fixed today + scrollable other days */}
           <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
-            <div className="w-[120px] flex-shrink-0 pl-2">Habit</div>
-            <div className="flex-1 overflow-x-auto touch-pan-x">
-              <div className="flex gap-3 min-w-max px-2">
-                {days.map((day, index) => (
-                  <div 
-                    key={day} 
-                    className={cn(
-                      "w-8 text-center font-medium",
-                      index === currentDayIndex && "text-accent font-semibold"
-                    )}
-                  >
-                    {day}
-                  </div>
-                ))}
+            <div className="w-[100px] flex-shrink-0 pl-2">Habit</div>
+            {/* Today - Fixed */}
+            <div className="w-12 flex-shrink-0 text-center font-semibold text-accent border-r border-border/30 mr-2">
+              {days[currentDayIndex]}
+            </div>
+            {/* Other days - Scrollable together */}
+            <div className="flex-1 overflow-x-auto touch-pan-x overscroll-x-contain">
+              <div className="flex gap-4 min-w-max px-2">
+                {days.map((day, index) => {
+                  if (index === currentDayIndex) return null;
+                  return (
+                    <div key={day} className="w-8 text-center font-medium">
+                      {day}
+                    </div>
+                  );
+                })}
                 <div className="w-10 text-center">%</div>
               </div>
             </div>
@@ -147,17 +149,15 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                 className="flex items-center py-2 group hover:bg-muted/40 rounded-lg transition-colors touch-manipulation"
               >
                 {/* Fixed Habit Name */}
-                <div className="w-[120px] flex-shrink-0 flex items-center gap-1.5 min-w-0 pl-2">
+                <div className="w-[100px] flex-shrink-0 flex items-center gap-1 min-w-0 pl-2">
                   <span className="text-sm">{habit.icon}</span>
                   <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
-                  
                   {streak > 0 && (
                     <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
                       <Flame className="w-2.5 h-2.5 text-orange-500" />
                       <span className="text-[10px] font-medium text-orange-500">{streak}</span>
                     </div>
                   )}
-
                   <button
                     onClick={() => setDeleteConfirmId(habit.id)}
                     className="p-0.5 hover:bg-destructive/10 rounded flex-shrink-0"
@@ -166,11 +166,29 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                   </button>
                 </div>
 
-                {/* Scrollable Days */}
-                <div className="flex-1 overflow-x-auto touch-pan-x">
-                  <div className="flex gap-3 min-w-max px-2">
+                {/* Today Checkbox - Fixed */}
+                <div className="w-12 flex-shrink-0 flex items-center justify-center border-r border-border/30 mr-2 touch-manipulation">
+                  {activeDays[currentDayIndex] ? (
+                    <Checkbox
+                      checked={habit.completedDays[currentDayIndex]}
+                      onCheckedChange={() => onToggleDay(habit.id, currentDayIndex)}
+                      className={cn(
+                        "w-6 h-6 border-2 transition-all touch-manipulation",
+                        habit.completedDays[currentDayIndex]
+                          ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
+                          : "border-accent ring-1 ring-accent/30"
+                      )}
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded bg-muted/20" title="Not active" />
+                  )}
+                </div>
+
+                {/* Other Days - Scrollable together */}
+                <div className="flex-1 overflow-x-auto touch-pan-x overscroll-x-contain">
+                  <div className="flex gap-4 min-w-max px-2">
                     {habit.completedDays.map((isComplete, dayIndex) => {
-                      const isCurrentDay = dayIndex === currentDayIndex;
+                      if (dayIndex === currentDayIndex) return null;
                       const isFutureDay = dayIndex > currentDayIndex;
 
                       return (
@@ -182,12 +200,11 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                               disabled={isFutureDay}
                               className={cn(
                                 "w-5 h-5 border-2 transition-all touch-manipulation",
-                                isComplete 
-                                  ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
+                                isComplete
+                                  ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
                                   : "border-border",
-                                !isCurrentDay && !isComplete && "opacity-40",
-                                isFutureDay && "opacity-20 cursor-not-allowed",
-                                isCurrentDay && !isComplete && "border-accent ring-1 ring-accent/30"
+                                !isComplete && "opacity-40",
+                                isFutureDay && "opacity-20 cursor-not-allowed"
                               )}
                             />
                           ) : (
@@ -201,7 +218,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                     <div className="w-10 flex items-center justify-center">
                       <span className={cn(
                         "text-xs font-medium",
-                        progressPercent >= 80 ? "text-accent" : 
+                        progressPercent >= 80 ? "text-accent" :
                         progressPercent >= 50 ? "text-foreground" : "text-muted-foreground"
                       )}>
                         {Math.round(progressPercent)}%
