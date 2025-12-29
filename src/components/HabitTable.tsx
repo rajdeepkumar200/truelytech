@@ -108,28 +108,32 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
   };
 
   return (
-    <div className="min-w-[560px] sm:min-w-0">
-      {/* Table Header */}
-      <div className="grid grid-cols-[16px_minmax(60px,1fr)_repeat(7,24px)_40px] sm:grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-0.5 sm:gap-1 px-1 sm:px-2 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
-        <div></div>
-        <div>Habit</div>
-        {days.map((day, index) => (
-          <div 
-            key={day} 
-            className={cn(
-              "text-center font-medium",
-              index === currentDayIndex && "text-accent font-semibold"
-            )}
-          >
-            {day}
-          </div>
-        ))}
-        <div className="text-center">%</div>
-      </div>
-
-      {/* Habit Rows - Drag and Drop disabled on mobile to prevent crashes */}
+    <div className="sm:min-w-0">
+      {/* Mobile: Fixed habit name + scrollable days */}
       {isMobile ? (
         <div className="space-y-0.5">
+          {/* Header */}
+          <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
+            <div className="w-[120px] flex-shrink-0 pl-2">Habit</div>
+            <div className="flex-1 overflow-x-auto touch-pan-x">
+              <div className="flex gap-3 min-w-max px-2">
+                {days.map((day, index) => (
+                  <div 
+                    key={day} 
+                    className={cn(
+                      "w-8 text-center font-medium",
+                      index === currentDayIndex && "text-accent font-semibold"
+                    )}
+                  >
+                    {day}
+                  </div>
+                ))}
+                <div className="w-10 text-center">%</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Habit Rows */}
           {habits.map((habit) => {
             const activeDays = habit.activeDays || Array(7).fill(true);
             const activeDaysCount = activeDays.filter(Boolean).length;
@@ -140,15 +144,12 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
             return (
               <div
                 key={habit.id}
-                className="grid grid-cols-[16px_minmax(60px,1fr)_repeat(7,24px)_40px] gap-0.5 px-1 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors touch-manipulation"
+                className="flex items-center py-2 group hover:bg-muted/40 rounded-lg transition-colors touch-manipulation"
               >
-                {/* Empty space for drag handle on mobile */}
-                <div></div>
-
-                {/* Habit Name */}
-                <div className="flex items-center gap-1.5 min-w-0">
+                {/* Fixed Habit Name */}
+                <div className="w-[120px] flex-shrink-0 flex items-center gap-1.5 min-w-0 pl-2">
                   <span className="text-sm">{habit.icon}</span>
-                  <span className="text-xs text-foreground truncate">{habit.name}</span>
+                  <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
                   
                   {streak > 0 && (
                     <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
@@ -159,56 +160,78 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
 
                   <button
                     onClick={() => setDeleteConfirmId(habit.id)}
-                    className="p-0.5 hover:bg-destructive/10 rounded ml-auto flex-shrink-0"
+                    className="p-0.5 hover:bg-destructive/10 rounded flex-shrink-0"
                   >
                     <Trash2 className="w-3 h-3 text-destructive" />
                   </button>
                 </div>
 
-                {/* Day Checkboxes */}
-                {habit.completedDays.map((isComplete, dayIndex) => {
-                  const isCurrentDay = dayIndex === currentDayIndex;
-                  const isFutureDay = dayIndex > currentDayIndex;
+                {/* Scrollable Days */}
+                <div className="flex-1 overflow-x-auto touch-pan-x">
+                  <div className="flex gap-3 min-w-max px-2">
+                    {habit.completedDays.map((isComplete, dayIndex) => {
+                      const isCurrentDay = dayIndex === currentDayIndex;
+                      const isFutureDay = dayIndex > currentDayIndex;
 
-                  return (
-                    <div key={dayIndex} className="flex items-center justify-center touch-manipulation">
-                      {activeDays[dayIndex] ? (
-                        <Checkbox
-                          checked={isComplete}
-                          onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
-                          disabled={isFutureDay}
-                          className={cn(
-                            "w-4 h-4 border-2 transition-all touch-manipulation",
-                            isComplete 
-                              ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
-                              : "border-border",
-                            !isCurrentDay && !isComplete && "opacity-40",
-                            isFutureDay && "opacity-20 cursor-not-allowed",
-                            isCurrentDay && !isComplete && "border-accent ring-1 ring-accent/30"
+                      return (
+                        <div key={dayIndex} className="w-8 flex items-center justify-center touch-manipulation">
+                          {activeDays[dayIndex] ? (
+                            <Checkbox
+                              checked={isComplete}
+                              onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
+                              disabled={isFutureDay}
+                              className={cn(
+                                "w-5 h-5 border-2 transition-all touch-manipulation",
+                                isComplete 
+                                  ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
+                                  : "border-border",
+                                !isCurrentDay && !isComplete && "opacity-40",
+                                isFutureDay && "opacity-20 cursor-not-allowed",
+                                isCurrentDay && !isComplete && "border-accent ring-1 ring-accent/30"
+                              )}
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded bg-muted/20" title="Not active" />
                           )}
-                        />
-                      ) : (
-                        <div className="w-5 h-5 rounded bg-muted/20" title="Not active" />
-                      )}
-                    </div>
-                  );
-                })}
+                        </div>
+                      );
+                    })}
 
-                {/* Progress */}
-                <div className="flex items-center justify-center">
-                  <span className={cn(
-                    "text-xs font-medium",
-                    progressPercent >= 80 ? "text-accent" : 
-                    progressPercent >= 50 ? "text-foreground" : "text-muted-foreground"
-                  )}>
-                    {Math.round(progressPercent)}%
-                  </span>
+                    {/* Progress */}
+                    <div className="w-10 flex items-center justify-center">
+                      <span className={cn(
+                        "text-xs font-medium",
+                        progressPercent >= 80 ? "text-accent" : 
+                        progressPercent >= 50 ? "text-foreground" : "text-muted-foreground"
+                      )}>
+                        {Math.round(progressPercent)}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
+        <>
+        {/* Desktop: Table Header */}
+        <div className="grid grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-1 px-2 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
+          <div></div>
+          <div>Habit</div>
+          {days.map((day, index) => (
+            <div 
+              key={day} 
+              className={cn(
+                "text-center font-medium",
+                index === currentDayIndex && "text-accent font-semibold"
+              )}
+            >
+              {day}
+            </div>
+          ))}
+          <div className="text-center">%</div>
+        </div>
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="habits">
             {(provided) => (
@@ -383,6 +406,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
             )}
           </Droppable>
         </DragDropContext>
+        </>
       )}
 
       {/* Delete Confirmation Dialog */}
