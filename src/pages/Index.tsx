@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
+import HabitStatistics from '@/components/HabitStatistics';
 import AddHabitRow from '@/components/AddHabitRow';
 import DailySchedule from '@/components/DailySchedule';
 import MotivationModal from '@/components/MotivationModal';
@@ -16,6 +17,7 @@ interface Habit {
   icon: string;
   completedDays: boolean[];
   activeDays: boolean[];
+  category?: string;
 }
 
 interface ScheduleItem {
@@ -118,6 +120,10 @@ const Index = () => {
     setHabits(prev => prev.filter(habit => habit.id !== habitId));
   };
 
+  const handleReorderHabits = (reorderedHabits: Habit[]) => {
+    setHabits(reorderedHabits);
+  };
+
   const handleUpdateActiveDays = (habitId: string, activeDays: boolean[]) => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
@@ -212,6 +218,9 @@ const Index = () => {
 
             {/* Right Column - Habit Tracker */}
             <div className="space-y-4 animate-fade-in">
+              {/* Habit Statistics */}
+              <HabitStatistics habits={habits} />
+
               {/* Habit Table */}
               <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-4">
                 <HabitTable
@@ -219,6 +228,7 @@ const Index = () => {
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onUpdateActiveDays={handleUpdateActiveDays}
+                  onReorder={handleReorderHabits}
                 />
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
