@@ -22,14 +22,10 @@ const MotivationModal = () => {
   const [quote, setQuote] = useState(quotes[0]);
 
   useEffect(() => {
-    // Check if we should show the modal (once per session)
-    const lastShown = sessionStorage.getItem('motivation-shown');
-    if (!lastShown) {
-      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-      setQuote(randomQuote);
-      setIsOpen(true);
-      sessionStorage.setItem('motivation-shown', 'true');
-    }
+    // Show a new random quote every time the app starts
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    setQuote(randomQuote);
+    setIsOpen(true);
   }, []);
 
   if (!isOpen) return null;
