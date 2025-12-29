@@ -20,6 +20,7 @@ interface ScheduleItem {
   id: string;
   time: string;
   task: string;
+  emoji?: string;
 }
 
 const defaultHabits: Habit[] = [
@@ -38,12 +39,9 @@ const defaultHabits: Habit[] = [
 ];
 
 const defaultSchedule: ScheduleItem[] = [
-  { id: '1', time: '05:00', task: 'morning ritual' },
-  { id: '2', time: '06:00', task: '' },
-  { id: '3', time: '07:00', task: '' },
-  { id: '4', time: '09:00', task: 'cleaning ritual' },
-  { id: '5', time: '10:00', task: '' },
-  { id: '6', time: '11:00', task: 'prepare lunch' },
+  { id: '1', time: '05:00', task: 'morning ritual', emoji: '🌅' },
+  { id: '2', time: '09:00', task: 'cleaning ritual', emoji: '🧹' },
+  { id: '3', time: '11:00', task: 'prepare lunch', emoji: '🍳' },
 ];
 
 const Index = () => {
@@ -110,11 +108,12 @@ const Index = () => {
     }));
   };
 
-  const handleAddScheduleItem = (time: string, task: string) => {
+  const handleAddScheduleItem = (time: string, task: string, emoji: string) => {
     const newItem: ScheduleItem = {
       id: Date.now().toString(),
       time,
       task,
+      emoji,
     };
     setSchedule(prev => [...prev, newItem].sort((a, b) => a.time.localeCompare(b.time)));
   };
@@ -123,10 +122,10 @@ const Index = () => {
     setSchedule(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleEditScheduleItem = (id: string, time: string, task: string) => {
+  const handleEditScheduleItem = (id: string, time: string, task: string, emoji: string) => {
     setSchedule(prev => prev.map(item => {
       if (item.id === id) {
-        return { ...item, time, task };
+        return { ...item, time, task, emoji };
       }
       return item;
     }).sort((a, b) => a.time.localeCompare(b.time)));
@@ -138,46 +137,40 @@ const Index = () => {
       <NotificationPrompt />
       
       {/* Title */}
-      <header className="pt-8 pb-4 px-6">
+      <header className="pt-8 pb-6 px-6">
         <h1 className="font-display text-4xl md:text-5xl text-foreground text-center tracking-tight">
           Daily Habits
         </h1>
+        <p className="text-center text-muted-foreground text-sm mt-2">Build better routines, one day at a time</p>
       </header>
 
       {/* Main Content */}
       <main className="px-4 md:px-6 pb-12">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
             {/* Left Column - Clock & Schedule & Pomodoro */}
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Clock Widget */}
               <div className="flex justify-center lg:justify-start">
                 <ClockWidget />
               </div>
 
+              {/* Pomodoro Timer */}
+              <PomodoroTimer />
+
               {/* Daily Schedule */}
               <DailySchedule
-                items={schedule.filter(item => item.task)}
+                items={schedule}
                 onAddItem={handleAddScheduleItem}
                 onDeleteItem={handleDeleteScheduleItem}
                 onEditItem={handleEditScheduleItem}
               />
-
-              {/* Pomodoro Timer */}
-              <PomodoroTimer />
             </div>
 
             {/* Right Column - Habit Tracker */}
             <div className="space-y-4 animate-fade-in">
-              {/* Morning Ritual Section */}
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="text-sm">▼</span>
-                <span className="font-medium text-foreground">Morning Ritual</span>
-                <span className="text-xs">✦ ☁ ✦ ✿ ☀ ✿ ✦ ✦ ✿ ✿ ✦ ✦ ✦ ✿ ☀ ✿ ✦ ✦ ✿ ✿ ✦ ☁ ✦ ✿ ☁ ✦ ✿ ✿ ✦ ✦ ✿</span>
-              </div>
-
               {/* Habit Table */}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-4">
                 <HabitTable
                   habits={habits}
                   onToggleDay={handleToggleDay}

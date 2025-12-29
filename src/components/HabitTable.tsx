@@ -30,27 +30,18 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
 
   return (
-    <div className="bg-popover rounded-lg overflow-hidden">
+    <div className="overflow-hidden">
       {/* Table Header */}
-      <div className="grid grid-cols-[1fr_repeat(7,40px)_100px] md:grid-cols-[1fr_repeat(7,48px)_120px] gap-1 px-3 py-2 border-b border-border text-sm text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-medium">Aa</span>
-          <span>Habit</span>
-        </div>
+      <div className="grid grid-cols-[1fr_repeat(7,36px)_80px] md:grid-cols-[1fr_repeat(7,44px)_100px] gap-1 px-2 py-3 text-xs text-muted-foreground uppercase tracking-wide">
+        <div>Habit</div>
         {days.map((day) => (
-          <div key={day} className="flex items-center justify-center gap-1">
-            <Checkbox className="w-3 h-3 opacity-50" checked disabled />
-            <span className="text-xs">{day}</span>
-          </div>
+          <div key={day} className="text-center font-medium">{day}</div>
         ))}
-        <div className="flex items-center gap-1 text-habit-progress">
-          <span>♥</span>
-          <span className="text-xs">Weekly Progress</span>
-        </div>
+        <div className="text-center">Progress</div>
       </div>
 
       {/* Habit Rows */}
-      <div className="divide-y divide-border">
+      <div className="space-y-1">
         {habits.map((habit) => {
           const activeDays = habit.activeDays || Array(7).fill(true);
           const activeDaysCount = activeDays.filter(Boolean).length;
@@ -60,7 +51,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
           return (
             <div
               key={habit.id}
-              className="grid grid-cols-[1fr_repeat(7,40px)_100px] md:grid-cols-[1fr_repeat(7,48px)_120px] gap-1 px-3 py-2 items-center group hover:bg-muted/30 transition-colors"
+              className="grid grid-cols-[1fr_repeat(7,36px)_80px] md:grid-cols-[1fr_repeat(7,44px)_100px] gap-1 px-2 py-2.5 items-center group hover:bg-muted/40 rounded-xl transition-colors"
             >
               {/* Habit Name */}
               <div className="flex items-center gap-2 min-w-0">
@@ -132,13 +123,14 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
               ))}
 
               {/* Progress Bar */}
-              <div className="flex items-center px-2">
-                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-habit-progress rounded-full transition-all duration-500"
+                    className="h-full bg-accent rounded-full transition-all duration-500"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
+                <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(progressPercent)}%</span>
               </div>
             </div>
           );
