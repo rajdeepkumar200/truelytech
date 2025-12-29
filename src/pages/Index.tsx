@@ -217,25 +217,48 @@ const Index = () => {
         <ThemeToggle />
       </div>
       
-      {/* Title */}
-      <header className="pt-8 pb-6 px-6">
-        <h1 className="font-display text-4xl md:text-5xl text-foreground text-center tracking-tight">
-          Daily Habits
-        </h1>
-        <p className="text-center text-muted-foreground text-sm mt-2">Build better routines, one day at a time</p>
+      {/* Title - with compact clock on mobile */}
+      <header className="pt-8 pb-4 px-4 sm:px-6">
+        <div className="flex items-center justify-center gap-3 lg:flex-col lg:gap-0">
+          <div className="lg:hidden">
+            <ClockWidget compact />
+          </div>
+          <div className="text-left lg:text-center">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-foreground tracking-tight">
+              Daily Habits
+            </h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1">Build better routines, one day at a time</p>
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
       <main className="px-3 sm:px-4 md:px-6 pb-12">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 lg:gap-8">
-            
-            {/* Mobile: Clock at top */}
-            <div className="lg:hidden flex justify-center">
-              <ClockWidget />
+
+            {/* Mobile: Today's Plan & Reminders - compact cards on top */}
+            <div className="lg:hidden">
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="bg-popover/60 backdrop-blur-sm rounded-xl border border-border/30 p-2 max-h-32 overflow-hidden">
+                  <DailySchedule
+                    items={schedule}
+                    onAddItem={handleAddScheduleItem}
+                    onDeleteItem={handleDeleteScheduleItem}
+                    onEditItem={handleEditScheduleItem}
+                  />
+                </div>
+                <div className="bg-popover/60 backdrop-blur-sm rounded-xl border border-border/30 p-2 max-h-32 overflow-hidden">
+                  <Reminders
+                    reminders={reminders}
+                    onAdd={handleAddReminder}
+                    onDelete={handleDeleteReminder}
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Mobile: Habit Table (2nd position) */}
+            {/* Mobile: Habit Table (main section) */}
             <div className="lg:hidden space-y-4 animate-fade-in">
               <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-2 sm:p-4">
                 <HabitTable
@@ -250,28 +273,9 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Mobile: Stats (3rd position) */}
+            {/* Mobile: Stats */}
             <div className="lg:hidden">
               <HabitStatistics habits={habits} />
-            </div>
-
-            {/* Mobile: Today's Plan & Reminders side by side */}
-            <div className="lg:hidden grid grid-cols-2 gap-3">
-              <div className="space-y-3">
-                <DailySchedule
-                  items={schedule}
-                  onAddItem={handleAddScheduleItem}
-                  onDeleteItem={handleDeleteScheduleItem}
-                  onEditItem={handleEditScheduleItem}
-                />
-              </div>
-              <div className="space-y-3">
-                <Reminders
-                  reminders={reminders}
-                  onAdd={handleAddReminder}
-                  onDelete={handleDeleteReminder}
-                />
-              </div>
             </div>
 
             {/* Mobile: Goals, Pomodoro, Settings */}
