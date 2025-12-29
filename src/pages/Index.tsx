@@ -237,30 +237,28 @@ const Index = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 lg:gap-8">
 
-            {/* Mobile: Today's Plan & Reminders - compact cards on top */}
-            <div className="lg:hidden">
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="bg-popover/60 backdrop-blur-sm rounded-xl border border-border/30 p-2 max-h-32 overflow-hidden">
-                  <DailySchedule
-                    items={schedule}
-                    onAddItem={handleAddScheduleItem}
-                    onDeleteItem={handleDeleteScheduleItem}
-                    onEditItem={handleEditScheduleItem}
-                  />
-                </div>
-                <div className="bg-popover/60 backdrop-blur-sm rounded-xl border border-border/30 p-2 max-h-32 overflow-hidden">
-                  <Reminders
-                    reminders={reminders}
-                    onAdd={handleAddReminder}
-                    onDelete={handleDeleteReminder}
-                  />
-                </div>
+            {/* Mobile: Today's Plan & Reminders - beautiful compact cards */}
+            <div className="lg:hidden mb-4">
+              <div className="grid grid-cols-2 gap-3">
+                <DailySchedule
+                  items={schedule}
+                  onAddItem={handleAddScheduleItem}
+                  onDeleteItem={handleDeleteScheduleItem}
+                  onEditItem={handleEditScheduleItem}
+                  compact
+                />
+                <Reminders
+                  reminders={reminders}
+                  onAdd={handleAddReminder}
+                  onDelete={handleDeleteReminder}
+                  compact
+                />
               </div>
             </div>
 
             {/* Mobile: Habit Table (main section) */}
             <div className="lg:hidden space-y-4 animate-fade-in">
-              <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-2 sm:p-4">
+              <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
                 <HabitTable
                   habits={habits}
                   onToggleDay={handleToggleDay}
@@ -273,15 +271,19 @@ const Index = () => {
               </div>
             </div>
 
+            {/* Mobile: Pomodoro Timer */}
+            <div className="lg:hidden">
+              <PomodoroTimer />
+            </div>
+
             {/* Mobile: Stats */}
             <div className="lg:hidden">
               <HabitStatistics habits={habits} />
             </div>
 
-            {/* Mobile: Goals, Pomodoro, Settings */}
+            {/* Mobile: Goals & Settings */}
             <div className="lg:hidden space-y-4">
               <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
-              <PomodoroTimer />
               <NotificationSettings
                 preferences={notificationPrefs}
                 onUpdate={setNotificationPrefs}
