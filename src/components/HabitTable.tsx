@@ -1,4 +1,4 @@
-import { Trash2, Settings2 } from 'lucide-react';
+import { Trash2, Settings2, Flame } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -13,7 +13,8 @@ interface Habit {
   name: string;
   icon: string;
   completedDays: boolean[];
-  activeDays: boolean[]; // Which days the habit is active
+  activeDays: boolean[];
+  streak?: number;
 }
 
 interface HabitTableProps {
@@ -25,6 +26,21 @@ interface HabitTableProps {
 
 const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// Calculate streak from the end of the week backwards
+const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): number => {
+  let streak = 0;
+  // Start from the most recent day and count backwards
+  for (let i = completedDays.length - 1; i >= 0; i--) {
+    if (!activeDays[i]) continue; // Skip inactive days
+    if (completedDays[i]) {
+      streak++;
+    } else {
+      break; // Streak broken
+    }
+  }
+  return streak;
+};
 
 const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: HabitTableProps) => {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
@@ -47,6 +63,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
           const activeDaysCount = activeDays.filter(Boolean).length;
           const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
           const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
+          const streak = calculateStreak(habit.completedDays, activeDays);
 
           return (
             <div
@@ -57,6 +74,14 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-base">{habit.icon}</span>
                 <span className="text-sm text-foreground truncate">{habit.name}</span>
+                
+                {/* Streak Badge */}
+                {streak > 0 && (
+                  <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
+                    <Flame className="w-3 h-3 text-orange-500" />
+                    <span className="text-xs font-medium text-orange-500">{streak}</span>
+                  </div>
+                )}
                 
                 {/* Settings Popover */}
                 <Popover open={editingHabitId === habit.id} onOpenChange={(open) => setEditingHabitId(open ? habit.id : null)}>

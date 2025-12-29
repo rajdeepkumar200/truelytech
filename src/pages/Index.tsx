@@ -7,6 +7,8 @@ import DailySchedule from '@/components/DailySchedule';
 import MotivationModal from '@/components/MotivationModal';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import PomodoroTimer from '@/components/PomodoroTimer';
+import ThemeToggle from '@/components/ThemeToggle';
+import Reminders from '@/components/Reminders';
 
 interface Habit {
   id: string;
@@ -21,6 +23,14 @@ interface ScheduleItem {
   time: string;
   task: string;
   emoji?: string;
+}
+
+interface Reminder {
+  id: string;
+  day: string;
+  time: string;
+  name: string;
+  emoji: string;
 }
 
 const defaultHabits: Habit[] = [
@@ -49,7 +59,6 @@ const Index = () => {
     const saved = localStorage.getItem('habits-v3');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migrate old habits that don't have activeDays
       return parsed.map((h: any) => ({
         ...h,
         activeDays: h.activeDays || Array(7).fill(true)
@@ -63,6 +72,11 @@ const Index = () => {
     return saved ? JSON.parse(saved) : defaultSchedule;
   });
 
+  const [reminders, setReminders] = useState<Reminder[]>(() => {
+    const saved = localStorage.getItem('reminders');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const today = new Date();
 
   useEffect(() => {
@@ -72,6 +86,11 @@ const Index = () => {
   useEffect(() => {
     localStorage.setItem('schedule', JSON.stringify(schedule));
   }, [schedule]);
+
+  useEffect(() => {
+    localStorage.setItem('reminders', JSON.stringify(reminders));
+  }, [reminders]);
+
 
   const handleToggleDay = (habitId: string, dayIndex: number) => {
     setHabits(prev => prev.map(habit => {
@@ -131,10 +150,27 @@ const Index = () => {
     }).sort((a, b) => a.time.localeCompare(b.time)));
   };
 
+  const handleAddReminder = (reminder: Omit<Reminder, 'id'>) => {
+    const newReminder: Reminder = {
+      id: Date.now().toString(),
+      ...reminder,
+    };
+    setReminders(prev => [...prev, newReminder]);
+  };
+
+  const handleDeleteReminder = (id: string) => {
+    setReminders(prev => prev.filter(r => r.id !== id));
+  };
+
   return (
     <div className="min-h-screen bg-background pb-safe">
       <MotivationModal />
       <NotificationPrompt />
+      
+      {/* Theme Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       
       {/* Title */}
       <header className="pt-8 pb-6 px-6">
@@ -164,6 +200,13 @@ const Index = () => {
                 onAddItem={handleAddScheduleItem}
                 onDeleteItem={handleDeleteScheduleItem}
                 onEditItem={handleEditScheduleItem}
+              />
+
+              {/* Reminders */}
+              <Reminders
+                reminders={reminders}
+                onAdd={handleAddReminder}
+                onDelete={handleDeleteReminder}
               />
             </div>
 
