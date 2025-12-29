@@ -12,6 +12,10 @@ import NotificationSettings from '@/components/NotificationSettings';
 import PomodoroTimer from '@/components/PomodoroTimer';
 import ThemeToggle from '@/components/ThemeToggle';
 import Reminders from '@/components/Reminders';
+import UserMenu from '@/components/UserMenu';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDataSync } from '@/hooks/useDataSync';
 import { useNotifications, NotificationPreferences } from '@/hooks/useNotifications';
 
 interface Habit {
@@ -63,6 +67,15 @@ const defaultSchedule: ScheduleItem[] = [
 ];
 
 const Index = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { 
+    fetchHabits, saveHabits, 
+    fetchSchedule, saveSchedule, 
+    fetchReminders, saveReminders, 
+    fetchSettings, saveSettings,
+    migrateLocalData 
+  } = useDataSync();
+  
   const [habits, setHabits] = useState<Habit[]>(() => {
     const saved = localStorage.getItem('habits-v3');
     if (saved) {
@@ -99,26 +112,65 @@ const Index = () => {
     };
   });
 
+  const [dataLoaded, setDataLoaded] = useState(false);
   const today = new Date();
 
   // Initialize notifications
   const { notifyHabitComplete } = useNotifications(reminders, schedule, notificationPrefs);
 
+  // Load data from cloud when user logs in
+  useEffect(() => {
+    if (user && !dataLoaded) {
+      const loadCloudData = async () => {
+        // First try to migrate local data
+        await migrateLocalData();
+        
+        // Then fetch from cloud
+        const cloudHabits = await fetchHabits();
+        const cloudSchedule = await fetchSchedule();
+        const cloudReminders = await fetchReminders();
+        const cloudSettings = await fetchSettings();
+        
+        if (cloudHabits.length > 0) setHabits(cloudHabits);
+        if (cloudSchedule.length > 0) setSchedule(cloudSchedule);
+        if (cloudReminders.length > 0) setReminders(cloudReminders);
+        if (cloudSettings) setNotificationPrefs(cloudSettings);
+        
+        setDataLoaded(true);
+      };
+      
+      loadCloudData();
+    }
+  }, [user, dataLoaded, migrateLocalData, fetchHabits, fetchSchedule, fetchReminders, fetchSettings]);
+
+  // Save to local storage (for offline/non-logged in users)
   useEffect(() => {
     localStorage.setItem('habits-v3', JSON.stringify(habits));
-  }, [habits]);
+    if (user && dataLoaded) {
+      saveHabits(habits);
+    }
+  }, [habits, user, dataLoaded, saveHabits]);
 
   useEffect(() => {
     localStorage.setItem('schedule', JSON.stringify(schedule));
-  }, [schedule]);
+    if (user && dataLoaded) {
+      saveSchedule(schedule);
+    }
+  }, [schedule, user, dataLoaded, saveSchedule]);
 
   useEffect(() => {
     localStorage.setItem('reminders', JSON.stringify(reminders));
-  }, [reminders]);
+    if (user && dataLoaded) {
+      saveReminders(reminders);
+    }
+  }, [reminders, user, dataLoaded, saveReminders]);
 
   useEffect(() => {
     localStorage.setItem('notificationPrefs', JSON.stringify(notificationPrefs));
-  }, [notificationPrefs]);
+    if (user && dataLoaded) {
+      saveSettings(notificationPrefs);
+    }
+  }, [notificationPrefs, user, dataLoaded, saveSettings]);
 
 
   const handleToggleDay = useCallback((habitId: string, dayIndex: number) => {
@@ -229,8 +281,14 @@ const Index = () => {
       <MotivationModal />
       <NotificationPrompt />
       
-      {/* Theme Toggle */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* Top Controls */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        {!user && !authLoading && (
+          <div className="hidden sm:block">
+            <GoogleSignInButton />
+          </div>
+        )}
+        {user && <UserMenu />}
         <ThemeToggle />
       </div>
       
@@ -362,6 +420,16 @@ const Index = () => {
             </div>
           </div>
         </div>
+        
+        {/* Mobile: Sign in prompt for non-logged users */}
+        {!user && !authLoading && (
+          <div className="sm:hidden mt-6 p-4 bg-popover rounded-2xl border border-border/50">
+            <p className="text-sm text-muted-foreground mb-3 text-center">
+              Sign in to sync your habits across all devices
+            </p>
+            <GoogleSignInButton />
+          </div>
+        )}
       </main>
     </div>
   );

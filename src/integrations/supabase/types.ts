@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      habits: {
+        Row: {
+          active_days: boolean[]
+          category: string | null
+          completed_days: boolean[]
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          sort_order: number | null
+          updated_at: string
+          user_id: string
+          weekly_goal: number | null
+        }
+        Insert: {
+          active_days?: boolean[]
+          category?: string | null
+          completed_days?: boolean[]
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+          user_id: string
+          weekly_goal?: number | null
+        }
+        Update: {
+          active_days?: boolean[]
+          category?: string | null
+          completed_days?: boolean[]
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+          user_id?: string
+          weekly_goal?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reminders: {
+        Row: {
+          completed: boolean | null
+          created_at: string
+          day: string
+          emoji: string | null
+          id: string
+          name: string
+          time: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string
+          day: string
+          emoji?: string | null
+          id?: string
+          name: string
+          time: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string
+          day?: string
+          emoji?: string | null
+          id?: string
+          name?: string
+          time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      schedule_items: {
+        Row: {
+          completed: boolean | null
+          created_at: string
+          emoji: string | null
+          id: string
+          task: string
+          time: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          task: string
+          time: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          task?: string
+          time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          custom_reminders: boolean | null
+          daily_reminder: boolean | null
+          eye_blink_reminders: boolean | null
+          habit_completions: boolean | null
+          id: string
+          notification_enabled: boolean | null
+          reminder_time: number | null
+          schedule_reminders: boolean | null
+          updated_at: string
+          user_id: string
+          water_intake_reminders: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          custom_reminders?: boolean | null
+          daily_reminder?: boolean | null
+          eye_blink_reminders?: boolean | null
+          habit_completions?: boolean | null
+          id?: string
+          notification_enabled?: boolean | null
+          reminder_time?: number | null
+          schedule_reminders?: boolean | null
+          updated_at?: string
+          user_id: string
+          water_intake_reminders?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          custom_reminders?: boolean | null
+          daily_reminder?: boolean | null
+          eye_blink_reminders?: boolean | null
+          habit_completions?: boolean | null
+          id?: string
+          notification_enabled?: boolean | null
+          reminder_time?: number | null
+          schedule_reminders?: boolean | null
+          updated_at?: string
+          user_id?: string
+          water_intake_reminders?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
