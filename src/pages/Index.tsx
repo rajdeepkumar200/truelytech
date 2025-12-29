@@ -13,6 +13,7 @@ import PomodoroTimer from '@/components/PomodoroTimer';
 import ThemeToggle from '@/components/ThemeToggle';
 import Reminders from '@/components/Reminders';
 import UserMenu from '@/components/UserMenu';
+import { Button } from '@/components/ui/button';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
@@ -285,7 +286,9 @@ const Index = () => {
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
         {!user && !authLoading && (
           <div className="hidden sm:block">
-            <GoogleSignInButton />
+            <Button variant="outline" size="sm" onClick={() => window.location.href = '/auth'}>
+              Sign in
+            </Button>
           </div>
         )}
         {user && <UserMenu />}
@@ -427,7 +430,9 @@ const Index = () => {
             <p className="text-sm text-muted-foreground mb-3 text-center">
               Sign in to sync your habits across all devices
             </p>
-            <GoogleSignInButton />
+            <Button className="w-full" onClick={() => window.location.href = '/auth'}>
+              Sign in
+            </Button>
           </div>
         )}
       </main>
