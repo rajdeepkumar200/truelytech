@@ -52,8 +52,9 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
       {/* Habit Rows */}
       <div className="divide-y divide-border">
         {habits.map((habit) => {
-          const activeDaysCount = habit.activeDays.filter(Boolean).length;
-          const completedCount = habit.completedDays.filter((completed, i) => completed && habit.activeDays[i]).length;
+          const activeDays = habit.activeDays || Array(7).fill(true);
+          const activeDaysCount = activeDays.filter(Boolean).length;
+          const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
           const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
 
           return (
@@ -86,9 +87,9 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
                             className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/50 rounded px-1"
                           >
                             <Checkbox
-                              checked={habit.activeDays[index]}
+                              checked={activeDays[index]}
                               onCheckedChange={(checked) => {
-                                const newActiveDays = [...habit.activeDays];
+                                const newActiveDays = [...activeDays];
                                 newActiveDays[index] = !!checked;
                                 onUpdateActiveDays(habit.id, newActiveDays);
                               }}
@@ -113,7 +114,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays }: 
               {/* Day Checkboxes */}
               {habit.completedDays.map((isComplete, dayIndex) => (
                 <div key={dayIndex} className="flex items-center justify-center">
-                  {habit.activeDays[dayIndex] ? (
+                  {activeDays[dayIndex] ? (
                     <Checkbox
                       checked={isComplete}
                       onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
