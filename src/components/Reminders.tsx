@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Plus, Trash2, Bell, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Bell, ChevronDown, CheckCircle2, Clock, Eye, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmojiPicker from './EmojiPicker';
+import SwipeableItem from './SwipeableItem';
+import AppleTimePicker from './AppleTimePicker';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,19 +31,34 @@ interface RemindersProps {
   onDelete: (id: string) => void;
   onToggleComplete?: (id: string) => void;
   compact?: boolean;
+  eyeBlinkEnabled?: boolean;
+  waterIntakeEnabled?: boolean;
+  onToggleEyeBlink?: (enabled: boolean) => void;
+  onToggleWaterIntake?: (enabled: boolean) => void;
 }
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = false }: RemindersProps) => {
+const Reminders = ({ 
+  reminders, 
+  onAdd, 
+  onDelete, 
+  onToggleComplete, 
+  compact = false,
+  eyeBlinkEnabled = false,
+  waterIntakeEnabled = false,
+  onToggleEyeBlink,
+  onToggleWaterIntake,
+}: RemindersProps) => {
   const [isExpanded, setIsExpanded] = useState(!compact);
   const [isAdding, setIsAdding] = useState(false);
   const [newDay, setNewDay] = useState('Monday');
-  const [newTime, setNewTime] = useState('');
+  const [newTime, setNewTime] = useState('09:00');
   const [newName, setNewName] = useState('');
   const [newEmoji, setNewEmoji] = useState('🔔');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
 
   const handleAdd = () => {
     if (newTime && newName.trim()) {
@@ -50,7 +68,7 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
         name: newName.trim(),
         emoji: newEmoji,
       });
-      setNewTime('');
+      setNewTime('09:00');
       setNewName('');
       setNewEmoji('🔔');
       setIsAdding(false);
@@ -73,7 +91,7 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
   const pendingReminders = reminders.filter(r => !r.completed);
   const hasReminders = pendingReminders.length > 0;
 
-  // Compact version for mobile
+  // Compact version for mobile with swipe gestures
   if (compact) {
     return (
       <div className="bg-gradient-to-br from-accent/5 via-popover to-primary/5 rounded-2xl border border-border/50 overflow-hidden shadow-sm h-full">
@@ -93,25 +111,55 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
         
         {isExpanded && (
           <div className="px-3 pb-3 max-h-48 overflow-y-auto scrollbar-thin space-y-1">
-            {/* Pending reminders */}
+            {/* Quick toggles for eye blink and water intake */}
+            <div className="flex gap-2 py-2 border-b border-border/30 mb-2">
+              <button
+                onClick={() => onToggleEyeBlink?.(!eyeBlinkEnabled)}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors",
+                  eyeBlinkEnabled ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground"
+                )}
+              >
+                <Eye className="w-3 h-3" />
+                Blink
+              </button>
+              <button
+                onClick={() => onToggleWaterIntake?.(!waterIntakeEnabled)}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors",
+                  waterIntakeEnabled ? "bg-accent/20 text-accent" : "bg-muted/50 text-muted-foreground"
+                )}
+              >
+                <Droplets className="w-3 h-3" />
+                Water
+              </button>
+            </div>
+
+            {/* Pending reminders with swipe */}
             {pendingReminders.map((reminder) => (
-              <div key={reminder.id} className="flex items-center gap-2 py-1.5 text-xs group">
-                <button 
-                  onClick={() => onToggleComplete?.(reminder.id)}
-                  className="hover:scale-110 transition-transform"
-                  title="Mark as done"
-                >
-                  <span>{reminder.emoji}</span>
-                </button>
-                <span className="text-muted-foreground">{shortDays[daysOfWeek.indexOf(reminder.day)]}</span>
-                <span className="text-foreground truncate flex-1">{reminder.name}</span>
-                <button
-                  onClick={() => setDeleteConfirmId(reminder.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
-                >
-                  <Trash2 className="w-3 h-3 text-destructive" />
-                </button>
-              </div>
+              <SwipeableItem
+                key={reminder.id}
+                onComplete={() => onToggleComplete?.(reminder.id)}
+                onDelete={() => setDeleteConfirmId(reminder.id)}
+              >
+                <div className="flex items-center gap-2 py-1.5 px-2 text-xs group">
+                  <button 
+                    onClick={() => onToggleComplete?.(reminder.id)}
+                    className="hover:scale-110 transition-transform"
+                    title="Mark as done"
+                  >
+                    <span>{reminder.emoji}</span>
+                  </button>
+                  <span className="text-muted-foreground">{shortDays[daysOfWeek.indexOf(reminder.day)]}</span>
+                  <span className="text-foreground truncate flex-1">{reminder.name}</span>
+                  <button
+                    onClick={() => setDeleteConfirmId(reminder.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
+                  >
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </button>
+                </div>
+              </SwipeableItem>
             ))}
             
             {!hasReminders && reminders.filter(r => r.completed).length === 0 && (
@@ -144,15 +192,60 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
             )}
             
             {/* Add more button */}
-            <button
-              onClick={() => setIsAdding(true)}
-              className="flex items-center gap-1 text-xs text-accent hover:underline mt-2"
-            >
-              <Plus className="w-3 h-3" />
-              Add more
-            </button>
+            {isAdding ? (
+              <div className="space-y-2 pt-2 border-t border-border/30">
+                <div className="flex gap-2 items-center">
+                  <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
+                  <select
+                    value={newDay}
+                    onChange={(e) => setNewDay(e.target.value)}
+                    className="text-xs bg-muted/50 rounded-lg px-2 py-1 text-foreground"
+                  >
+                    {daysOfWeek.map(day => (
+                      <option key={day} value={day}>{shortDays[daysOfWeek.indexOf(day)]}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setTimePickerOpen(true)}
+                    className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded-lg text-xs text-foreground"
+                  >
+                    <Clock className="w-3 h-3" />
+                    {newTime}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Reminder name"
+                  className="w-full text-xs bg-muted/50 rounded-lg px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                />
+                <div className="flex gap-2">
+                  <button onClick={handleAdd} className="text-xs text-accent font-medium">Add</button>
+                  <button onClick={() => setIsAdding(false)} className="text-xs text-muted-foreground">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAdding(true)}
+                className="flex items-center gap-1 text-xs text-accent hover:underline mt-2"
+              >
+                <Plus className="w-3 h-3" />
+                Add more
+              </button>
+            )}
           </div>
         )}
+
+        {/* Time Picker */}
+        <AppleTimePicker
+          value={newTime}
+          onChange={setNewTime}
+          open={timePickerOpen}
+          onOpenChange={setTimePickerOpen}
+        />
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
@@ -203,6 +296,30 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
       {/* Content */}
       {isExpanded && (
         <div className="px-5 pb-5">
+          {/* Eye Blink & Water Intake Toggles */}
+          <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-xl mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-primary" />
+                <span className="text-sm text-foreground">Eye Blink Reminders</span>
+              </div>
+              <Switch
+                checked={eyeBlinkEnabled}
+                onCheckedChange={(checked) => onToggleEyeBlink?.(checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Droplets className="w-4 h-4 text-accent" />
+                <span className="text-sm text-foreground">Water Intake Reminders</span>
+              </div>
+              <Switch
+                checked={waterIntakeEnabled}
+                onCheckedChange={(checked) => onToggleWaterIntake?.(checked)}
+              />
+            </div>
+          </div>
+
           {/* Reminders List */}
           {hasReminders && (
             <div className="space-y-3 mb-3">
@@ -298,12 +415,13 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
                     <option key={day} value={day}>{day}</option>
                   ))}
                 </select>
-                <input
-                  type="time"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                  className="text-sm bg-background border border-border rounded-lg px-2 py-2 text-muted-foreground"
-                />
+                <button
+                  onClick={() => setTimePickerOpen(true)}
+                  className="flex items-center gap-1 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  {newTime}
+                </button>
               </div>
               <input
                 type="text"
@@ -324,7 +442,7 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
                 <button
                   onClick={() => {
                     setIsAdding(false);
-                    setNewTime('');
+                    setNewTime('09:00');
                     setNewName('');
                     setNewEmoji('🔔');
                   }}
@@ -346,6 +464,14 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
         </div>
       )}
     </div>
+
+      {/* Time Picker */}
+      <AppleTimePicker
+        value={newTime}
+        onChange={setNewTime}
+        open={timePickerOpen}
+        onOpenChange={setTimePickerOpen}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
