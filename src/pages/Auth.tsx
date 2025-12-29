@@ -193,6 +193,26 @@ const Auth = () => {
     </form>
   );
 
+  const handleResendCode = async () => {
+    setLoading(true);
+    const { error } = await signInWithOtp(email);
+    setLoading(false);
+    
+    if (error) {
+      toast({
+        title: 'Failed to resend code',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Code resent!',
+        description: 'Check your email for the new verification code.',
+      });
+      setOtpCode('');
+    }
+  };
+
   const renderOtpVerify = () => (
     <form onSubmit={handleOtpVerify} className="space-y-6">
       <div className="space-y-4">
@@ -224,16 +244,26 @@ const Auth = () => {
         {loading ? 'Verifying...' : 'Verify code'}
       </Button>
 
-      <button
-        type="button"
-        onClick={() => {
-          setMode('otp-request');
-          setOtpCode('');
-        }}
-        className="w-full text-sm text-muted-foreground hover:text-foreground"
-      >
-        Use a different email
-      </button>
+      <div className="flex flex-col items-center gap-2">
+        <button
+          type="button"
+          onClick={handleResendCode}
+          disabled={loading}
+          className="text-sm text-primary hover:underline font-medium disabled:opacity-50"
+        >
+          Resend code
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('otp-request');
+            setOtpCode('');
+          }}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Use a different email
+        </button>
+      </div>
     </form>
   );
 
