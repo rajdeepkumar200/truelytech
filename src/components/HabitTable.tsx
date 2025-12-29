@@ -23,6 +23,7 @@ import {
   Draggable,
   DropResult,
 } from '@hello-pangea/dnd';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Habit {
   id: string;
@@ -72,6 +73,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const currentDayIndex = getCurrentDayIndex();
   const goalOptions = [0, 3, 4, 5, 6, 7];
+  const isMobile = useIsMobile();
 
   const confirmDelete = () => {
     if (deleteConfirmId) {
@@ -125,182 +127,263 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
         <div className="text-center">%</div>
       </div>
 
-      {/* Habit Rows with Drag and Drop */}
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="habits">
-          {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-0.5">
-              {habits.map((habit, index) => {
-                const activeDays = habit.activeDays || Array(7).fill(true);
-                const activeDaysCount = activeDays.filter(Boolean).length;
-                const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
-                const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
-                const streak = calculateStreak(habit.completedDays, activeDays);
+      {/* Habit Rows - Drag and Drop disabled on mobile to prevent crashes */}
+      {isMobile ? (
+        <div className="space-y-0.5">
+          {habits.map((habit) => {
+            const activeDays = habit.activeDays || Array(7).fill(true);
+            const activeDaysCount = activeDays.filter(Boolean).length;
+            const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
+            const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
+            const streak = calculateStreak(habit.completedDays, activeDays);
 
-                return (
-                  <Draggable key={habit.id} draggableId={habit.id} index={index}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={cn(
-                          "grid grid-cols-[16px_minmax(60px,1fr)_repeat(7,24px)_40px] sm:grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-0.5 sm:gap-1 px-1 sm:px-2 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors",
-                          snapshot.isDragging && "bg-muted/60 shadow-lg"
-                        )}
-                      >
-                        {/* Drag Handle */}
-                        <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                          <GripVertical className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                        </div>
+            return (
+              <div
+                key={habit.id}
+                className="grid grid-cols-[16px_minmax(60px,1fr)_repeat(7,24px)_40px] gap-0.5 px-1 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors touch-manipulation"
+              >
+                {/* Empty space for drag handle on mobile */}
+                <div></div>
 
-                        {/* Habit Name */}
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-sm">{habit.icon}</span>
-                          <span className="text-xs text-foreground truncate">{habit.name}</span>
-                          
-                          {streak > 0 && (
-                            <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
-                              <Flame className="w-2.5 h-2.5 text-orange-500" />
-                              <span className="text-[10px] font-medium text-orange-500">{streak}</span>
-                            </div>
+                {/* Habit Name */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm">{habit.icon}</span>
+                  <span className="text-xs text-foreground truncate">{habit.name}</span>
+                  
+                  {streak > 0 && (
+                    <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
+                      <Flame className="w-2.5 h-2.5 text-orange-500" />
+                      <span className="text-[10px] font-medium text-orange-500">{streak}</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setDeleteConfirmId(habit.id)}
+                    className="p-0.5 hover:bg-destructive/10 rounded ml-auto flex-shrink-0"
+                  >
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </button>
+                </div>
+
+                {/* Day Checkboxes */}
+                {habit.completedDays.map((isComplete, dayIndex) => {
+                  const isCurrentDay = dayIndex === currentDayIndex;
+                  const isFutureDay = dayIndex > currentDayIndex;
+
+                  return (
+                    <div key={dayIndex} className="flex items-center justify-center touch-manipulation">
+                      {activeDays[dayIndex] ? (
+                        <Checkbox
+                          checked={isComplete}
+                          onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
+                          disabled={isFutureDay}
+                          className={cn(
+                            "w-4 h-4 border-2 transition-all touch-manipulation",
+                            isComplete 
+                              ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
+                              : "border-border",
+                            !isCurrentDay && !isComplete && "opacity-40",
+                            isFutureDay && "opacity-20 cursor-not-allowed",
+                            isCurrentDay && !isComplete && "border-accent ring-1 ring-accent/30"
                           )}
-                          
-                          {/* Settings Popover */}
-                          <Popover open={editingHabitId === habit.id} onOpenChange={(open) => setEditingHabitId(open ? habit.id : null)}>
-                            <PopoverTrigger asChild>
-                              <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-primary/10 rounded flex-shrink-0">
-                                <Settings2 className="w-3 h-3 text-primary" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-56 p-3" align="start">
-                              <div className="space-y-3">
-                                {/* Category Selection */}
-                                <div className="space-y-1">
-                                  <p className="text-xs font-medium text-foreground">Category</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {categories.map((cat) => (
-                                      <button
-                                        key={cat}
-                                        onClick={() => handleUpdateCategory(habit.id, cat)}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-full text-xs transition-colors",
-                                          habit.category === cat 
-                                            ? "bg-accent text-accent-foreground" 
-                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                        )}
-                                      >
-                                        {cat}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded bg-muted/20" title="Not active" />
+                      )}
+                    </div>
+                  );
+                })}
 
-                                {/* Weekly Goal */}
-                                <div className="space-y-1">
-                                  <p className="text-xs font-medium text-foreground">Weekly Goal</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {goalOptions.map((goal) => (
-                                      <button
-                                        key={goal}
-                                        onClick={() => onUpdateGoal(habit.id, goal)}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded-full text-xs transition-colors",
-                                          habit.weeklyGoal === goal 
-                                            ? "bg-accent text-accent-foreground" 
-                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                        )}
-                                      >
-                                        {goal === 0 ? 'None' : `${goal} days`}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
+                {/* Progress */}
+                <div className="flex items-center justify-center">
+                  <span className={cn(
+                    "text-xs font-medium",
+                    progressPercent >= 80 ? "text-accent" : 
+                    progressPercent >= 50 ? "text-foreground" : "text-muted-foreground"
+                  )}>
+                    {Math.round(progressPercent)}%
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="habits">
+            {(provided) => (
+              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-0.5">
+                {habits.map((habit, index) => {
+                  const activeDays = habit.activeDays || Array(7).fill(true);
+                  const activeDaysCount = activeDays.filter(Boolean).length;
+                  const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
+                  const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
+                  const streak = calculateStreak(habit.completedDays, activeDays);
 
-                                {/* Active Days */}
-                                <div className="space-y-1">
-                                  <p className="text-xs font-medium text-foreground">Active Days</p>
-                                  <div className="space-y-0.5">
-                                    {fullDays.map((dayName, idx) => (
-                                      <label
-                                        key={dayName}
-                                        className="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-muted/50 rounded px-1"
-                                      >
-                                        <Checkbox
-                                          checked={activeDays[idx]}
-                                          onCheckedChange={(checked) => {
-                                            const newActiveDays = [...activeDays];
-                                            newActiveDays[idx] = !!checked;
-                                            onUpdateActiveDays(habit.id, newActiveDays);
-                                          }}
-                                          className="w-3.5 h-3.5"
-                                        />
-                                        <span className="text-xs text-foreground">{dayName}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
+                  return (
+                    <Draggable key={habit.id} draggableId={habit.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={cn(
+                            "grid grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-1 px-2 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors",
+                            snapshot.isDragging && "bg-muted/60 shadow-lg"
+                          )}
+                        >
+                          {/* Drag Handle */}
+                          <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                            <GripVertical className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground" />
+                          </div>
+
+                          {/* Habit Name */}
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-sm">{habit.icon}</span>
+                            <span className="text-xs text-foreground truncate">{habit.name}</span>
+                            
+                            {streak > 0 && (
+                              <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
+                                <Flame className="w-2.5 h-2.5 text-orange-500" />
+                                <span className="text-[10px] font-medium text-orange-500">{streak}</span>
                               </div>
-                            </PopoverContent>
-                          </Popover>
+                            )}
+                            
+                            {/* Settings Popover */}
+                            <Popover open={editingHabitId === habit.id} onOpenChange={(open) => setEditingHabitId(open ? habit.id : null)}>
+                              <PopoverTrigger asChild>
+                                <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-primary/10 rounded flex-shrink-0">
+                                  <Settings2 className="w-3 h-3 text-primary" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 p-3" align="start">
+                                <div className="space-y-3">
+                                  {/* Category Selection */}
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-foreground">Category</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {categories.map((cat) => (
+                                        <button
+                                          key={cat}
+                                          onClick={() => handleUpdateCategory(habit.id, cat)}
+                                          className={cn(
+                                            "px-2 py-0.5 rounded-full text-xs transition-colors",
+                                            habit.category === cat 
+                                              ? "bg-accent text-accent-foreground" 
+                                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                          )}
+                                        >
+                                          {cat}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
 
-                          <button
-                            onClick={() => setDeleteConfirmId(habit.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded ml-auto flex-shrink-0"
-                          >
-                            <Trash2 className="w-3 h-3 text-destructive" />
-                          </button>
+                                  {/* Weekly Goal */}
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-foreground">Weekly Goal</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {goalOptions.map((goal) => (
+                                        <button
+                                          key={goal}
+                                          onClick={() => onUpdateGoal(habit.id, goal)}
+                                          className={cn(
+                                            "px-2 py-0.5 rounded-full text-xs transition-colors",
+                                            habit.weeklyGoal === goal 
+                                              ? "bg-accent text-accent-foreground" 
+                                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                          )}
+                                        >
+                                          {goal === 0 ? 'None' : `${goal} days`}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Active Days */}
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-foreground">Active Days</p>
+                                    <div className="space-y-0.5">
+                                      {fullDays.map((dayName, idx) => (
+                                        <label
+                                          key={dayName}
+                                          className="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-muted/50 rounded px-1"
+                                        >
+                                          <Checkbox
+                                            checked={activeDays[idx]}
+                                            onCheckedChange={(checked) => {
+                                              const newActiveDays = [...activeDays];
+                                              newActiveDays[idx] = !!checked;
+                                              onUpdateActiveDays(habit.id, newActiveDays);
+                                            }}
+                                            className="w-3.5 h-3.5"
+                                          />
+                                          <span className="text-xs text-foreground">{dayName}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+
+                            <button
+                              onClick={() => setDeleteConfirmId(habit.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded ml-auto flex-shrink-0"
+                            >
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </button>
+                          </div>
+
+                          {/* Day Checkboxes */}
+                          {habit.completedDays.map((isComplete, dayIndex) => {
+                            const isCurrentDay = dayIndex === currentDayIndex;
+                            const isFutureDay = dayIndex > currentDayIndex;
+
+                            return (
+                              <div key={dayIndex} className="flex items-center justify-center">
+                                {activeDays[dayIndex] ? (
+                                <Checkbox
+                                    checked={isComplete}
+                                    onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
+                                    disabled={isFutureDay}
+                                    className={cn(
+                                      "w-5 h-5 border-2 transition-all",
+                                      isComplete 
+                                        ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
+                                        : "border-border",
+                                      !isCurrentDay && !isComplete && "opacity-40",
+                                      isFutureDay && "opacity-20 cursor-not-allowed",
+                                      isCurrentDay && !isComplete && "border-accent ring-1 ring-accent/30"
+                                    )}
+                                  />
+                                ) : (
+                                  <div className="w-5 h-5 rounded bg-muted/20" title="Not active" />
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {/* Progress */}
+                          <div className="flex items-center justify-center">
+                            <span className={cn(
+                              "text-xs font-medium",
+                              progressPercent >= 80 ? "text-accent" : 
+                              progressPercent >= 50 ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              {Math.round(progressPercent)}%
+                            </span>
+                          </div>
                         </div>
-
-                        {/* Day Checkboxes */}
-                        {habit.completedDays.map((isComplete, dayIndex) => {
-                          const isCurrentDay = dayIndex === currentDayIndex;
-                          const isPastDay = dayIndex < currentDayIndex;
-                          const isFutureDay = dayIndex > currentDayIndex;
-
-                          return (
-                            <div key={dayIndex} className="flex items-center justify-center">
-                              {activeDays[dayIndex] ? (
-                              <Checkbox
-                                  checked={isComplete}
-                                  onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
-                                  disabled={isFutureDay}
-                                  className={cn(
-                                    "w-4 h-4 sm:w-5 sm:h-5 border-2 transition-all",
-                                    isComplete 
-                                      ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
-                                      : "border-border",
-                                    !isCurrentDay && !isComplete && "opacity-40",
-                                    isFutureDay && "opacity-20 cursor-not-allowed",
-                                    isCurrentDay && !isComplete && "border-accent ring-1 ring-accent/30"
-                                  )}
-                                />
-                              ) : (
-                                <div className="w-5 h-5 rounded bg-muted/20" title="Not active" />
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {/* Progress */}
-                        <div className="flex items-center justify-center">
-                          <span className={cn(
-                            "text-xs font-medium",
-                            progressPercent >= 80 ? "text-accent" : 
-                            progressPercent >= 50 ? "text-foreground" : "text-muted-foreground"
-                          )}>
-                            {Math.round(progressPercent)}%
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </Draggable>
-                );
-              })}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
