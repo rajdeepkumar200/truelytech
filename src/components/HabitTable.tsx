@@ -8,6 +8,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DragDropContext,
   Droppable,
   Draggable,
@@ -59,8 +69,16 @@ const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): numbe
 
 const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, onReorder, onUpdateGoal }: HabitTableProps) => {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const currentDayIndex = getCurrentDayIndex();
   const goalOptions = [0, 3, 4, 5, 6, 7];
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      onDeleteHabit(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
 
   // Group habits by category
   const groupedHabits = habits.reduce((acc, habit) => {
@@ -226,7 +244,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                           </Popover>
 
                           <button
-                            onClick={() => onDeleteHabit(habit.id)}
+                            onClick={() => setDeleteConfirmId(habit.id)}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded ml-auto flex-shrink-0"
                           >
                             <Trash2 className="w-3 h-3 text-destructive" />
@@ -284,6 +302,24 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
           )}
         </Droppable>
       </DragDropContext>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this habit?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this habit? All progress will be lost. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

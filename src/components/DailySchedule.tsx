@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, Plus, Trash2, Pencil, Check, X, Calendar, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Pencil, Check, X, Calendar, CheckCircle2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmojiPicker from './EmojiPicker';
+import SwipeableItem from './SwipeableItem';
+import AppleTimePicker from './AppleTimePicker';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +34,7 @@ interface DailyScheduleProps {
 
 const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleComplete, compact = false }: DailyScheduleProps) => {
   const [isExpanded, setIsExpanded] = useState(!compact);
-  const [newTime, setNewTime] = useState('');
+  const [newTime, setNewTime] = useState('09:00');
   const [newTask, setNewTask] = useState('');
   const [newEmoji, setNewEmoji] = useState('📌');
   const [isAdding, setIsAdding] = useState(false);
@@ -41,11 +43,13 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
   const [editTask, setEditTask] = useState('');
   const [editEmoji, setEditEmoji] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [editTimePickerOpen, setEditTimePickerOpen] = useState(false);
 
   const handleAdd = () => {
     if (newTime && newTask.trim()) {
       onAddItem(newTime, newTask.trim(), newEmoji);
-      setNewTime('');
+      setNewTime('09:00');
       setNewTask('');
       setNewEmoji('📌');
       setIsAdding(false);
@@ -86,7 +90,7 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
   const completedItems = items.filter(i => i.completed);
   const pendingItems = items.filter(i => !i.completed);
 
-  // Compact version for mobile
+  // Compact version for mobile with swipe gestures
   if (compact) {
     return (
       <div className="bg-gradient-to-br from-primary/5 via-popover to-accent/5 rounded-2xl border border-border/50 overflow-hidden shadow-sm h-full">
@@ -104,25 +108,31 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
         
         {isExpanded && (
           <div className="px-3 pb-3 max-h-48 overflow-y-auto scrollbar-thin space-y-1">
-            {/* Pending items */}
+            {/* Pending items with swipe */}
             {pendingItems.map((item) => (
-              <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs group">
-                <button 
-                  onClick={() => onToggleComplete?.(item.id)}
-                  className="hover:scale-110 transition-transform"
-                  title="Mark as done"
-                >
-                  <span>{item.emoji || '📌'}</span>
-                </button>
-                <span className="text-muted-foreground font-mono">{item.time}</span>
-                <span className="text-foreground truncate flex-1">{item.task}</span>
-                <button
-                  onClick={() => setDeleteConfirmId(item.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
-                >
-                  <Trash2 className="w-3 h-3 text-destructive" />
-                </button>
-              </div>
+              <SwipeableItem
+                key={item.id}
+                onComplete={() => onToggleComplete?.(item.id)}
+                onDelete={() => setDeleteConfirmId(item.id)}
+              >
+                <div className="flex items-center gap-2 py-1.5 px-2 text-xs group">
+                  <button 
+                    onClick={() => onToggleComplete?.(item.id)}
+                    className="hover:scale-110 transition-transform"
+                    title="Mark as done"
+                  >
+                    <span>{item.emoji || '📌'}</span>
+                  </button>
+                  <span className="text-muted-foreground font-mono">{item.time}</span>
+                  <span className="text-foreground truncate flex-1">{item.task}</span>
+                  <button
+                    onClick={() => setDeleteConfirmId(item.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
+                  >
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </button>
+                </div>
+              </SwipeableItem>
             ))}
             
             {pendingItems.length === 0 && completedItems.length === 0 && (
@@ -159,15 +169,51 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
             )}
             
             {/* Add more button */}
-            <button
-              onClick={() => setIsAdding(true)}
-              className="flex items-center gap-1 text-xs text-primary hover:underline mt-2"
-            >
-              <Plus className="w-3 h-3" />
-              Add more
-            </button>
+            {isAdding ? (
+              <div className="space-y-2 pt-2 border-t border-border/30">
+                <div className="flex gap-2 items-center">
+                  <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
+                  <button
+                    onClick={() => setTimePickerOpen(true)}
+                    className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded-lg text-xs text-foreground"
+                  >
+                    <Clock className="w-3 h-3" />
+                    {newTime}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={newTask}
+                  onChange={(e) => setNewTask(e.target.value)}
+                  placeholder="Task name"
+                  className="w-full text-xs bg-muted/50 rounded-lg px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                />
+                <div className="flex gap-2">
+                  <button onClick={handleAdd} className="text-xs text-primary font-medium">Add</button>
+                  <button onClick={() => setIsAdding(false)} className="text-xs text-muted-foreground">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAdding(true)}
+                className="flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+              >
+                <Plus className="w-3 h-3" />
+                Add more
+              </button>
+            )}
           </div>
         )}
+
+        {/* Time Picker */}
+        <AppleTimePicker
+          value={newTime}
+          onChange={setNewTime}
+          open={timePickerOpen}
+          onOpenChange={setTimePickerOpen}
+        />
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
@@ -224,12 +270,13 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
                 {editingId === item.id ? (
                   <div className="flex gap-2 items-center py-2 px-3 bg-muted/40 rounded-xl border border-border/50">
                     <EmojiPicker value={editEmoji} onChange={setEditEmoji} />
-                    <input
-                      type="time"
-                      value={editTime}
-                      onChange={(e) => setEditTime(e.target.value)}
-                      className="text-sm bg-transparent border-b border-border focus:border-primary outline-none text-muted-foreground w-20"
-                    />
+                    <button
+                      onClick={() => setEditTimePickerOpen(true)}
+                      className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded-lg text-sm text-foreground"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      {editTime}
+                    </button>
                     <input
                       type="text"
                       value={editTask}
@@ -317,12 +364,13 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
             {isAdding ? (
               <div className="flex gap-2 items-center py-2 px-3 bg-muted/40 rounded-xl border border-border/50">
                 <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
-                <input
-                  type="time"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                  className="text-sm bg-transparent border-b border-border focus:border-primary outline-none text-muted-foreground w-20"
-                />
+                <button
+                  onClick={() => setTimePickerOpen(true)}
+                  className="flex items-center gap-1 px-2 py-1 bg-muted/50 rounded-lg text-sm text-foreground hover:bg-muted/80 transition-colors"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  {newTime}
+                </button>
                 <input
                   type="text"
                   value={newTask}
@@ -341,7 +389,7 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
                 <button
                   onClick={() => {
                     setIsAdding(false);
-                    setNewTime('');
+                    setNewTime('09:00');
                     setNewTask('');
                     setNewEmoji('📌');
                   }}
@@ -363,6 +411,20 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
         </div>
       )}
     </div>
+
+      {/* Time Pickers */}
+      <AppleTimePicker
+        value={newTime}
+        onChange={setNewTime}
+        open={timePickerOpen}
+        onOpenChange={setTimePickerOpen}
+      />
+      <AppleTimePicker
+        value={editTime}
+        onChange={setEditTime}
+        open={editTimePickerOpen}
+        onOpenChange={setEditTimePickerOpen}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
