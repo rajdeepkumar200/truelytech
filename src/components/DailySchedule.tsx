@@ -103,25 +103,62 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
         </button>
         
         {isExpanded && (
-          <div className="px-3 pb-3 max-h-32 overflow-y-auto scrollbar-thin">
-            {pendingItems.slice(0, 3).map((item) => (
+          <div className="px-3 pb-3 max-h-48 overflow-y-auto scrollbar-thin space-y-1">
+            {/* Pending items */}
+            {pendingItems.map((item) => (
               <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs group">
                 <button 
                   onClick={() => onToggleComplete?.(item.id)}
                   className="hover:scale-110 transition-transform"
+                  title="Mark as done"
                 >
                   <span>{item.emoji || '📌'}</span>
                 </button>
                 <span className="text-muted-foreground font-mono">{item.time}</span>
                 <span className="text-foreground truncate flex-1">{item.task}</span>
+                <button
+                  onClick={() => setDeleteConfirmId(item.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
+                >
+                  <Trash2 className="w-3 h-3 text-destructive" />
+                </button>
               </div>
             ))}
-            {pendingItems.length > 3 && (
-              <p className="text-xs text-muted-foreground">+{pendingItems.length - 3} more</p>
+            
+            {pendingItems.length === 0 && completedItems.length === 0 && (
+              <p className="text-xs text-muted-foreground italic py-1">No tasks yet</p>
             )}
-            {pendingItems.length === 0 && (
+            
+            {pendingItems.length === 0 && completedItems.length > 0 && (
               <p className="text-xs text-muted-foreground italic py-1">All done! 🎉</p>
             )}
+
+            {/* Completed items */}
+            {completedItems.length > 0 && (
+              <div className="pt-2 mt-2 border-t border-border/30">
+                <p className="text-xs text-muted-foreground mb-1">Completed</p>
+                {completedItems.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 py-1 text-xs group">
+                    <CheckCircle2 className="w-3 h-3 text-accent" />
+                    <span className="text-muted-foreground line-through truncate flex-1">{item.task}</span>
+                    <button
+                      onClick={() => onToggleComplete?.(item.id)}
+                      className="text-[10px] text-primary hover:underline"
+                    >
+                      Undo
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(item.id)}
+                      className="p-1 hover:bg-destructive/10 rounded"
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Add more button */}
             <button
               onClick={() => setIsAdding(true)}
               className="flex items-center gap-1 text-xs text-primary hover:underline mt-2"
