@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
@@ -14,7 +15,6 @@ import ThemeToggle from '@/components/ThemeToggle';
 import Reminders from '@/components/Reminders';
 import UserMenu from '@/components/UserMenu';
 import { Button } from '@/components/ui/button';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
 import { useNotifications, NotificationPreferences } from '@/hooks/useNotifications';
@@ -68,6 +68,7 @@ const defaultSchedule: ScheduleItem[] = [
 ];
 
 const Index = () => {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { 
     fetchHabits, saveHabits, 
@@ -286,7 +287,7 @@ const Index = () => {
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
         {!user && !authLoading && (
           <div className="hidden sm:block">
-            <Button variant="outline" size="sm" onClick={() => window.location.href = '/auth'}>
+            <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
               Sign in
             </Button>
           </div>
@@ -430,7 +431,7 @@ const Index = () => {
             <p className="text-sm text-muted-foreground mb-3 text-center">
               Sign in to sync your habits across all devices
             </p>
-            <Button className="w-full" onClick={() => window.location.href = '/auth'}>
+            <Button className="w-full" onClick={() => navigate('/auth')}>
               Sign in
             </Button>
           </div>
