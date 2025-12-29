@@ -51,7 +51,7 @@ const Reminders = ({
   onToggleEyeBlink,
   onToggleWaterIntake,
 }: RemindersProps) => {
-  const [isExpanded, setIsExpanded] = useState(!compact);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [newDay, setNewDay] = useState('Monday');
   const [newTime, setNewTime] = useState('09:00');
@@ -230,10 +230,10 @@ const Reminders = ({
             ) : (
               <button
                 onClick={() => setIsAdding(true)}
-                className="flex items-center gap-1 text-xs text-accent hover:underline mt-2"
+                className="flex items-center justify-center w-6 h-6 rounded-full bg-accent/10 hover:bg-accent/20 text-accent transition-colors mt-2"
+                title="Add reminder"
               >
-                <Plus className="w-3 h-3" />
-                Add more
+                <Plus className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -455,10 +455,12 @@ const Reminders = ({
           ) : (
             <button
               onClick={() => setIsAdding(true)}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors py-2.5 px-3 w-full rounded-xl hover:bg-muted/30 border border-dashed border-border/50 hover:border-accent/30"
+              className="flex items-center justify-center gap-2 text-muted-foreground hover:text-accent transition-colors py-2.5 px-3 w-full rounded-xl hover:bg-muted/30 border border-dashed border-border/50 hover:border-accent/30"
+              title="Add reminder"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add reminder</span>
+              <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center">
+                <Plus className="w-4 h-4" />
+              </div>
             </button>
           )}
         </div>

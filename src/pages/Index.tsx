@@ -94,6 +94,8 @@ const Index = () => {
       dailyReminder: true,
       scheduleReminders: true,
       customReminders: true,
+      eyeBlinkReminders: false,
+      waterIntakeReminders: false,
     };
   });
 
@@ -267,6 +269,10 @@ const Index = () => {
                   onAdd={handleAddReminder}
                   onDelete={handleDeleteReminder}
                   onToggleComplete={handleToggleReminderComplete}
+                  eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
+                  waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
+                  onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
+                  onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
                   compact
                 />
               </div>
@@ -274,15 +280,17 @@ const Index = () => {
 
             {/* Mobile: Habit Table (main section) */}
             <div className="lg:hidden space-y-4 animate-fade-in">
-              <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
-                <HabitTable
-                  habits={habits}
-                  onToggleDay={handleToggleDay}
-                  onDeleteHabit={handleDeleteHabit}
-                  onUpdateActiveDays={handleUpdateActiveDays}
-                  onReorder={handleReorderHabits}
-                  onUpdateGoal={handleUpdateGoal}
-                />
+              <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
+                <div className="overflow-x-auto max-h-[50vh] overflow-y-auto scrollbar-thin">
+                  <HabitTable
+                    habits={habits}
+                    onToggleDay={handleToggleDay}
+                    onDeleteHabit={handleDeleteHabit}
+                    onUpdateActiveDays={handleUpdateActiveDays}
+                    onReorder={handleReorderHabits}
+                    onUpdateGoal={handleUpdateGoal}
+                  />
+                </div>
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
             </div>
@@ -324,6 +332,10 @@ const Index = () => {
                 onAdd={handleAddReminder}
                 onDelete={handleDeleteReminder}
                 onToggleComplete={handleToggleReminderComplete}
+                eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
+                waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
+                onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
+                onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
               />
               <NotificationSettings
                 preferences={notificationPrefs}

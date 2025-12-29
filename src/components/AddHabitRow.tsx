@@ -26,10 +26,12 @@ const AddHabitRow = ({ onAdd }: AddHabitRowProps) => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="w-full py-2 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors border-t border-border"
+        className="w-full py-2 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors border-t border-border"
+        title="New habit"
       >
-        <Plus className="w-4 h-4" />
-        <span>New habit</span>
+        <div className="w-7 h-7 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
+          <Plus className="w-4 h-4" />
+        </div>
       </button>
     );
   }

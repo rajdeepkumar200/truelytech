@@ -33,7 +33,7 @@ interface DailyScheduleProps {
 }
 
 const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleComplete, compact = false }: DailyScheduleProps) => {
-  const [isExpanded, setIsExpanded] = useState(!compact);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [newTime, setNewTime] = useState('09:00');
   const [newTask, setNewTask] = useState('');
   const [newEmoji, setNewEmoji] = useState('📌');
@@ -198,10 +198,10 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
             ) : (
               <button
                 onClick={() => setIsAdding(true)}
-                className="flex items-center gap-1 text-xs text-primary hover:underline mt-2"
+                className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 hover:bg-primary/20 text-primary transition-colors mt-2"
+                title="Add task"
               >
-                <Plus className="w-3 h-3" />
-                Add more
+                <Plus className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -401,10 +401,12 @@ const DailySchedule = ({ items, onAddItem, onDeleteItem, onEditItem, onToggleCom
             ) : (
               <button
                 onClick={() => setIsAdding(true)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors py-2.5 px-3 w-full rounded-xl hover:bg-muted/30 border border-dashed border-border/50 hover:border-primary/30"
+                className="flex items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-colors py-2.5 px-3 w-full rounded-xl hover:bg-muted/30 border border-dashed border-border/50 hover:border-primary/30"
+                title="Add task"
               >
-                <Plus className="w-4 h-4" />
-                <span>Add task</span>
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Plus className="w-4 h-4" />
+                </div>
               </button>
             )}
           </div>

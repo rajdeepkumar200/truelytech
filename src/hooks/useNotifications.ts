@@ -41,6 +41,8 @@ export interface NotificationPreferences {
   dailyReminder: boolean;
   scheduleReminders: boolean;
   customReminders: boolean;
+  eyeBlinkReminders?: boolean;
+  waterIntakeReminders?: boolean;
 }
 
 export const useNotifications = (
@@ -129,6 +131,36 @@ export const useNotifications = (
           );
         }
       });
+    }
+
+    // Eye blink reminders - every 20 minutes
+    if (preferences.eyeBlinkReminders) {
+      const minutes = now.getMinutes();
+      if (minutes % 20 === 0 && now.getSeconds() < 30) {
+        const blinkKey = `eyeblink-${now.getHours()}-${minutes}`;
+        if (!notifiedRef.current.has(blinkKey)) {
+          notifiedRef.current.add(blinkKey);
+          sendNotification(
+            '👁️ Eye Break!',
+            'Look away from the screen for 20 seconds. Blink slowly to rest your eyes.'
+          );
+        }
+      }
+    }
+
+    // Water intake reminders - every 30 minutes
+    if (preferences.waterIntakeReminders) {
+      const minutes = now.getMinutes();
+      if (minutes % 30 === 0 && now.getSeconds() < 30) {
+        const waterKey = `water-${now.getHours()}-${minutes}`;
+        if (!notifiedRef.current.has(waterKey)) {
+          notifiedRef.current.add(waterKey);
+          sendNotification(
+            '💧 Hydration Time!',
+            'Take a sip of water to stay hydrated and energized.'
+          );
+        }
+      }
     }
   }, [reminders, schedule, preferences, sendNotification]);
 
