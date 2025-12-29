@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Share, Plus, Smartphone, CheckCircle } from 'lucide-react';
+import { Download, Share, Plus, Smartphone, CheckCircle, Monitor, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,6 +12,7 @@ const Install = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,6 +24,10 @@ const Install = () => {
     // Check if iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(iOS);
+
+    // Check if mobile
+    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    setIsMobile(mobile);
 
     // Listen for install prompt
     const handler = (e: Event) => {
@@ -55,7 +60,11 @@ const Install = () => {
         {/* App Icon */}
         <div className="flex justify-center">
           <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-accent to-primary flex items-center justify-center shadow-xl">
-            <Smartphone className="w-12 h-12 text-accent-foreground" />
+            {isMobile ? (
+              <Smartphone className="w-12 h-12 text-accent-foreground" />
+            ) : (
+              <Monitor className="w-12 h-12 text-accent-foreground" />
+            )}
           </div>
         </div>
 
@@ -112,10 +121,38 @@ const Install = () => {
             <Download className="w-5 h-5" />
             Install App
           </Button>
+        ) : !isMobile ? (
+          <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6">
+            <p className="text-sm text-foreground font-medium">To install on Windows/macOS:</p>
+            <div className="space-y-4 text-left">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-accent">1</span>
+                </div>
+                <span className="text-sm text-foreground">Open in Chrome or Edge browser</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-accent">2</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-foreground">Click the</span>
+                  <Menu className="w-5 h-5 text-accent" />
+                  <span className="text-sm text-foreground">menu (⋮) or install icon in address bar</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-accent">3</span>
+                </div>
+                <span className="text-sm text-foreground">Select "Install Daily Habits" or "Install app"</span>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="space-y-4 bg-popover rounded-2xl border border-border/50 p-6">
             <p className="text-sm text-muted-foreground">
-              To install, open this page in your browser's menu and select "Add to Home Screen" or "Install App"
+              To install, open your browser menu and select "Add to Home Screen" or "Install App"
             </p>
           </div>
         )}
@@ -134,7 +171,7 @@ const Install = () => {
             </div>
             <div className="bg-popover rounded-xl p-3 border border-border/30">
               <p className="text-xs font-medium text-foreground">Quick Access</p>
-              <p className="text-xs text-muted-foreground">One tap from home</p>
+              <p className="text-xs text-muted-foreground">{isMobile ? 'One tap from home' : 'Launch from desktop'}</p>
             </div>
             <div className="bg-popover rounded-xl p-3 border border-border/30">
               <p className="text-xs font-medium text-foreground">Full Screen</p>
