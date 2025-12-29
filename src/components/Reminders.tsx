@@ -92,25 +92,58 @@ const Reminders = ({ reminders, onAdd, onDelete, onToggleComplete, compact = fal
         </button>
         
         {isExpanded && (
-          <div className="px-3 pb-3 max-h-32 overflow-y-auto scrollbar-thin">
-            {pendingReminders.slice(0, 3).map((reminder) => (
+          <div className="px-3 pb-3 max-h-48 overflow-y-auto scrollbar-thin space-y-1">
+            {/* Pending reminders */}
+            {pendingReminders.map((reminder) => (
               <div key={reminder.id} className="flex items-center gap-2 py-1.5 text-xs group">
                 <button 
                   onClick={() => onToggleComplete?.(reminder.id)}
                   className="hover:scale-110 transition-transform"
+                  title="Mark as done"
                 >
                   <span>{reminder.emoji}</span>
                 </button>
                 <span className="text-muted-foreground">{shortDays[daysOfWeek.indexOf(reminder.day)]}</span>
                 <span className="text-foreground truncate flex-1">{reminder.name}</span>
+                <button
+                  onClick={() => setDeleteConfirmId(reminder.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
+                >
+                  <Trash2 className="w-3 h-3 text-destructive" />
+                </button>
               </div>
             ))}
-            {pendingReminders.length > 3 && (
-              <p className="text-xs text-muted-foreground">+{pendingReminders.length - 3} more</p>
-            )}
-            {!hasReminders && (
+            
+            {!hasReminders && reminders.filter(r => r.completed).length === 0 && (
               <p className="text-xs text-muted-foreground italic py-1">No reminders</p>
             )}
+
+            {/* Completed reminders */}
+            {reminders.filter(r => r.completed).length > 0 && (
+              <div className="pt-2 mt-2 border-t border-border/30">
+                <p className="text-xs text-muted-foreground mb-1">Completed</p>
+                {reminders.filter(r => r.completed).map((reminder) => (
+                  <div key={reminder.id} className="flex items-center gap-2 py-1 text-xs group">
+                    <CheckCircle2 className="w-3 h-3 text-accent" />
+                    <span className="text-muted-foreground line-through truncate flex-1">{reminder.name}</span>
+                    <button
+                      onClick={() => onToggleComplete?.(reminder.id)}
+                      className="text-[10px] text-primary hover:underline"
+                    >
+                      Undo
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(reminder.id)}
+                      className="p-1 hover:bg-destructive/10 rounded"
+                    >
+                      <Trash2 className="w-3 h-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Add more button */}
             <button
               onClick={() => setIsAdding(true)}
               className="flex items-center gap-1 text-xs text-accent hover:underline mt-2"
