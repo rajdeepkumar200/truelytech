@@ -22,6 +22,7 @@ interface Habit {
   activeDays: boolean[];
   category?: string;
   streak?: number;
+  weeklyGoal?: number;
 }
 
 interface HabitTableProps {
@@ -30,6 +31,7 @@ interface HabitTableProps {
   onDeleteHabit: (habitId: string) => void;
   onUpdateActiveDays: (habitId: string, activeDays: boolean[]) => void;
   onReorder: (habits: Habit[]) => void;
+  onUpdateGoal: (habitId: string, goal: number) => void;
 }
 
 const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -55,9 +57,10 @@ const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): numbe
   return streak;
 };
 
-const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, onReorder }: HabitTableProps) => {
+const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, onReorder, onUpdateGoal }: HabitTableProps) => {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const currentDayIndex = getCurrentDayIndex();
+  const goalOptions = [0, 3, 4, 5, 6, 7];
 
   // Group habits by category
   const groupedHabits = habits.reduce((acc, habit) => {
@@ -169,6 +172,27 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                                         )}
                                       >
                                         {cat}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Weekly Goal */}
+                                <div className="space-y-1">
+                                  <p className="text-xs font-medium text-foreground">Weekly Goal</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {goalOptions.map((goal) => (
+                                      <button
+                                        key={goal}
+                                        onClick={() => onUpdateGoal(habit.id, goal)}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded-full text-xs transition-colors",
+                                          habit.weeklyGoal === goal 
+                                            ? "bg-accent text-accent-foreground" 
+                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                        )}
+                                      >
+                                        {goal === 0 ? 'None' : `${goal} days`}
                                       </button>
                                     ))}
                                   </div>
