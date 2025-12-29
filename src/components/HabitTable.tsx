@@ -90,7 +90,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
   return (
     <div className="overflow-hidden">
       {/* Table Header */}
-      <div className="grid grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-1 px-2 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
+      <div className="grid grid-cols-[16px_minmax(60px,1fr)_repeat(7,24px)_40px] sm:grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-0.5 sm:gap-1 px-1 sm:px-2 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
         <div></div>
         <div>Habit</div>
         {days.map((day, index) => (
@@ -126,7 +126,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         className={cn(
-                          "grid grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-1 px-2 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors",
+                          "grid grid-cols-[16px_minmax(60px,1fr)_repeat(7,24px)_40px] sm:grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-0.5 sm:gap-1 px-1 sm:px-2 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors",
                           snapshot.isDragging && "bg-muted/60 shadow-lg"
                         )}
                       >
@@ -246,7 +246,8 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                                   checked={isComplete}
                                   onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
                                   disabled={isFutureDay}
-                                  className={cn(
+                                                  className={cn(
+                                                    "w-4 h-4 sm:w-5 sm:h-5 border-2 transition-all",
                                     "w-5 h-5 border-2 transition-all",
                                     isComplete 
                                       ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 

@@ -226,50 +226,91 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="px-4 md:px-6 pb-12">
+      <main className="px-3 sm:px-4 md:px-6 pb-12">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
-            {/* Left Column - Clock & Schedule & Pomodoro */}
-            <div className="space-y-5">
-              {/* Clock Widget */}
-              <div className="flex justify-center lg:justify-start">
-                <ClockWidget />
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 lg:gap-8">
+            
+            {/* Mobile: Clock at top */}
+            <div className="lg:hidden flex justify-center">
+              <ClockWidget />
+            </div>
+
+            {/* Mobile: Habit Table (2nd position) */}
+            <div className="lg:hidden space-y-4 animate-fade-in">
+              <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-2 sm:p-4">
+                <HabitTable
+                  habits={habits}
+                  onToggleDay={handleToggleDay}
+                  onDeleteHabit={handleDeleteHabit}
+                  onUpdateActiveDays={handleUpdateActiveDays}
+                  onReorder={handleReorderHabits}
+                  onUpdateGoal={handleUpdateGoal}
+                />
+                <AddHabitRow onAdd={handleAddHabit} />
               </div>
+            </div>
 
-              {/* Pomodoro Timer */}
+            {/* Mobile: Stats (3rd position) */}
+            <div className="lg:hidden">
+              <HabitStatistics habits={habits} />
+            </div>
+
+            {/* Mobile: Today's Plan & Reminders side by side */}
+            <div className="lg:hidden grid grid-cols-2 gap-3">
+              <div className="space-y-3">
+                <DailySchedule
+                  items={schedule}
+                  onAddItem={handleAddScheduleItem}
+                  onDeleteItem={handleDeleteScheduleItem}
+                  onEditItem={handleEditScheduleItem}
+                />
+              </div>
+              <div className="space-y-3">
+                <Reminders
+                  reminders={reminders}
+                  onAdd={handleAddReminder}
+                  onDelete={handleDeleteReminder}
+                />
+              </div>
+            </div>
+
+            {/* Mobile: Goals, Pomodoro, Settings */}
+            <div className="lg:hidden space-y-4">
+              <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
               <PomodoroTimer />
-
-              {/* Daily Schedule */}
-              <DailySchedule
-                items={schedule}
-                onAddItem={handleAddScheduleItem}
-                onDeleteItem={handleDeleteScheduleItem}
-                onEditItem={handleEditScheduleItem}
-              />
-
-              {/* Reminders */}
-              <Reminders
-                reminders={reminders}
-                onAdd={handleAddReminder}
-                onDelete={handleDeleteReminder}
-              />
-
-              {/* Notification Settings */}
               <NotificationSettings
                 preferences={notificationPrefs}
                 onUpdate={setNotificationPrefs}
               />
             </div>
 
-            {/* Right Column - Habit Tracker */}
-            <div className="space-y-4 animate-fade-in">
-              {/* Habit Goals */}
+            {/* Desktop: Left Column */}
+            <div className="hidden lg:block space-y-5">
+              <div className="flex justify-start">
+                <ClockWidget />
+              </div>
+              <PomodoroTimer />
+              <DailySchedule
+                items={schedule}
+                onAddItem={handleAddScheduleItem}
+                onDeleteItem={handleDeleteScheduleItem}
+                onEditItem={handleEditScheduleItem}
+              />
+              <Reminders
+                reminders={reminders}
+                onAdd={handleAddReminder}
+                onDelete={handleDeleteReminder}
+              />
+              <NotificationSettings
+                preferences={notificationPrefs}
+                onUpdate={setNotificationPrefs}
+              />
+            </div>
+
+            {/* Desktop: Right Column */}
+            <div className="hidden lg:block space-y-4 animate-fade-in">
               <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
-
-              {/* Habit Statistics */}
               <HabitStatistics habits={habits} />
-
-              {/* Habit Table */}
               <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-4">
                 <HabitTable
                   habits={habits}
