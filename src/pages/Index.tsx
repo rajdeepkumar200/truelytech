@@ -14,6 +14,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import Reminders from '@/components/Reminders';
 import UserMenu from '@/components/UserMenu';
 import MobileInstallPrompt from '@/components/MobileInstallPrompt';
+import ReminderAlert from '@/components/ReminderAlert';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
@@ -118,11 +119,61 @@ const Index = () => {
   const [lastUserId, setLastUserId] = useState<string | null>(() => {
     return localStorage.getItem('lastUserId');
   });
+  const [reminderAlertType, setReminderAlertType] = useState<'eye' | 'water' | null>(null);
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const reminderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const today = new Date();
 
   // Initialize notifications
   const { notifyHabitComplete } = useNotifications(reminders, schedule, notificationPrefs);
+
+  // Visual reminder alerts for eye blink and water intake
+  useEffect(() => {
+    if (!notificationPrefs.eyeBlinkReminders && !notificationPrefs.waterIntakeReminders) {
+      if (reminderIntervalRef.current) {
+        clearInterval(reminderIntervalRef.current);
+      }
+      return;
+    }
+
+    const checkVisualReminders = () => {
+      const now = new Date();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
+
+      // Eye blink - every 20 minutes
+      if (notificationPrefs.eyeBlinkReminders && minutes % 20 === 0 && seconds < 5) {
+        setReminderAlertType('eye');
+        // Send notification if document is hidden (user not on screen)
+        if (document.hidden && Notification.permission === 'granted') {
+          new Notification('👁️ Eye Break!', {
+            body: 'Look away from the screen for 20 seconds.',
+            icon: '/pwa-192x192.png',
+          });
+        }
+      }
+
+      // Water intake - every 30 minutes
+      if (notificationPrefs.waterIntakeReminders && minutes % 30 === 0 && seconds < 5) {
+        setReminderAlertType('water');
+        // Send notification if document is hidden
+        if (document.hidden && Notification.permission === 'granted') {
+          new Notification('💧 Hydration Time!', {
+            body: 'Take a sip of water to stay hydrated.',
+            icon: '/pwa-192x192.png',
+          });
+        }
+      }
+    };
+
+    reminderIntervalRef.current = setInterval(checkVisualReminders, 5000);
+    
+    return () => {
+      if (reminderIntervalRef.current) {
+        clearInterval(reminderIntervalRef.current);
+      }
+    };
+  }, [notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders]);
 
   // Reset data when user changes (login/logout/switch accounts) - clear shared local storage
   useEffect(() => {
@@ -322,6 +373,15 @@ const Index = () => {
     }));
   };
 
+  const handleUpdateIcon = (habitId: string, icon: string) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        return { ...habit, icon };
+      }
+      return habit;
+    }));
+  };
+
   const handleAddScheduleItem = (time: string, task: string, emoji: string) => {
     const newItem: ScheduleItem = {
       id: Date.now().toString(),
@@ -374,6 +434,7 @@ const Index = () => {
       <MotivationModal />
       <NotificationPrompt />
       <MobileInstallPrompt />
+      <ReminderAlert type={reminderAlertType} onDismiss={() => setReminderAlertType(null)} />
       
       {/* Top Controls */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
@@ -417,6 +478,7 @@ const Index = () => {
                     onUpdateActiveDays={handleUpdateActiveDays}
                     onReorder={handleReorderHabits}
                     onUpdateGoal={handleUpdateGoal}
+                    onUpdateIcon={handleUpdateIcon}
                   />
                 </div>
                 <AddHabitRow onAdd={handleAddHabit} />
@@ -489,6 +551,7 @@ const Index = () => {
                   onUpdateActiveDays={handleUpdateActiveDays}
                   onReorder={handleReorderHabits}
                   onUpdateGoal={handleUpdateGoal}
+                  onUpdateIcon={handleUpdateIcon}
                 />
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
