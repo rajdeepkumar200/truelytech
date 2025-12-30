@@ -79,13 +79,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithOtp = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
+        emailRedirectTo: redirectUrl,
       },
     });
-    
+
     return { error: error as Error | null };
   };
 

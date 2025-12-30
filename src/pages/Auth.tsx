@@ -7,50 +7,87 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { ArrowLeft, Mail, Lock } from 'lucide-react';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const emailSchema = z.string().trim().email({ message: "Invalid email address" }).max(255);
 const passwordSchema = z.string().min(6, { message: "Password must be at least 6 characters" }).max(72);
 
-type AuthMode = 'login' | 'signup' | 'otp-request' | 'otp-verify' | 'forgot-password' | 'reset-verify' | 'new-password';
+type AuthMode = 'login' | 'signup' | 'otp-request' | 'forgot-password' | 'new-password';
 
 const RESEND_COOLDOWN = 60; // seconds
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<AuthMode>('otp-request');
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otpCode, setOtpCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [resendCooldown, setResendCooldown] = useState(0);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithOtp, verifyOtp } = useAuth();
+
+  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithOtp, resetPassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Handle URL params for password reset redirect
+  // Basic SEO for /auth
+  useEffect(() => {
+    document.title = 'Sign in | Habit Tracker';
+
+    const description = 'Sign in to your habit tracker to manage habits, reminders, and daily schedule.';
+
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'description');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', description);
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `${window.location.origin}/auth`;
+  }, []);
+
+  // Handle redirect back from password recovery links (and show backend error messages nicely)
   useEffect(() => {
     const modeParam = searchParams.get('mode');
-    if (modeParam === 'reset') {
-      // User came from password reset email - they can now login
+    const typeParam = searchParams.get('type');
+
+    const error = searchParams.get('error_description') ?? searchParams.get('error');
+    if (error) {
       toast({
-        title: 'Password reset successful',
-        description: 'You can now sign in with your new password.',
+        title: 'Authentication link error',
+        description: decodeURIComponent(error),
+        variant: 'destructive',
+      });
+    }
+
+    const isRecovery = typeParam === 'recovery' || modeParam === 'reset' || modeParam === 'recovery';
+    if (isRecovery) {
+      setMode('new-password');
+      toast({
+        title: 'Set a new password',
+        description: 'Enter your new password to finish resetting your account.',
       });
     }
   }, [searchParams, toast]);
 
-  // Redirect if already logged in
+  // Redirect if already logged in (except during recovery)
   useEffect(() => {
-    if (user) {
+    const modeParam = searchParams.get('mode');
+    const typeParam = searchParams.get('type');
+    const isRecovery = typeParam === 'recovery' || modeParam === 'reset' || modeParam === 'recovery';
+
+    if (user && !isRecovery && mode !== 'new-password') {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, navigate, searchParams, mode]);
 
   // Cleanup cooldown timer on unmount
   useEffect(() => {
@@ -106,75 +143,44 @@ const Auth = () => {
   const handleOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateEmail()) return;
-    
+
     setLoading(true);
     const { error } = await signInWithOtp(email);
     setLoading(false);
-    
-    if (error) {
-      toast({
-        title: 'Failed to send code',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Code sent!',
-        description: 'Check your email for the 6-digit verification code.',
-      });
-      setMode('otp-verify');
-      startResendCooldown();
-    }
-  };
 
-  const handleOtpVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length !== 6) {
-      toast({
-        title: 'Invalid code',
-        description: 'Please enter the 6-digit code from your email.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setLoading(true);
-    const { error } = await verifyOtp(email, otpCode);
-    setLoading(false);
-    
     if (error) {
       toast({
-        title: 'Verification failed',
+        title: 'Failed to send link',
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Welcome!',
-        description: 'You have successfully signed in.',
+        title: 'Link sent!',
+        description: 'Check your email for a sign-in link. Open it in the same browser.',
       });
+      startResendCooldown();
     }
   };
 
   const handleResendCode = async () => {
     if (resendCooldown > 0) return;
-    
+
     setLoading(true);
     const { error } = await signInWithOtp(email);
     setLoading(false);
-    
+
     if (error) {
       toast({
-        title: 'Failed to resend code',
+        title: 'Failed to resend link',
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Code resent!',
-        description: 'Check your email for the new 6-digit verification code.',
+        title: 'Link resent!',
+        description: 'Check your email for the newest sign-in link.',
       });
-      setOtpCode('');
       startResendCooldown();
     }
   };
@@ -223,77 +229,47 @@ const Auth = () => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateEmail()) return;
-    
-    setLoading(true);
-    // Use OTP for password reset instead of magic link
-    const { error } = await signInWithOtp(email);
-    setLoading(false);
-    
-    if (error) {
-      toast({
-        title: 'Failed to send reset code',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Code sent!',
-        description: 'Check your email for the 6-digit verification code.',
-      });
-      setMode('reset-verify');
-      startResendCooldown();
-    }
-  };
 
-  const handleResetVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length !== 6) {
-      toast({
-        title: 'Invalid code',
-        description: 'Please enter the 6-digit code from your email.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
     setLoading(true);
-    const { error } = await verifyOtp(email, otpCode);
+    const { error } = await resetPassword(email);
     setLoading(false);
-    
+
     if (error) {
       toast({
-        title: 'Verification failed',
+        title: 'Failed to send reset link',
         description: error.message,
         variant: 'destructive',
       });
     } else {
-      setMode('new-password');
-      setOtpCode('');
+      toast({
+        title: 'Reset link sent!',
+        description: 'Check your email for a password reset link.',
+      });
     }
   };
 
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const passwordResult = passwordSchema.safeParse(newPassword);
     if (!passwordResult.success) {
       setErrors({ password: passwordResult.error.errors[0].message });
       return;
     }
-    
+
     if (newPassword !== confirmPassword) {
       setErrors({ password: 'Passwords do not match' });
       return;
     }
-    
+
     setErrors({});
     setLoading(true);
-    
+
     const { supabase } = await import('@/integrations/supabase/client');
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    
+
     setLoading(false);
-    
+
     if (error) {
       toast({
         title: 'Failed to update password',
@@ -306,29 +282,6 @@ const Auth = () => {
         description: 'Your password has been successfully changed.',
       });
       navigate('/');
-    }
-  };
-
-  const handleResendResetCode = async () => {
-    if (resendCooldown > 0) return;
-    
-    setLoading(true);
-    const { error } = await signInWithOtp(email);
-    setLoading(false);
-    
-    if (error) {
-      toast({
-        title: 'Failed to resend code',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Code resent!',
-        description: 'Check your email for the new 6-digit verification code.',
-      });
-      setOtpCode('');
-      startResendCooldown();
     }
   };
 
@@ -367,68 +320,22 @@ const Auth = () => {
       </div>
 
       <Button type="submit" className="w-full h-11" disabled={loading}>
-        {loading ? 'Sending code...' : 'Send verification code'}
+        {loading ? 'Sending link...' : 'Send sign-in link'}
       </Button>
+
+      <button
+        type="button"
+        onClick={handleResendCode}
+        disabled={loading || resendCooldown > 0}
+        className="w-full text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend link'}
+      </button>
     </form>
   );
 
-  const renderOtpVerify = () => (
-    <form onSubmit={handleOtpVerify} className="space-y-6">
-      <div className="space-y-4">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-1">Code sent to</p>
-          <p className="font-medium">{email}</p>
-        </div>
-        
-        <div className="flex justify-center">
-          <InputOTP
-            maxLength={6}
-            value={otpCode}
-            onChange={setOtpCode}
-            disabled={loading}
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-      </div>
-
-      <Button type="submit" className="w-full h-11" disabled={loading || otpCode.length !== 6}>
-        {loading ? 'Verifying...' : 'Verify code'}
-      </Button>
-
-      <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={handleResendCode}
-          disabled={loading || resendCooldown > 0}
-          className="text-sm text-primary hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('otp-request');
-            setOtpCode('');
-            setResendCooldown(0);
-            if (cooldownRef.current) {
-              clearInterval(cooldownRef.current);
-            }
-          }}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          Use a different email
-        </button>
-      </div>
-    </form>
-  );
+  // Magic-link sign-in does not require entering a code in-app.
+  // Users will be signed in automatically after opening the email link.
 
   const renderPasswordAuth = () => (
     <form onSubmit={handleEmailAuth} className="space-y-4">
@@ -509,7 +416,7 @@ const Auth = () => {
       </div>
 
       <Button type="submit" className="w-full h-11" disabled={loading}>
-        {loading ? 'Sending code...' : 'Send verification code'}
+        {loading ? 'Sending link...' : 'Send reset link'}
       </Button>
 
       <button
@@ -522,63 +429,7 @@ const Auth = () => {
     </form>
   );
 
-  const renderResetVerify = () => (
-    <form onSubmit={handleResetVerify} className="space-y-6">
-      <div className="space-y-4">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-1">Code sent to</p>
-          <p className="font-medium">{email}</p>
-        </div>
-        
-        <div className="flex justify-center">
-          <InputOTP
-            maxLength={6}
-            value={otpCode}
-            onChange={setOtpCode}
-            disabled={loading}
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-      </div>
-
-      <Button type="submit" className="w-full h-11" disabled={loading || otpCode.length !== 6}>
-        {loading ? 'Verifying...' : 'Verify code'}
-      </Button>
-
-      <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={handleResendResetCode}
-          disabled={loading || resendCooldown > 0}
-          className="text-sm text-primary hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('forgot-password');
-            setOtpCode('');
-            setResendCooldown(0);
-            if (cooldownRef.current) {
-              clearInterval(cooldownRef.current);
-            }
-          }}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          Use a different email
-        </button>
-      </div>
-    </form>
-  );
+  // Password recovery uses an email link. After opening it, this page switches to "new-password" mode automatically.
 
   const renderNewPassword = () => (
     <form onSubmit={handleSetNewPassword} className="space-y-4">
@@ -625,14 +476,14 @@ const Auth = () => {
 
   const getHeaderText = () => {
     switch (mode) {
-      case 'otp-verify':
-        return 'Enter code';
+      case 'otp-request':
+        return 'Email link sign-in';
       case 'forgot-password':
         return 'Reset password';
-      case 'reset-verify':
-        return 'Enter code';
       case 'new-password':
         return 'New password';
+      case 'login':
+      case 'signup':
       default:
         return 'Welcome';
     }
@@ -640,18 +491,14 @@ const Auth = () => {
 
   const getSubheaderText = () => {
     switch (mode) {
-      case 'otp-verify':
-        return 'Enter the 6-digit code from your email';
       case 'otp-request':
-        return 'Sign in with a verification code sent to your email';
+        return 'We’ll email you a sign-in link';
       case 'login':
         return 'Sign in with your email and password';
       case 'signup':
         return 'Create an account with email and password';
       case 'forgot-password':
-        return 'Enter your email to receive a verification code';
-      case 'reset-verify':
-        return 'Enter the 6-digit code from your email';
+        return 'Enter your email to receive a password reset link';
       case 'new-password':
         return 'Create a new password for your account';
       default:
@@ -727,14 +574,12 @@ const Auth = () => {
 
         {/* Auth Form based on mode */}
         {mode === 'otp-request' && renderOtpRequest()}
-        {mode === 'otp-verify' && renderOtpVerify()}
         {(mode === 'login' || mode === 'signup') && renderPasswordAuth()}
         {mode === 'forgot-password' && renderForgotPassword()}
-        {mode === 'reset-verify' && renderResetVerify()}
         {mode === 'new-password' && renderNewPassword()}
 
         {/* Mode toggles */}
-        {mode !== 'otp-verify' && mode !== 'forgot-password' && mode !== 'reset-verify' && mode !== 'new-password' && (
+        {mode !== 'forgot-password' && mode !== 'new-password' && (
           <div className="space-y-3 text-center">
             {mode === 'otp-request' && (
               <p className="text-sm text-muted-foreground">
@@ -748,7 +593,7 @@ const Auth = () => {
                 </button>
               </p>
             )}
-            
+
             {mode === 'login' && (
               <>
                 <p className="text-sm text-muted-foreground">
@@ -768,12 +613,12 @@ const Auth = () => {
                     onClick={() => setMode('otp-request')}
                     className="text-primary hover:underline font-medium"
                   >
-                    sign in with email code
+                    sign in with email link
                   </button>
                 </p>
               </>
             )}
-            
+
             {mode === 'signup' && (
               <>
                 <p className="text-sm text-muted-foreground">
@@ -793,7 +638,7 @@ const Auth = () => {
                     onClick={() => setMode('otp-request')}
                     className="text-primary hover:underline font-medium"
                   >
-                    sign in with email code
+                    sign in with email link
                   </button>
                 </p>
               </>
