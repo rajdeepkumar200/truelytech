@@ -113,6 +113,7 @@ const Index = () => {
       eyeBlinkReminders: false,
       waterIntakeReminders: false,
       waterIntakeInterval: 30,
+      soundEnabled: true,
     };
   });
 
@@ -175,7 +176,7 @@ const Index = () => {
         clearInterval(reminderIntervalRef.current);
       }
     };
-  }, [notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders]);
+  }, [notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders, notificationPrefs.waterIntakeInterval]);
 
   // Reset data when user changes (login/logout/switch accounts) - clear shared local storage
   useEffect(() => {
@@ -272,18 +273,8 @@ const Index = () => {
     }
   }, [user, dataLoaded, authLoading, migrateLocalData, syncData]);
 
-  // Auto-sync every 5 seconds when user is logged in
-  useEffect(() => {
-    if (user && dataLoaded) {
-      syncIntervalRef.current = setInterval(syncData, 5000);
-    }
-    
-    return () => {
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current);
-      }
-    };
-  }, [user, dataLoaded, syncData]);
+  // Note: Removed auto-sync interval - data is synced on each change via save functions
+  // This prevents the checkbox flickering issue where old cloud data overwrites local changes
 
   // Save to local storage (for offline/non-logged in users)
   useEffect(() => {
@@ -436,7 +427,11 @@ const Index = () => {
       <MotivationModal />
       <NotificationPrompt />
       <MobileInstallPrompt />
-      <ReminderAlert type={reminderAlertType} onDismiss={() => setReminderAlertType(null)} />
+      <ReminderAlert 
+        type={reminderAlertType} 
+        onDismiss={() => setReminderAlertType(null)} 
+        soundEnabled={notificationPrefs.soundEnabled !== false}
+      />
       
       {/* Top Controls */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
@@ -506,9 +501,11 @@ const Index = () => {
                 eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
                 waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
+                soundEnabled={notificationPrefs.soundEnabled !== false}
                 onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
                 onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
+                onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
               />
             </div>
 
@@ -539,9 +536,11 @@ const Index = () => {
                 eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
                 waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
+                soundEnabled={notificationPrefs.soundEnabled !== false}
                 onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
                 onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
+                onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
               />
               <PomodoroTimer />
               <NotificationSettings

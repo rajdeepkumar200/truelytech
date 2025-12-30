@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Eye, Droplets, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { playReminderSound, resumeAudioContext } from '@/hooks/useSound';
 
 interface ReminderAlertProps {
   type: 'eye' | 'water' | null;
   onDismiss: () => void;
+  soundEnabled?: boolean;
 }
 
-const ReminderAlert = ({ type, onDismiss }: ReminderAlertProps) => {
+const ReminderAlert = ({ type, onDismiss, soundEnabled = true }: ReminderAlertProps) => {
   const [blinkCount, setBlinkCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -16,10 +18,16 @@ const ReminderAlert = ({ type, onDismiss }: ReminderAlertProps) => {
       setIsVisible(true);
       setBlinkCount(0);
       
+      // Play sound when reminder appears
+      if (soundEnabled) {
+        resumeAudioContext();
+        playReminderSound(type);
+      }
+      
       // Blink animation - 3 times
       const blinkInterval = setInterval(() => {
         setBlinkCount(prev => {
-          if (prev >= 5) { // 3 full blinks = 6 states (on/off/on/off/on/off)
+          if (prev >= 5) {
             clearInterval(blinkInterval);
             return prev;
           }
@@ -38,7 +46,7 @@ const ReminderAlert = ({ type, onDismiss }: ReminderAlertProps) => {
         clearTimeout(dismissTimeout);
       };
     }
-  }, [type, onDismiss]);
+  }, [type, onDismiss, soundEnabled]);
 
   if (!type) return null;
 
