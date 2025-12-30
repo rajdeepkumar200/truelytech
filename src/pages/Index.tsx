@@ -115,18 +115,56 @@ const Index = () => {
   });
 
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [lastUserId, setLastUserId] = useState<string | null>(null);
+  const [lastUserId, setLastUserId] = useState<string | null>(() => {
+    return localStorage.getItem('lastUserId');
+  });
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const today = new Date();
 
   // Initialize notifications
   const { notifyHabitComplete } = useNotifications(reminders, schedule, notificationPrefs);
 
-  // Reset dataLoaded when user changes (login/logout)
+  // Reset data when user changes (login/logout/switch accounts) - clear shared local storage
   useEffect(() => {
-    if (user?.id !== lastUserId) {
+    if (user?.id && user.id !== lastUserId) {
+      // User changed - clear local storage to prevent data leakage between accounts
+      localStorage.removeItem('habits-v3');
+      localStorage.removeItem('schedule');
+      localStorage.removeItem('reminders');
+      localStorage.removeItem('notificationPrefs');
+      
+      // Reset state to empty (will be populated from cloud)
+      setHabits([]);
+      setSchedule([]);
+      setReminders([]);
+      setNotificationPrefs({
+        enabled: true,
+        reminderTime: 5,
+        habitCompletions: true,
+        dailyReminder: true,
+        scheduleReminders: true,
+        customReminders: true,
+        eyeBlinkReminders: false,
+        waterIntakeReminders: false,
+      });
+      
+      // Store current user ID
+      localStorage.setItem('lastUserId', user.id);
+      setLastUserId(user.id);
       setDataLoaded(false);
-      setLastUserId(user?.id || null);
+    } else if (!user && lastUserId) {
+      // User logged out - clear everything
+      localStorage.removeItem('habits-v3');
+      localStorage.removeItem('schedule');
+      localStorage.removeItem('reminders');
+      localStorage.removeItem('notificationPrefs');
+      localStorage.removeItem('lastUserId');
+      
+      setHabits(defaultHabits);
+      setSchedule(defaultSchedule);
+      setReminders([]);
+      setLastUserId(null);
+      setDataLoaded(false);
     }
   }, [user?.id, lastUserId]);
 
