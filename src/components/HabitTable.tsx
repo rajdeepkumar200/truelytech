@@ -2,6 +2,7 @@ import { Trash2, Settings2, Flame, GripVertical } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { format } from 'date-fns';
 import {
   Popover,
   PopoverContent,
@@ -48,6 +49,15 @@ interface HabitTableProps {
 const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const categories = ['Morning', 'Afternoon', 'Evening', 'Health', 'Work', 'Personal'];
+
+// Get current date info
+const getCurrentDateInfo = () => {
+  const now = new Date();
+  return {
+    dayName: format(now, 'EEEE'),
+    dateStr: format(now, 'MMM d, yyyy')
+  };
+};
 
 // Get current day index (0 = Monday, 6 = Sunday)
 const getCurrentDayIndex = (): number => {
@@ -107,8 +117,18 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
     onReorder(updatedHabits);
   };
 
+  const { dayName, dateStr } = getCurrentDateInfo();
+
   return (
     <div className="sm:min-w-0">
+      {/* Date Header */}
+      <div className="flex items-center justify-between mb-3 px-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">{dayName}</span>
+          <span className="text-xs text-muted-foreground">{dateStr}</span>
+        </div>
+      </div>
+
       {/* Mobile: Fixed habit name + scrollable days */}
       {isMobile ? (
         <div className="flex">
@@ -189,24 +209,21 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                   <div className="flex gap-4 px-3">
                     {habit.completedDays.map((isComplete, dayIndex) => {
                       if (dayIndex === currentDayIndex) return null;
-                      const isFutureDay = dayIndex > currentDayIndex;
 
                       return (
                         <div key={dayIndex} className="w-8 flex items-center justify-center touch-manipulation">
                           {activeDays[dayIndex] ? (
-                            <Checkbox
-                              checked={isComplete}
-                              onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
-                              disabled={isFutureDay}
+                            <div
                               className={cn(
-                                "w-5 h-5 border-2 transition-all touch-manipulation",
+                                "w-5 h-5 rounded border-2 flex items-center justify-center",
                                 isComplete
-                                  ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
-                                  : "border-border",
-                                !isComplete && "opacity-40",
-                                isFutureDay && "opacity-20 cursor-not-allowed"
+                                  ? "bg-habit-checkbox border-habit-checkbox"
+                                  : "border-border opacity-40"
                               )}
-                            />
+                              title="Only today can be modified"
+                            >
+                              {isComplete && <span className="text-xs text-white">✓</span>}
+                            </div>
                           ) : (
                             <div className="w-5 h-5 rounded bg-muted/20" title="Not active" />
                           )}
@@ -375,25 +392,34 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                           {/* Day Checkboxes */}
                           {habit.completedDays.map((isComplete, dayIndex) => {
                             const isCurrentDay = dayIndex === currentDayIndex;
-                            const isFutureDay = dayIndex > currentDayIndex;
 
                             return (
                               <div key={dayIndex} className="flex items-center justify-center">
                                 {activeDays[dayIndex] ? (
-                                <Checkbox
-                                    checked={isComplete}
-                                    onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
-                                    disabled={isFutureDay}
-                                    className={cn(
-                                      "w-5 h-5 border-2 transition-all",
-                                      isComplete 
-                                        ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
-                                        : "border-border",
-                                      !isCurrentDay && !isComplete && "opacity-40",
-                                      isFutureDay && "opacity-20 cursor-not-allowed",
-                                      isCurrentDay && !isComplete && "border-accent ring-1 ring-accent/30"
-                                    )}
-                                  />
+                                  isCurrentDay ? (
+                                    <Checkbox
+                                      checked={isComplete}
+                                      onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
+                                      className={cn(
+                                        "w-5 h-5 border-2 transition-all",
+                                        isComplete 
+                                          ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox" 
+                                          : "border-accent ring-1 ring-accent/30"
+                                      )}
+                                    />
+                                  ) : (
+                                    <div
+                                      className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center",
+                                        isComplete
+                                          ? "bg-habit-checkbox border-habit-checkbox"
+                                          : "border-border opacity-40"
+                                      )}
+                                      title="Only today can be modified"
+                                    >
+                                      {isComplete && <span className="text-xs text-white">✓</span>}
+                                    </div>
+                                  )
                                 ) : (
                                   <div className="w-5 h-5 rounded bg-muted/20" title="Not active" />
                                 )}
