@@ -115,35 +115,60 @@ const Index = () => {
   });
 
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [lastUserId, setLastUserId] = useState<string | null>(null);
   const today = new Date();
 
   // Initialize notifications
   const { notifyHabitComplete } = useNotifications(reminders, schedule, notificationPrefs);
 
+  // Reset dataLoaded when user changes (login/logout)
+  useEffect(() => {
+    if (user?.id !== lastUserId) {
+      setDataLoaded(false);
+      setLastUserId(user?.id || null);
+    }
+  }, [user?.id, lastUserId]);
+
   // Load data from cloud when user logs in
   useEffect(() => {
-    if (user && !dataLoaded) {
+    if (user && !dataLoaded && !authLoading) {
       const loadCloudData = async () => {
-        // First try to migrate local data
-        await migrateLocalData();
-        
-        // Then fetch from cloud
-        const cloudHabits = await fetchHabits();
-        const cloudSchedule = await fetchSchedule();
-        const cloudReminders = await fetchReminders();
-        const cloudSettings = await fetchSettings();
-        
-        if (cloudHabits.length > 0) setHabits(cloudHabits);
-        if (cloudSchedule.length > 0) setSchedule(cloudSchedule);
-        if (cloudReminders.length > 0) setReminders(cloudReminders);
-        if (cloudSettings) setNotificationPrefs(cloudSettings);
-        
-        setDataLoaded(true);
+        try {
+          // First try to migrate local data
+          await migrateLocalData();
+          
+          // Then fetch from cloud
+          const [cloudHabits, cloudSchedule, cloudReminders, cloudSettings] = await Promise.all([
+            fetchHabits(),
+            fetchSchedule(),
+            fetchReminders(),
+            fetchSettings()
+          ]);
+          
+          // Always update from cloud data (even if empty - user might have cleared everything)
+          if (cloudHabits.length > 0) {
+            setHabits(cloudHabits);
+          }
+          if (cloudSchedule.length > 0) {
+            setSchedule(cloudSchedule);
+          }
+          if (cloudReminders.length > 0) {
+            setReminders(cloudReminders);
+          }
+          if (cloudSettings) {
+            setNotificationPrefs(cloudSettings);
+          }
+          
+          setDataLoaded(true);
+        } catch (error) {
+          console.error('Error loading cloud data:', error);
+          setDataLoaded(true); // Mark as loaded to prevent infinite retries
+        }
       };
       
       loadCloudData();
     }
-  }, [user, dataLoaded, migrateLocalData, fetchHabits, fetchSchedule, fetchReminders, fetchSettings]);
+  }, [user, dataLoaded, authLoading, migrateLocalData, fetchHabits, fetchSchedule, fetchReminders, fetchSettings]);
 
   // Save to local storage (for offline/non-logged in users)
   useEffect(() => {
