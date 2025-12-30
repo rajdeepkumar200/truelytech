@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
@@ -6,7 +6,6 @@ import HabitTable from '@/components/HabitTable';
 import HabitStatistics from '@/components/HabitStatistics';
 import HabitGoals from '@/components/HabitGoals';
 import AddHabitRow from '@/components/AddHabitRow';
-import DailySchedule from '@/components/DailySchedule';
 import MotivationModal from '@/components/MotivationModal';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import NotificationSettings from '@/components/NotificationSettings';
@@ -14,6 +13,7 @@ import PomodoroTimer from '@/components/PomodoroTimer';
 import ThemeToggle from '@/components/ThemeToggle';
 import Reminders from '@/components/Reminders';
 import UserMenu from '@/components/UserMenu';
+import MobileInstallPrompt from '@/components/MobileInstallPrompt';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
@@ -116,6 +116,7 @@ const Index = () => {
 
   const [dataLoaded, setDataLoaded] = useState(false);
   const [lastUserId, setLastUserId] = useState<string | null>(null);
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const today = new Date();
 
   // Initialize notifications
@@ -129,6 +130,35 @@ const Index = () => {
     }
   }, [user?.id, lastUserId]);
 
+  // Sync data function
+  const syncData = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const [cloudHabits, cloudSchedule, cloudReminders, cloudSettings] = await Promise.all([
+        fetchHabits(),
+        fetchSchedule(),
+        fetchReminders(),
+        fetchSettings()
+      ]);
+      
+      if (cloudHabits.length > 0) {
+        setHabits(cloudHabits);
+      }
+      if (cloudSchedule.length > 0) {
+        setSchedule(cloudSchedule);
+      }
+      if (cloudReminders.length > 0) {
+        setReminders(cloudReminders);
+      }
+      if (cloudSettings) {
+        setNotificationPrefs(cloudSettings);
+      }
+    } catch (error) {
+      console.error('Error syncing data:', error);
+    }
+  }, [user, fetchHabits, fetchSchedule, fetchReminders, fetchSettings]);
+
   // Load data from cloud when user logs in
   useEffect(() => {
     if (user && !dataLoaded && !authLoading) {
@@ -138,26 +168,7 @@ const Index = () => {
           await migrateLocalData();
           
           // Then fetch from cloud
-          const [cloudHabits, cloudSchedule, cloudReminders, cloudSettings] = await Promise.all([
-            fetchHabits(),
-            fetchSchedule(),
-            fetchReminders(),
-            fetchSettings()
-          ]);
-          
-          // Always update from cloud data (even if empty - user might have cleared everything)
-          if (cloudHabits.length > 0) {
-            setHabits(cloudHabits);
-          }
-          if (cloudSchedule.length > 0) {
-            setSchedule(cloudSchedule);
-          }
-          if (cloudReminders.length > 0) {
-            setReminders(cloudReminders);
-          }
-          if (cloudSettings) {
-            setNotificationPrefs(cloudSettings);
-          }
+          await syncData();
           
           setDataLoaded(true);
         } catch (error) {
@@ -168,7 +179,20 @@ const Index = () => {
       
       loadCloudData();
     }
-  }, [user, dataLoaded, authLoading, migrateLocalData, fetchHabits, fetchSchedule, fetchReminders, fetchSettings]);
+  }, [user, dataLoaded, authLoading, migrateLocalData, syncData]);
+
+  // Auto-sync every 5 seconds when user is logged in
+  useEffect(() => {
+    if (user && dataLoaded) {
+      syncIntervalRef.current = setInterval(syncData, 5000);
+    }
+    
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+    };
+  }, [user, dataLoaded, syncData]);
 
   // Save to local storage (for offline/non-logged in users)
   useEffect(() => {
@@ -307,6 +331,7 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-safe">
       <MotivationModal />
       <NotificationPrompt />
+      <MobileInstallPrompt />
       
       {/* Top Controls */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
@@ -322,12 +347,10 @@ const Index = () => {
       </div>
       
       {/* Title - with compact clock on mobile */}
-      <header className="pt-8 pb-4 px-4 sm:px-6">
-        <div className="flex items-center justify-center gap-3 lg:flex-col lg:gap-0">
-          <div className="lg:hidden">
-            <ClockWidget compact />
-          </div>
-          <div className="text-left lg:text-center">
+      <header className="pt-4 pb-4 px-4 sm:px-6">
+        <div className="flex flex-col items-center gap-2">
+          <ClockWidget compact />
+          <div className="text-center">
             <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-foreground tracking-tight">
               Daily Habits
             </h1>
@@ -341,32 +364,7 @@ const Index = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 lg:gap-8">
 
-            {/* Mobile: Today's Plan & Reminders - beautiful compact cards */}
-            <div className="lg:hidden mb-4">
-              <div className="grid grid-cols-2 gap-3">
-                <DailySchedule
-                  items={schedule}
-                  onAddItem={handleAddScheduleItem}
-                  onDeleteItem={handleDeleteScheduleItem}
-                  onEditItem={handleEditScheduleItem}
-                  onToggleComplete={handleToggleScheduleComplete}
-                  compact
-                />
-                <Reminders
-                  reminders={reminders}
-                  onAdd={handleAddReminder}
-                  onDelete={handleDeleteReminder}
-                  onToggleComplete={handleToggleReminderComplete}
-                  eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
-                  waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
-                  onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
-                  onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
-                  compact
-                />
-              </div>
-            </div>
-
-            {/* Mobile: Habit Table (main section) */}
+            {/* Mobile: Habit Table (main section) - moved to top */}
             <div className="lg:hidden space-y-4 animate-fade-in">
               <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
                 <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
@@ -383,14 +381,28 @@ const Index = () => {
               </div>
             </div>
 
+            {/* Mobile: Stats (streaks) - right after habits */}
+            <div className="lg:hidden">
+              <HabitStatistics habits={habits} />
+            </div>
+
+            {/* Mobile: Reminders */}
+            <div className="lg:hidden">
+              <Reminders
+                reminders={reminders}
+                onAdd={handleAddReminder}
+                onDelete={handleDeleteReminder}
+                onToggleComplete={handleToggleReminderComplete}
+                eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
+                waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
+                onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
+                onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
+              />
+            </div>
+
             {/* Mobile: Pomodoro Timer */}
             <div className="lg:hidden">
               <PomodoroTimer />
-            </div>
-
-            {/* Mobile: Stats */}
-            <div className="lg:hidden">
-              <HabitStatistics habits={habits} />
             </div>
 
             {/* Mobile: Goals & Settings */}
@@ -418,13 +430,6 @@ const Index = () => {
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
               />
               <PomodoroTimer />
-              <DailySchedule
-                items={schedule}
-                onAddItem={handleAddScheduleItem}
-                onDeleteItem={handleDeleteScheduleItem}
-                onEditItem={handleEditScheduleItem}
-                onToggleComplete={handleToggleScheduleComplete}
-              />
               <NotificationSettings
                 preferences={notificationPrefs}
                 onUpdate={setNotificationPrefs}
@@ -433,8 +438,6 @@ const Index = () => {
 
             {/* Desktop: Right Column */}
             <div className="hidden lg:block space-y-4 animate-fade-in">
-              <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
-              <HabitStatistics habits={habits} />
               <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-4">
                 <HabitTable
                   habits={habits}
@@ -446,6 +449,8 @@ const Index = () => {
                 />
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
+              <HabitStatistics habits={habits} />
+              <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
             </div>
           </div>
         </div>
