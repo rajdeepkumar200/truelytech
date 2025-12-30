@@ -1,5 +1,6 @@
-import { Trash2, Settings2, Flame, GripVertical } from 'lucide-react';
+import { Trash2, Settings2, Flame, GripVertical, CheckSquare, Square } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -41,6 +42,7 @@ interface HabitTableProps {
   habits: Habit[];
   onToggleDay: (habitId: string, dayIndex: number) => void;
   onDeleteHabit: (habitId: string) => void;
+  onDeleteMultipleHabits?: (habitIds: string[]) => void;
   onUpdateActiveDays: (habitId: string, activeDays: boolean[]) => void;
   onReorder: (habits: Habit[]) => void;
   onUpdateGoal: (habitId: string, goal: number) => void;
@@ -78,9 +80,11 @@ const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): numbe
   return streak;
 };
 
-const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, onReorder, onUpdateGoal }: HabitTableProps) => {
+const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits, onUpdateActiveDays, onReorder, onUpdateGoal }: HabitTableProps) => {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const currentDayIndex = getCurrentDayIndex();
   const goalOptions = [0, 3, 4, 5, 6, 7];
   const isMobile = useIsMobile();
@@ -90,6 +94,43 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
       onDeleteHabit(deleteConfirmId);
       setDeleteConfirmId(null);
     }
+  };
+
+  const toggleSelectHabit = (habitId: string) => {
+    setSelectedHabits(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(habitId)) {
+        newSet.delete(habitId);
+      } else {
+        newSet.add(habitId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedHabits.size === habits.length) {
+      setSelectedHabits(new Set());
+    } else {
+      setSelectedHabits(new Set(habits.map(h => h.id)));
+    }
+  };
+
+  const confirmBulkDelete = () => {
+    if (selectedHabits.size > 0) {
+      if (onDeleteMultipleHabits) {
+        onDeleteMultipleHabits(Array.from(selectedHabits));
+      } else {
+        // Fallback: delete one by one
+        selectedHabits.forEach(id => onDeleteHabit(id));
+      }
+      setSelectedHabits(new Set());
+      setShowBulkDeleteConfirm(false);
+    }
+  };
+
+  const cancelSelection = () => {
+    setSelectedHabits(new Set());
   };
 
   // Group habits by category
@@ -121,11 +162,47 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
 
   return (
     <div className="sm:min-w-0">
-      {/* Date Header */}
+      {/* Date Header with Multi-Select Controls */}
       <div className="flex items-center justify-between mb-3 px-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-foreground">{dayName}</span>
           <span className="text-xs text-muted-foreground">{dateStr}</span>
+        </div>
+        
+        {/* Multi-select controls */}
+        <div className="flex items-center gap-2">
+          {selectedHabits.size > 0 ? (
+            <>
+              <span className="text-xs text-muted-foreground">{selectedHabits.size} selected</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelSelection}
+                className="h-7 px-2 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="h-7 px-2 text-xs"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Delete ({selectedHabits.size})
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSelectAll}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <CheckSquare className="w-3.5 h-3.5 mr-1" />
+              Select
+            </Button>
+          )}
         </div>
       </div>
 
@@ -136,17 +213,37 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
           <div className="flex-shrink-0">
             {/* Header */}
             <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
-              <div className="w-[100px] pl-2">Habit</div>
+              {selectedHabits.size > 0 && <div className="w-6 pl-1"></div>}
+              <div className={cn("pl-2", selectedHabits.size > 0 ? "w-[80px]" : "w-[100px]")}>Habit</div>
               <div className="w-12 text-center font-semibold text-accent">{days[currentDayIndex]}</div>
             </div>
             {/* Rows */}
             {habits.map((habit) => {
               const activeDays = habit.activeDays || Array(7).fill(true);
               const streak = calculateStreak(habit.completedDays, activeDays);
+              const isSelected = selectedHabits.has(habit.id);
 
               return (
-                <div key={habit.id} className="flex items-center py-2 h-[44px] touch-manipulation">
-                  <div className="w-[100px] flex items-center gap-1 min-w-0 pl-2">
+                <div key={habit.id} className={cn(
+                  "flex items-center py-2 h-[44px] touch-manipulation",
+                  isSelected && "bg-destructive/5"
+                )}>
+                  {/* Selection checkbox - shown when in selection mode */}
+                  {selectedHabits.size > 0 && (
+                    <div className="w-6 pl-1 flex items-center justify-center">
+                      <button
+                        onClick={() => toggleSelectHabit(habit.id)}
+                        className="p-0.5"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-destructive" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  <div className={cn("flex items-center gap-1 min-w-0 pl-2", selectedHabits.size > 0 ? "w-[80px]" : "w-[100px]")}>
                     <span className="text-sm">{habit.icon}</span>
                     <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
                     {streak > 0 && (
@@ -155,12 +252,14 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                         <span className="text-[10px] font-medium text-orange-500">{streak}</span>
                       </div>
                     )}
-                    <button
-                      onClick={() => setDeleteConfirmId(habit.id)}
-                      className="p-0.5 hover:bg-destructive/10 rounded flex-shrink-0"
-                    >
-                      <Trash2 className="w-3 h-3 text-destructive" />
-                    </button>
+                    {selectedHabits.size === 0 && (
+                      <button
+                        onClick={() => setDeleteConfirmId(habit.id)}
+                        className="p-0.5 hover:bg-destructive/10 rounded flex-shrink-0"
+                      >
+                        <Trash2 className="w-3 h-3 text-destructive" />
+                      </button>
+                    )}
                   </div>
                   <div className="w-12 flex items-center justify-center touch-manipulation">
                     {activeDays[currentDayIndex] ? (
@@ -248,8 +347,14 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
       ) : (
         <>
         {/* Desktop: Table Header */}
-        <div className="grid grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-1 px-2 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
+        <div className={cn(
+          "grid gap-1 px-2 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30",
+          selectedHabits.size > 0 
+            ? "grid-cols-[20px_20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_24px_1fr_repeat(7,40px)_80px]"
+            : "grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px]"
+        )}>
           <div></div>
+          {selectedHabits.size > 0 && <div></div>}
           <div>Habit</div>
           {days.map((day, index) => (
             <div 
@@ -274,6 +379,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                   const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
                   const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
                   const streak = calculateStreak(habit.completedDays, activeDays);
+                  const isSelected = selectedHabits.has(habit.id);
 
                   return (
                     <Draggable key={habit.id} draggableId={habit.id} index={index}>
@@ -282,14 +388,34 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           className={cn(
-                            "grid grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px] gap-1 px-2 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors",
-                            snapshot.isDragging && "bg-muted/60 shadow-lg"
+                            "grid gap-1 px-2 py-2 items-center group hover:bg-muted/40 rounded-lg transition-colors",
+                            selectedHabits.size > 0 
+                              ? "grid-cols-[20px_20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_24px_1fr_repeat(7,40px)_80px]"
+                              : "grid-cols-[20px_1fr_repeat(7,32px)_60px] md:grid-cols-[24px_1fr_repeat(7,40px)_80px]",
+                            snapshot.isDragging && "bg-muted/60 shadow-lg",
+                            isSelected && "bg-destructive/5"
                           )}
                         >
                           {/* Drag Handle */}
                           <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
                             <GripVertical className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground" />
                           </div>
+
+                          {/* Selection checkbox - shown when in selection mode */}
+                          {selectedHabits.size > 0 && (
+                            <div className="flex items-center justify-center">
+                              <button
+                                onClick={() => toggleSelectHabit(habit.id)}
+                                className="p-0.5"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-4 h-4 text-destructive" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-muted-foreground" />
+                                )}
+                              </button>
+                            </div>
+                          )}
 
                           {/* Habit Name */}
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -463,6 +589,24 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onUpdateActiveDays, on
             <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedHabits.size} habits?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedHabits.size} habits? All progress will be lost. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
