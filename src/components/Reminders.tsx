@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Bell, ChevronDown, CheckCircle2, Clock, Eye, Droplets } from 'lucide-react';
+import { Plus, Trash2, Bell, ChevronDown, CheckCircle2, Clock, Eye, Droplets, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmojiPicker from './EmojiPicker';
 import SwipeableItem from './SwipeableItem';
@@ -34,9 +34,11 @@ interface RemindersProps {
   eyeBlinkEnabled?: boolean;
   waterIntakeEnabled?: boolean;
   waterIntakeInterval?: number;
+  soundEnabled?: boolean;
   onToggleEyeBlink?: (enabled: boolean) => void;
   onToggleWaterIntake?: (enabled: boolean) => void;
   onWaterIntakeIntervalChange?: (interval: number) => void;
+  onToggleSound?: (enabled: boolean) => void;
 }
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -52,9 +54,11 @@ const Reminders = ({
   eyeBlinkEnabled = false,
   waterIntakeEnabled = false,
   waterIntakeInterval = 30,
+  soundEnabled = true,
   onToggleEyeBlink,
   onToggleWaterIntake,
   onWaterIntakeIntervalChange,
+  onToggleSound,
 }: RemindersProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -117,34 +121,46 @@ const Reminders = ({
         
         {isExpanded && (
           <div className="px-3 pb-3 max-h-48 overflow-y-auto scrollbar-thin space-y-1">
-            {/* Quick toggles for eye blink and water intake */}
+            {/* Quick toggles for eye blink, water intake, and sound */}
             <div className="flex flex-col gap-2 py-2 border-b border-border/30 mb-2">
               <div className="flex gap-2">
                 <button
                   onClick={() => onToggleEyeBlink?.(!eyeBlinkEnabled)}
                   className={cn(
-                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 flex-1",
+                    "flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg transition-all duration-200 flex-1",
                     eyeBlinkEnabled 
-                      ? "bg-primary/20 text-primary shadow-sm ring-1 ring-primary/30" 
+                      ? "bg-primary/20 text-primary ring-1 ring-primary/30" 
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
                   )}
-                  title="Eye Blink Reminders (20-20-20 rule)"
+                  title="Eye Blink (20-20-20 rule)"
                 >
-                  <Eye className="w-4 h-4" />
-                  <span className="text-[10px]">20min</span>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span className="text-[9px]">20m</span>
                 </button>
                 <button
                   onClick={() => onToggleWaterIntake?.(!waterIntakeEnabled)}
                   className={cn(
-                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 flex-1",
+                    "flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg transition-all duration-200 flex-1",
                     waterIntakeEnabled 
-                      ? "bg-accent/20 text-accent shadow-sm ring-1 ring-accent/30" 
+                      ? "bg-accent/20 text-accent ring-1 ring-accent/30" 
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
                   )}
-                  title="Water Intake Reminders"
+                  title="Water Intake"
                 >
-                  <Droplets className="w-4 h-4" />
-                  <span className="text-[10px]">{waterIntakeInterval}min</span>
+                  <Droplets className="w-3.5 h-3.5" />
+                  <span className="text-[9px]">{waterIntakeInterval}m</span>
+                </button>
+                <button
+                  onClick={() => onToggleSound?.(!soundEnabled)}
+                  className={cn(
+                    "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200",
+                    soundEnabled 
+                      ? "bg-muted text-foreground" 
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  )}
+                  title={soundEnabled ? "Sound On" : "Sound Off"}
+                >
+                  {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
                 </button>
               </div>
               {/* Water interval selector - compact mobile */}
@@ -155,7 +171,7 @@ const Reminders = ({
                       key={interval}
                       onClick={() => onWaterIntakeIntervalChange?.(interval)}
                       className={cn(
-                        "px-2 py-0.5 rounded text-[10px] font-medium transition-colors",
+                        "px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors",
                         waterIntakeInterval === interval
                           ? "bg-accent text-accent-foreground"
                           : "text-muted-foreground hover:bg-muted"
@@ -329,47 +345,47 @@ const Reminders = ({
       {/* Content */}
       {isExpanded && (
         <div className="px-5 pb-5">
-          {/* Eye Blink & Water Intake Quick Buttons */}
+          {/* Eye Blink, Water Intake & Sound Buttons */}
           <div className="flex gap-3 mb-4">
             <button
               onClick={() => onToggleEyeBlink?.(!eyeBlinkEnabled)}
               className={cn(
-                "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
+                "flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200",
                 eyeBlinkEnabled 
                   ? "bg-primary/10 border-primary text-primary shadow-sm" 
                   : "bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/50 hover:border-border"
               )}
             >
               <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
                 eyeBlinkEnabled ? "bg-primary/20" : "bg-muted"
               )}>
-                <Eye className="w-5 h-5" />
+                <Eye className="w-4 h-4" />
               </div>
               <span className="text-xs font-medium">Eye Blink</span>
-              <span className="text-[10px] text-muted-foreground">Every 20 min</span>
+              <span className="text-[10px] text-muted-foreground">20 min</span>
             </button>
             <div className="flex-1 flex flex-col">
               <button
                 onClick={() => onToggleWaterIntake?.(!waterIntakeEnabled)}
                 className={cn(
-                  "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl rounded-b-none border-2 border-b-0 transition-all duration-200",
+                  "flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl rounded-b-none border-2 border-b-0 transition-all duration-200",
                   waterIntakeEnabled 
                     ? "bg-accent/10 border-accent text-accent shadow-sm" 
                     : "bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/50 hover:border-border"
                 )}
               >
                 <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
                   waterIntakeEnabled ? "bg-accent/20" : "bg-muted"
                 )}>
-                  <Droplets className="w-5 h-5" />
+                  <Droplets className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Water Intake</span>
+                <span className="text-xs font-medium">Water</span>
               </button>
               {/* Water Interval Selector */}
               <div className={cn(
-                "flex items-center justify-center gap-1 py-2 rounded-b-xl border-2 border-t-0",
+                "flex items-center justify-center gap-1 py-1.5 rounded-b-xl border-2 border-t-0",
                 waterIntakeEnabled 
                   ? "bg-accent/5 border-accent" 
                   : "bg-muted/20 border-border/50"
@@ -379,7 +395,7 @@ const Reminders = ({
                     key={interval}
                     onClick={() => onWaterIntakeIntervalChange?.(interval)}
                     className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-medium transition-colors",
+                      "px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors",
                       waterIntakeInterval === interval
                         ? "bg-accent text-accent-foreground"
                         : "text-muted-foreground hover:bg-muted"
@@ -390,6 +406,25 @@ const Reminders = ({
                 ))}
               </div>
             </div>
+            {/* Sound Toggle */}
+            <button
+              onClick={() => onToggleSound?.(!soundEnabled)}
+              className={cn(
+                "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200",
+                soundEnabled 
+                  ? "bg-muted border-border text-foreground" 
+                  : "bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/50"
+              )}
+            >
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
+                soundEnabled ? "bg-foreground/10" : "bg-muted"
+              )}>
+                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </div>
+              <span className="text-xs font-medium">Sound</span>
+              <span className="text-[10px] text-muted-foreground">{soundEnabled ? 'On' : 'Off'}</span>
+            </button>
           </div>
 
           {/* Reminders List */}

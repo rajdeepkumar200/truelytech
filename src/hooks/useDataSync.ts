@@ -107,6 +107,7 @@ export const useDataSync = () => {
           }).eq('id', h.id);
         } else {
           await supabase.from('habits').insert({
+            id: h.id,
             user_id: user.id,
             name: h.name,
             icon: h.icon,

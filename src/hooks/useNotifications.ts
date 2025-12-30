@@ -43,7 +43,8 @@ export interface NotificationPreferences {
   customReminders: boolean;
   eyeBlinkReminders?: boolean;
   waterIntakeReminders?: boolean;
-  waterIntakeInterval?: number; // in minutes, default 30
+  waterIntakeInterval?: number;
+  soundEnabled?: boolean;
 }
 
 export const useNotifications = (

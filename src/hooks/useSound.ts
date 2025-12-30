@@ -70,6 +70,33 @@ export const playBreakOver = () => {
   });
 };
 
+export const playReminderSound = (type: 'eye' | 'water') => {
+  if (!audioContext) return;
+  
+  // Different sounds for different reminders
+  const notes = type === 'eye' 
+    ? [440, 554.37, 659.25] // A4, C#5, E5 - gentle arpeggio
+    : [523.25, 587.33, 659.25, 783.99]; // C5, D5, E5, G5 - water drop sound
+  
+  notes.forEach((freq, i) => {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = freq;
+    oscillator.type = type === 'eye' ? 'sine' : 'triangle';
+    
+    const startTime = audioContext.currentTime + i * 0.12;
+    gainNode.gain.setValueAtTime(0.15, startTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.35);
+    
+    oscillator.start(startTime);
+    oscillator.stop(startTime + 0.35);
+  });
+};
+
 export const triggerHaptic = (pattern: number | number[] = 50) => {
   if (navigator.vibrate) {
     navigator.vibrate(pattern);
