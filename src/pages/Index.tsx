@@ -407,14 +407,6 @@ const Index = () => {
               <div className="flex justify-start">
                 <ClockWidget />
               </div>
-              <PomodoroTimer />
-              <DailySchedule
-                items={schedule}
-                onAddItem={handleAddScheduleItem}
-                onDeleteItem={handleDeleteScheduleItem}
-                onEditItem={handleEditScheduleItem}
-                onToggleComplete={handleToggleScheduleComplete}
-              />
               <Reminders
                 reminders={reminders}
                 onAdd={handleAddReminder}
@@ -424,6 +416,14 @@ const Index = () => {
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
                 onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
+              />
+              <PomodoroTimer />
+              <DailySchedule
+                items={schedule}
+                onAddItem={handleAddScheduleItem}
+                onDeleteItem={handleDeleteScheduleItem}
+                onEditItem={handleEditScheduleItem}
+                onToggleComplete={handleToggleScheduleComplete}
               />
               <NotificationSettings
                 preferences={notificationPrefs}
