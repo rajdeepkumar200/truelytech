@@ -70,29 +70,54 @@ export const useDataSync = () => {
     }));
   }, [user]);
 
-  // Save habits to database
+  // Save habits to database using upsert for proper sync
   const saveHabits = useCallback(async (habits: Habit[]) => {
     if (!user) return;
     
-    // Delete all existing habits and insert new ones
-    await supabase.from('habits').delete().eq('user_id', user.id);
+    // Get existing habit IDs from cloud
+    const { data: existingHabits } = await supabase
+      .from('habits')
+      .select('id')
+      .eq('user_id', user.id);
     
+    const existingIds = new Set(existingHabits?.map(h => h.id) || []);
+    const currentIds = new Set(habits.map(h => h.id));
+    
+    // Delete habits that no longer exist locally
+    const toDelete = [...existingIds].filter(id => !currentIds.has(id));
+    if (toDelete.length > 0) {
+      await supabase.from('habits').delete().in('id', toDelete);
+    }
+    
+    // Upsert all current habits
     if (habits.length > 0) {
-      const { error } = await supabase.from('habits').insert(
-        habits.map((h, index) => ({
-          id: h.id.length > 20 ? undefined : undefined, // Let DB generate UUID
-          user_id: user.id,
-          name: h.name,
-          icon: h.icon,
-          completed_days: h.completedDays,
-          active_days: h.activeDays,
-          category: h.category || null,
-          weekly_goal: h.weeklyGoal || 0,
-          sort_order: index,
-        }))
-      );
-      
-      if (error) console.error('Error saving habits:', error);
+      for (let i = 0; i < habits.length; i++) {
+        const h = habits[i];
+        const isExisting = existingIds.has(h.id);
+        
+        if (isExisting) {
+          await supabase.from('habits').update({
+            name: h.name,
+            icon: h.icon,
+            completed_days: h.completedDays,
+            active_days: h.activeDays,
+            category: h.category || null,
+            weekly_goal: h.weeklyGoal || 0,
+            sort_order: i,
+          }).eq('id', h.id);
+        } else {
+          await supabase.from('habits').insert({
+            user_id: user.id,
+            name: h.name,
+            icon: h.icon,
+            completed_days: h.completedDays,
+            active_days: h.activeDays,
+            category: h.category || null,
+            weekly_goal: h.weeklyGoal || 0,
+            sort_order: i,
+          });
+        }
+      }
     }
   }, [user]);
 
@@ -119,24 +144,40 @@ export const useDataSync = () => {
     }));
   }, [user]);
 
-  // Save schedule items
+  // Save schedule items using upsert for proper sync
   const saveSchedule = useCallback(async (schedule: ScheduleItem[]) => {
     if (!user) return;
     
-    await supabase.from('schedule_items').delete().eq('user_id', user.id);
+    const { data: existingItems } = await supabase
+      .from('schedule_items')
+      .select('id')
+      .eq('user_id', user.id);
     
-    if (schedule.length > 0) {
-      const { error } = await supabase.from('schedule_items').insert(
-        schedule.map(s => ({
+    const existingIds = new Set(existingItems?.map(s => s.id) || []);
+    const currentIds = new Set(schedule.map(s => s.id));
+    
+    const toDelete = [...existingIds].filter(id => !currentIds.has(id));
+    if (toDelete.length > 0) {
+      await supabase.from('schedule_items').delete().in('id', toDelete);
+    }
+    
+    for (const s of schedule) {
+      if (existingIds.has(s.id)) {
+        await supabase.from('schedule_items').update({
+          time: s.time,
+          task: s.task,
+          emoji: s.emoji || '📋',
+          completed: s.completed || false,
+        }).eq('id', s.id);
+      } else {
+        await supabase.from('schedule_items').insert({
           user_id: user.id,
           time: s.time,
           task: s.task,
           emoji: s.emoji || '📋',
           completed: s.completed || false,
-        }))
-      );
-      
-      if (error) console.error('Error saving schedule:', error);
+        });
+      }
     }
   }, [user]);
 
@@ -163,25 +204,42 @@ export const useDataSync = () => {
     }));
   }, [user]);
 
-  // Save reminders
+  // Save reminders using upsert for proper sync
   const saveReminders = useCallback(async (reminders: Reminder[]) => {
     if (!user) return;
     
-    await supabase.from('reminders').delete().eq('user_id', user.id);
+    const { data: existingReminders } = await supabase
+      .from('reminders')
+      .select('id')
+      .eq('user_id', user.id);
     
-    if (reminders.length > 0) {
-      const { error } = await supabase.from('reminders').insert(
-        reminders.map(r => ({
+    const existingIds = new Set(existingReminders?.map(r => r.id) || []);
+    const currentIds = new Set(reminders.map(r => r.id));
+    
+    const toDelete = [...existingIds].filter(id => !currentIds.has(id));
+    if (toDelete.length > 0) {
+      await supabase.from('reminders').delete().in('id', toDelete);
+    }
+    
+    for (const r of reminders) {
+      if (existingIds.has(r.id)) {
+        await supabase.from('reminders').update({
+          day: r.day,
+          time: r.time,
+          name: r.name,
+          emoji: r.emoji || '🔔',
+          completed: r.completed || false,
+        }).eq('id', r.id);
+      } else {
+        await supabase.from('reminders').insert({
           user_id: user.id,
           day: r.day,
           time: r.time,
           name: r.name,
           emoji: r.emoji || '🔔',
           completed: r.completed || false,
-        }))
-      );
-      
-      if (error) console.error('Error saving reminders:', error);
+        });
+      }
     }
   }, [user]);
 
@@ -211,25 +269,40 @@ export const useDataSync = () => {
     };
   }, [user]);
 
-  // Save settings
+  // Save settings with upsert
   const saveSettings = useCallback(async (settings: NotificationPreferences) => {
     if (!user) return;
     
-    const { error } = await supabase
+    // First check if settings exist
+    const { data: existing } = await supabase
       .from('user_settings')
-      .update({
-        notification_enabled: settings.enabled,
-        reminder_time: settings.reminderTime,
-        habit_completions: settings.habitCompletions,
-        daily_reminder: settings.dailyReminder,
-        schedule_reminders: settings.scheduleReminders,
-        custom_reminders: settings.customReminders,
-        eye_blink_reminders: settings.eyeBlinkReminders,
-        water_intake_reminders: settings.waterIntakeReminders,
-      })
-      .eq('user_id', user.id);
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
     
-    if (error) console.error('Error saving settings:', error);
+    const settingsData = {
+      notification_enabled: settings.enabled,
+      reminder_time: settings.reminderTime,
+      habit_completions: settings.habitCompletions,
+      daily_reminder: settings.dailyReminder,
+      schedule_reminders: settings.scheduleReminders,
+      custom_reminders: settings.customReminders,
+      eye_blink_reminders: settings.eyeBlinkReminders,
+      water_intake_reminders: settings.waterIntakeReminders,
+    };
+    
+    if (existing) {
+      const { error } = await supabase
+        .from('user_settings')
+        .update(settingsData)
+        .eq('user_id', user.id);
+      if (error) console.error('Error updating settings:', error);
+    } else {
+      const { error } = await supabase
+        .from('user_settings')
+        .insert({ user_id: user.id, ...settingsData });
+      if (error) console.error('Error inserting settings:', error);
+    }
   }, [user]);
 
   // Migrate local data to cloud on first login
