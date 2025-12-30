@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { format } from 'date-fns';
+import EmojiPicker from './EmojiPicker';
 import {
   Popover,
   PopoverContent,
@@ -46,6 +47,7 @@ interface HabitTableProps {
   onUpdateActiveDays: (habitId: string, activeDays: boolean[]) => void;
   onReorder: (habits: Habit[]) => void;
   onUpdateGoal: (habitId: string, goal: number) => void;
+  onUpdateIcon?: (habitId: string, icon: string) => void;
 }
 
 const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -80,7 +82,7 @@ const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): numbe
   return streak;
 };
 
-const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits, onUpdateActiveDays, onReorder, onUpdateGoal }: HabitTableProps) => {
+const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits, onUpdateActiveDays, onReorder, onUpdateGoal, onUpdateIcon }: HabitTableProps) => {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
@@ -438,6 +440,17 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                               </PopoverTrigger>
                               <PopoverContent className="w-56 p-3" align="start">
                                 <div className="space-y-3">
+                                  {/* Emoji Selection */}
+                                  {onUpdateIcon && (
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-medium text-foreground">Icon</p>
+                                      <EmojiPicker 
+                                        value={habit.icon} 
+                                        onChange={(emoji) => onUpdateIcon(habit.id, emoji)} 
+                                      />
+                                    </div>
+                                  )}
+
                                   {/* Category Selection */}
                                   <div className="space-y-1">
                                     <p className="text-xs font-medium text-foreground">Category</p>
