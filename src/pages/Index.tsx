@@ -112,6 +112,7 @@ const Index = () => {
       customReminders: true,
       eyeBlinkReminders: false,
       waterIntakeReminders: false,
+      waterIntakeInterval: 30,
     };
   });
 
@@ -153,8 +154,9 @@ const Index = () => {
         }
       }
 
-      // Water intake - every 30 minutes
-      if (notificationPrefs.waterIntakeReminders && minutes % 30 === 0 && seconds < 5) {
+      // Water intake - customizable interval (default 30 minutes)
+      const waterInterval = notificationPrefs.waterIntakeInterval || 30;
+      if (notificationPrefs.waterIntakeReminders && minutes % waterInterval === 0 && seconds < 5) {
         setReminderAlertType('water');
         // Send notification if document is hidden
         if (document.hidden && Notification.permission === 'granted') {
@@ -503,8 +505,10 @@ const Index = () => {
                 onToggleComplete={handleToggleReminderComplete}
                 eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
+                waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
                 onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
+                onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
               />
             </div>
 
@@ -534,8 +538,10 @@ const Index = () => {
                 onToggleComplete={handleToggleReminderComplete}
                 eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
+                waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
                 onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
+                onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
               />
               <PomodoroTimer />
               <NotificationSettings
