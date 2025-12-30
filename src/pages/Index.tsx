@@ -47,18 +47,18 @@ interface Reminder {
 }
 
 const defaultHabits: Habit[] = [
-  { id: '1', name: 'clean desk', icon: '🧹', completedDays: [true, true, true, true, true, true, true], activeDays: Array(7).fill(true) },
-  { id: '2', name: 'check into notion', icon: '💻', completedDays: [true, true, true, true, true, false, false], activeDays: Array(7).fill(true) },
-  { id: '3', name: 'journal', icon: '📝', completedDays: [true, true, true, true, false, false, false], activeDays: Array(7).fill(true) },
-  { id: '4', name: 'exercise', icon: '💪', completedDays: [true, true, false, true, false, false, false], activeDays: [true, true, true, true, true, false, false] },
-  { id: '5', name: 'drink water', icon: '💧', completedDays: [true, true, true, true, false, false, false], activeDays: Array(7).fill(true) },
-  { id: '6', name: 'meditate', icon: '🧘', completedDays: [true, true, true, true, true, true, false], activeDays: Array(7).fill(true) },
-  { id: '7', name: 'listen to uplifting music', icon: '🎵', completedDays: [true, true, false, false, false, true, false], activeDays: Array(7).fill(true) },
-  { id: '8', name: 'brush hair', icon: '💇', completedDays: [true, true, true, true, false, true, false], activeDays: Array(7).fill(true) },
-  { id: '9', name: 'shower', icon: '🚿', completedDays: [true, true, true, true, true, true, false], activeDays: Array(7).fill(true) },
-  { id: '10', name: 'skin care', icon: '😊', completedDays: [true, true, true, true, true, false, false], activeDays: Array(7).fill(true) },
-  { id: '11', name: 'brush teeth', icon: '🦷', completedDays: [true, true, true, true, true, true, false], activeDays: Array(7).fill(true) },
-  { id: '12', name: 'style hair', icon: '💇', completedDays: [true, false, false, false, false, false, false], activeDays: [true, false, false, true, false, false, false] },
+  { id: '1', name: 'clean desk', icon: '🧹', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '2', name: 'check into notion', icon: '💻', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '3', name: 'journal', icon: '📝', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '4', name: 'exercise', icon: '💪', completedDays: Array(7).fill(false), activeDays: [true, true, true, true, true, false, false] },
+  { id: '5', name: 'drink water', icon: '💧', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '6', name: 'meditate', icon: '🧘', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '7', name: 'listen to uplifting music', icon: '🎵', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '8', name: 'brush hair', icon: '💇', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '9', name: 'shower', icon: '🚿', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '10', name: 'skin care', icon: '😊', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '11', name: 'brush teeth', icon: '🦷', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
+  { id: '12', name: 'style hair', icon: '💇', completedDays: Array(7).fill(false), activeDays: [true, false, false, true, false, false, false] },
 ];
 
 const defaultSchedule: ScheduleItem[] = [
