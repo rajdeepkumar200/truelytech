@@ -116,22 +116,26 @@ const Reminders = ({
               <button
                 onClick={() => onToggleEyeBlink?.(!eyeBlinkEnabled)}
                 className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors",
-                  eyeBlinkEnabled ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground"
+                  "flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200",
+                  eyeBlinkEnabled 
+                    ? "bg-primary/20 text-primary shadow-sm ring-1 ring-primary/30" 
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
                 )}
+                title="Eye Blink Reminders"
               >
-                <Eye className="w-3 h-3" />
-                Blink
+                <Eye className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onToggleWaterIntake?.(!waterIntakeEnabled)}
                 className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors",
-                  waterIntakeEnabled ? "bg-accent/20 text-accent" : "bg-muted/50 text-muted-foreground"
+                  "flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200",
+                  waterIntakeEnabled 
+                    ? "bg-accent/20 text-accent shadow-sm ring-1 ring-accent/30" 
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
                 )}
+                title="Water Intake Reminders"
               >
-                <Droplets className="w-3 h-3" />
-                Water
+                <Droplets className="w-4 h-4" />
               </button>
             </div>
 
@@ -296,28 +300,42 @@ const Reminders = ({
       {/* Content */}
       {isExpanded && (
         <div className="px-5 pb-5">
-          {/* Eye Blink & Water Intake Toggles */}
-          <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-xl mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-primary" />
-                <span className="text-sm text-foreground">Eye Blink Reminders</span>
+          {/* Eye Blink & Water Intake Quick Buttons */}
+          <div className="flex gap-3 mb-4">
+            <button
+              onClick={() => onToggleEyeBlink?.(!eyeBlinkEnabled)}
+              className={cn(
+                "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
+                eyeBlinkEnabled 
+                  ? "bg-primary/10 border-primary text-primary shadow-sm" 
+                  : "bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/50 hover:border-border"
+              )}
+            >
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                eyeBlinkEnabled ? "bg-primary/20" : "bg-muted"
+              )}>
+                <Eye className="w-5 h-5" />
               </div>
-              <Switch
-                checked={eyeBlinkEnabled}
-                onCheckedChange={(checked) => onToggleEyeBlink?.(checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Droplets className="w-4 h-4 text-accent" />
-                <span className="text-sm text-foreground">Water Intake Reminders</span>
+              <span className="text-xs font-medium">Eye Blink</span>
+            </button>
+            <button
+              onClick={() => onToggleWaterIntake?.(!waterIntakeEnabled)}
+              className={cn(
+                "flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
+                waterIntakeEnabled 
+                  ? "bg-accent/10 border-accent text-accent shadow-sm" 
+                  : "bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/50 hover:border-border"
+              )}
+            >
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                waterIntakeEnabled ? "bg-accent/20" : "bg-muted"
+              )}>
+                <Droplets className="w-5 h-5" />
               </div>
-              <Switch
-                checked={waterIntakeEnabled}
-                onCheckedChange={(checked) => onToggleWaterIntake?.(checked)}
-              />
-            </div>
+              <span className="text-xs font-medium">Water Intake</span>
+            </button>
           </div>
 
           {/* Reminders List */}

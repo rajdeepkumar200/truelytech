@@ -346,10 +346,9 @@ const Index = () => {
         <ThemeToggle />
       </div>
       
-      {/* Title - with compact clock on mobile */}
+      {/* Title */}
       <header className="pt-4 pb-4 px-4 sm:px-6">
-        <div className="flex flex-col items-center gap-2">
-          <ClockWidget compact />
+        <div className="flex flex-col items-center">
           <div className="text-center">
             <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-foreground tracking-tight">
               Daily Habits
