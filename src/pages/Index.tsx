@@ -296,6 +296,10 @@ const Index = () => {
     setHabits(prev => prev.filter(habit => habit.id !== habitId));
   };
 
+  const handleDeleteMultipleHabits = (habitIds: string[]) => {
+    setHabits(prev => prev.filter(habit => !habitIds.includes(habit.id)));
+  };
+
   const handleReorderHabits = (reorderedHabits: Habit[]) => {
     setHabits(reorderedHabits);
   };
@@ -409,6 +413,7 @@ const Index = () => {
                     habits={habits}
                     onToggleDay={handleToggleDay}
                     onDeleteHabit={handleDeleteHabit}
+                    onDeleteMultipleHabits={handleDeleteMultipleHabits}
                     onUpdateActiveDays={handleUpdateActiveDays}
                     onReorder={handleReorderHabits}
                     onUpdateGoal={handleUpdateGoal}
@@ -480,6 +485,7 @@ const Index = () => {
                   habits={habits}
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
+                  onDeleteMultipleHabits={handleDeleteMultipleHabits}
                   onUpdateActiveDays={handleUpdateActiveDays}
                   onReorder={handleReorderHabits}
                   onUpdateGoal={handleUpdateGoal}
