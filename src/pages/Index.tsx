@@ -458,6 +458,10 @@ const Index = () => {
             </h1>
             <p className="text-muted-foreground text-xs sm:text-sm mt-1">Build better routines, one day at a time</p>
           </div>
+          {/* Clock Widget - Mobile only */}
+          <div className="lg:hidden mt-3">
+            <ClockWidget />
+          </div>
         </div>
       </header>
 
