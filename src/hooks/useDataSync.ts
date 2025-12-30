@@ -305,52 +305,12 @@ export const useDataSync = () => {
     }
   }, [user]);
 
-  // Migrate local data to cloud on first login
+  // Migration is disabled - each user starts fresh with their own cloud data
+  // Local storage is cleared on account switch to prevent data leakage
   const migrateLocalData = useCallback(async () => {
-    if (!user) return;
-    
-    // Check if user already has data in cloud
-    const { data: existingHabits } = await supabase
-      .from('habits')
-      .select('id')
-      .limit(1);
-    
-    if (existingHabits && existingHabits.length > 0) {
-      // User already has cloud data, skip migration
-      return;
-    }
-    
-    // Migrate local storage data
-    const localHabits = localStorage.getItem('habits-v3');
-    const localSchedule = localStorage.getItem('schedule');
-    const localReminders = localStorage.getItem('reminders');
-    const localSettings = localStorage.getItem('notificationPrefs');
-    
-    if (localHabits) {
-      const habits: Habit[] = JSON.parse(localHabits).map((h: any) => ({
-        ...h,
-        activeDays: h.activeDays || Array(7).fill(true),
-      }));
-      await saveHabits(habits);
-    }
-    
-    if (localSchedule) {
-      await saveSchedule(JSON.parse(localSchedule));
-    }
-    
-    if (localReminders) {
-      await saveReminders(JSON.parse(localReminders));
-    }
-    
-    if (localSettings) {
-      await saveSettings(JSON.parse(localSettings));
-    }
-    
-    toast({
-      title: 'Data synced!',
-      description: 'Your habits have been saved to the cloud.',
-    });
-  }, [user, saveHabits, saveSchedule, saveReminders, saveSettings, toast]);
+    // No-op: Migration removed to prevent cross-account data leakage
+    // Each user's data is strictly isolated in the cloud
+  }, []);
 
   return {
     fetchHabits,
