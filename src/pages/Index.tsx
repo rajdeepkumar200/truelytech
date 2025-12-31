@@ -4,17 +4,17 @@ import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
 import MonthlyHabitCalendar from '@/components/MonthlyHabitCalendar';
-import ConsistencyGraph from '@/components/ConsistencyGraph';
-import WeeklyReportCards from '@/components/WeeklyReportCards';
+import ReportCards from '@/components/ReportCards';
 import HabitStatistics from '@/components/HabitStatistics';
 import HabitGoals from '@/components/HabitGoals';
 import AddHabitRow from '@/components/AddHabitRow';
 import MotivationModal from '@/components/MotivationModal';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import NotificationSettings from '@/components/NotificationSettings';
-import PomodoroTimer from '@/components/PomodoroTimer';
+import PomodoroTimerWithPopup from '@/components/PomodoroTimerWithPopup';
+import RemindersRedesigned from '@/components/RemindersRedesigned';
 import ThemeToggle from '@/components/ThemeToggle';
-import Reminders from '@/components/Reminders';
+
 import UserMenu from '@/components/UserMenu';
 import MobileInstallPrompt from '@/components/MobileInstallPrompt';
 import ReminderAlert from '@/components/ReminderAlert';
@@ -482,14 +482,9 @@ const Index = () => {
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
               
-              {/* Consistency Graph */}
+              {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
-                <ConsistencyGraph habits={habits} />
-              </div>
-              
-              {/* Weekly Report Cards */}
-              <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
-                <WeeklyReportCards habits={habits} />
+                <ReportCards habits={habits} />
               </div>
             </div>
 
@@ -500,11 +495,12 @@ const Index = () => {
 
             {/* Mobile: Reminders */}
             <div className="lg:hidden">
-              <Reminders
+              <RemindersRedesigned
                 reminders={reminders}
                 onAdd={handleAddReminder}
                 onDelete={handleDeleteReminder}
                 onToggleComplete={handleToggleReminderComplete}
+                compact
                 eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
                 waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
@@ -518,7 +514,7 @@ const Index = () => {
 
             {/* Mobile: Pomodoro Timer */}
             <div className="lg:hidden">
-              <PomodoroTimer />
+              <PomodoroTimerWithPopup />
             </div>
 
             {/* Mobile: Goals & Settings */}
@@ -535,7 +531,7 @@ const Index = () => {
               <div className="flex justify-start">
                 <ClockWidget />
               </div>
-              <Reminders
+              <RemindersRedesigned
                 reminders={reminders}
                 onAdd={handleAddReminder}
                 onDelete={handleDeleteReminder}
@@ -549,7 +545,7 @@ const Index = () => {
                 onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
                 onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
               />
-              <PomodoroTimer />
+              <PomodoroTimerWithPopup />
               <NotificationSettings
                 preferences={notificationPrefs}
                 onUpdate={setNotificationPrefs}
@@ -568,17 +564,10 @@ const Index = () => {
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
               
-              {/* Consistency Graph */}
+              {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
-                <ConsistencyGraph habits={habits} />
+                <ReportCards habits={habits} />
               </div>
-              
-              {/* Weekly Report Cards */}
-              <div className="bg-popover rounded-2xl border border-border/50 p-4">
-                <WeeklyReportCards habits={habits} />
-              </div>
-              
-              <HabitStatistics habits={habits} />
               <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
             </div>
           </div>
