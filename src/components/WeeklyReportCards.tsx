@@ -1,0 +1,172 @@
+import { useMemo } from 'react';
+import { format, startOfWeek, addDays, isToday, isBefore } from 'date-fns';
+import { cn } from '@/lib/utils';
+
+interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  completedDays: boolean[];
+  activeDays: boolean[];
+}
+
+interface WeeklyReportCardsProps {
+  habits: Habit[];
+}
+
+// Circular progress component
+const CircularProgress = ({ percentage, size = 80 }: { percentage: number; size?: number }) => {
+  const strokeWidth = 6;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg className="transform -rotate-90" width={size} height={size}>
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="hsl(var(--muted))"
+          strokeWidth={strokeWidth}
+        />
+        {/* Progress circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="hsl(var(--habit-checkbox))"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="transition-all duration-500 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-lg font-bold text-foreground">{percentage}%</span>
+      </div>
+    </div>
+  );
+};
+
+const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
+  // Generate week days starting from Monday
+  const weekDays = useMemo(() => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
+    
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = addDays(weekStart, i);
+      const dayOfWeek = day.getDay();
+      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      
+      // Calculate progress for this day
+      let totalActive = 0;
+      let totalCompleted = 0;
+      const tasksForDay: { icon: string; name: string; completed: boolean }[] = [];
+      
+      habits.forEach(habit => {
+        if (habit.activeDays[dayIndex]) {
+          totalActive++;
+          const isComplete = habit.completedDays[dayIndex];
+          if (isComplete) {
+            totalCompleted++;
+          }
+          tasksForDay.push({
+            icon: habit.icon,
+            name: habit.name,
+            completed: isComplete
+          });
+        }
+      });
+      
+      const progress = totalActive > 0 ? Math.round((totalCompleted / totalActive) * 100) : 0;
+      
+      return {
+        date: day,
+        dayIndex,
+        progress,
+        completed: totalCompleted,
+        total: totalActive,
+        tasks: tasksForDay,
+        isToday: isToday(day),
+        isPast: isBefore(day, today) && !isToday(day)
+      };
+    });
+  }, [habits]);
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground px-1">Weekly Report</h3>
+      
+      <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory">
+        {weekDays.map((day, idx) => (
+          <div
+            key={idx}
+            className={cn(
+              "flex-shrink-0 w-[160px] rounded-xl border p-3 snap-start transition-all",
+              day.isToday 
+                ? "bg-habit-checkbox/10 border-habit-checkbox/30" 
+                : "bg-popover border-border/50"
+            )}
+          >
+            {/* Day header */}
+            <div className="text-center mb-3">
+              <p className={cn(
+                "text-sm font-semibold",
+                day.isToday ? "text-habit-checkbox" : "text-foreground"
+              )}>
+                {format(day.date, 'EEEE')}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {format(day.date, 'dd.MM.yyyy')}
+              </p>
+            </div>
+            
+            {/* Circular progress */}
+            <div className="flex justify-center mb-3">
+              <CircularProgress percentage={day.progress} size={70} />
+            </div>
+            
+            {/* Tasks list */}
+            <div className="space-y-1">
+              <p className="text-[10px] uppercase font-medium text-muted-foreground mb-1">Tasks</p>
+              <div className="max-h-[100px] overflow-y-auto space-y-1">
+                {day.tasks.slice(0, 5).map((task, taskIdx) => (
+                  <div 
+                    key={taskIdx}
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs py-0.5",
+                      task.completed ? "text-muted-foreground line-through" : "text-foreground"
+                    )}
+                  >
+                    <span className="text-xs">{task.icon}</span>
+                    <span className="truncate">{task.name}</span>
+                    {task.completed && (
+                      <span className="ml-auto text-habit-checkbox">✓</span>
+                    )}
+                  </div>
+                ))}
+                {day.tasks.length > 5 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    +{day.tasks.length - 5} more
+                  </p>
+                )}
+                {day.tasks.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">No habits scheduled</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default WeeklyReportCards;

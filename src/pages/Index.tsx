@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
+import MonthlyHabitCalendar from '@/components/MonthlyHabitCalendar';
+import ConsistencyGraph from '@/components/ConsistencyGraph';
+import WeeklyReportCards from '@/components/WeeklyReportCards';
 import HabitStatistics from '@/components/HabitStatistics';
 import HabitGoals from '@/components/HabitGoals';
 import AddHabitRow from '@/components/AddHabitRow';
@@ -467,22 +470,26 @@ const Index = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 lg:gap-8">
 
-            {/* Mobile: Habit Table (main section) - moved to top */}
+            {/* Mobile: Monthly Habit Calendar (main section) */}
             <div className="lg:hidden space-y-4 animate-fade-in">
               <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
-                <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
-                  <HabitTable
-                    habits={habits}
-                    onToggleDay={handleToggleDay}
-                    onDeleteHabit={handleDeleteHabit}
-                    onDeleteMultipleHabits={handleDeleteMultipleHabits}
-                    onUpdateActiveDays={handleUpdateActiveDays}
-                    onReorder={handleReorderHabits}
-                    onUpdateGoal={handleUpdateGoal}
-                    onUpdateIcon={handleUpdateIcon}
-                  />
-                </div>
+                <MonthlyHabitCalendar
+                  habits={habits}
+                  onToggleDay={handleToggleDay}
+                  onDeleteHabit={handleDeleteHabit}
+                  onDeleteMultipleHabits={handleDeleteMultipleHabits}
+                />
                 <AddHabitRow onAdd={handleAddHabit} />
+              </div>
+              
+              {/* Consistency Graph */}
+              <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
+                <ConsistencyGraph habits={habits} />
+              </div>
+              
+              {/* Weekly Report Cards */}
+              <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
+                <WeeklyReportCards habits={habits} />
               </div>
             </div>
 
@@ -551,19 +558,26 @@ const Index = () => {
 
             {/* Desktop: Right Column */}
             <div className="hidden lg:block space-y-4 animate-fade-in">
-              <div className="overflow-x-auto bg-popover rounded-2xl border border-border/50 p-4">
-                <HabitTable
+              <div className="bg-popover rounded-2xl border border-border/50 p-4">
+                <MonthlyHabitCalendar
                   habits={habits}
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
-                  onUpdateActiveDays={handleUpdateActiveDays}
-                  onReorder={handleReorderHabits}
-                  onUpdateGoal={handleUpdateGoal}
-                  onUpdateIcon={handleUpdateIcon}
                 />
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
+              
+              {/* Consistency Graph */}
+              <div className="bg-popover rounded-2xl border border-border/50 p-4">
+                <ConsistencyGraph habits={habits} />
+              </div>
+              
+              {/* Weekly Report Cards */}
+              <div className="bg-popover rounded-2xl border border-border/50 p-4">
+                <WeeklyReportCards habits={habits} />
+              </div>
+              
               <HabitStatistics habits={habits} />
               <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
             </div>
