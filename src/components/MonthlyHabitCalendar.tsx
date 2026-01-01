@@ -224,7 +224,7 @@ const MonthlyHabitCalendar = ({
       {/* Calendar Grid */}
       <div className="flex">
         {/* Fixed Left Column: Habit names */}
-        <div className="flex-shrink-0 w-[140px] border-r border-border/30">
+        <div className="flex-shrink-0 w-[200px] border-r border-border/30">
           {/* Header spacer */}
           <div className="h-[52px] border-b border-border/30 flex items-end pb-1 px-2">
             <span className="text-xs font-medium text-muted-foreground uppercase">My Habits</span>
