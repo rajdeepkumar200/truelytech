@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface Habit {
   id: string;
@@ -32,7 +37,10 @@ interface MonthlyHabitCalendarProps {
   onToggleDay: (habitId: string, dayIndex: number) => void;
   onDeleteHabit: (habitId: string) => void;
   onDeleteMultipleHabits?: (habitIds: string[]) => void;
+  onToggleActiveDay?: (habitId: string, dayIndex: number) => void;
 }
+
+const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // Get current day index (0 = Monday, 6 = Sunday)
 const getCurrentDayIndex = (): number => {
@@ -57,12 +65,14 @@ const MonthlyHabitCalendar = ({
   habits, 
   onToggleDay, 
   onDeleteHabit, 
-  onDeleteMultipleHabits 
+  onDeleteMultipleHabits,
+  onToggleActiveDay
 }: MonthlyHabitCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [settingsHabitId, setSettingsHabitId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentDayIndex = getCurrentDayIndex();
 
@@ -230,7 +240,7 @@ const MonthlyHabitCalendar = ({
               <div 
                 key={habit.id} 
                 className={cn(
-                  "flex items-center gap-1.5 h-[36px] px-2 border-b border-border/20",
+                  "group flex items-center gap-1.5 h-[36px] px-2 border-b border-border/20",
                   isSelected && "bg-destructive/5"
                 )}
               >
@@ -252,12 +262,51 @@ const MonthlyHabitCalendar = ({
                   </div>
                 )}
                 {selectedHabits.size === 0 && (
-                  <button
-                    onClick={() => setDeleteConfirmId(habit.id)}
-                    className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 rounded flex-shrink-0"
-                  >
-                    <Trash2 className="w-3 h-3 text-destructive" />
-                  </button>
+                  <Popover open={settingsHabitId === habit.id} onOpenChange={(open) => setSettingsHabitId(open ? habit.id : null)}>
+                    <PopoverTrigger asChild>
+                      <button className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted/50 rounded flex-shrink-0">
+                        <Settings className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-52 p-3 bg-popover border-border" align="start">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-foreground">Active Days</span>
+                          <button onClick={() => setSettingsHabitId(null)} className="p-0.5 hover:bg-muted rounded">
+                            <X className="w-3 h-3 text-muted-foreground" />
+                          </button>
+                        </div>
+                        <div className="flex gap-1">
+                          {DAYS_OF_WEEK.map((day, idx) => (
+                            <button
+                              key={day}
+                              onClick={() => onToggleActiveDay?.(habit.id, idx)}
+                              className={cn(
+                                "w-7 h-7 rounded-full text-[10px] font-medium transition-all",
+                                activeDays[idx]
+                                  ? "bg-accent text-accent-foreground"
+                                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                              )}
+                            >
+                              {day[0]}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="pt-2 border-t border-border">
+                          <button
+                            onClick={() => {
+                              setSettingsHabitId(null);
+                              setDeleteConfirmId(habit.id);
+                            }}
+                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10 rounded transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Delete habit
+                          </button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
             );
