@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
 import MonthlyHabitCalendar from '@/components/MonthlyHabitCalendar';
-import ReportCards from '@/components/ReportCards';
+import WeeklyReportCards from '@/components/WeeklyReportCards';
 import HabitStatistics from '@/components/HabitStatistics';
 import HabitGoals from '@/components/HabitGoals';
 import AddHabitRow from '@/components/AddHabitRow';
@@ -360,6 +360,17 @@ const Index = () => {
     }));
   };
 
+  const handleToggleActiveDay = (habitId: string, dayIndex: number) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        const newActiveDays = [...habit.activeDays];
+        newActiveDays[dayIndex] = !newActiveDays[dayIndex];
+        return { ...habit, activeDays: newActiveDays };
+      }
+      return habit;
+    }));
+  };
+
   const handleUpdateGoal = (habitId: string, goal: number) => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
@@ -478,13 +489,14 @@ const Index = () => {
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
+                  onToggleActiveDay={handleToggleActiveDay}
                 />
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
               
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
-                <ReportCards habits={habits} />
+                <WeeklyReportCards habits={habits} />
               </div>
             </div>
 
@@ -560,13 +572,14 @@ const Index = () => {
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
+                  onToggleActiveDay={handleToggleActiveDay}
                 />
                 <AddHabitRow onAdd={handleAddHabit} />
               </div>
               
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
-                <ReportCards habits={habits} />
+                <WeeklyReportCards habits={habits} />
               </div>
               <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
             </div>
