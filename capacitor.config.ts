@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'TruelyTech Habits',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    cleartextTrafficPermitted: true
+    androidScheme: 'https'
   }
 };
 
