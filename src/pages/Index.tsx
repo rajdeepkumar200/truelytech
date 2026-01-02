@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { Book, Eye, EyeOff } from 'lucide-react';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
 import MonthlyHabitCalendar from '@/components/MonthlyHabitCalendar';
@@ -18,10 +19,12 @@ import ThemeToggle from '@/components/ThemeToggle';
 import UserMenu from '@/components/UserMenu';
 import MobileInstallPrompt from '@/components/MobileInstallPrompt';
 import ReminderAlert from '@/components/ReminderAlert';
+import { OnboardingTour } from '@/components/OnboardingTour';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
 import { useNotifications, NotificationPreferences } from '@/hooks/useNotifications';
+import { useToast } from '@/hooks/use-toast';
 
 interface Habit {
   id: string;
@@ -31,6 +34,7 @@ interface Habit {
   activeDays: boolean[];
   category?: string;
   weeklyGoal?: number;
+  hidden?: boolean;
 }
 
 interface ScheduleItem {
@@ -74,6 +78,7 @@ const defaultSchedule: ScheduleItem[] = [
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const { 
     fetchHabits, saveHabits, 
     fetchSchedule, saveSchedule, 
@@ -98,6 +103,8 @@ const Index = () => {
     const saved = localStorage.getItem('schedule');
     return saved ? JSON.parse(saved) : defaultSchedule;
   });
+
+  const [showHiddenHabits, setShowHiddenHabits] = useState(false);
 
   const [reminders, setReminders] = useState<Reminder[]>(() => {
     const saved = localStorage.getItem('reminders');
@@ -131,6 +138,13 @@ const Index = () => {
 
   // Initialize notifications
   const { notifyHabitComplete } = useNotifications(reminders, schedule, notificationPrefs);
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
 
   // Visual reminder alerts for eye blink and water intake
   useEffect(() => {
@@ -283,28 +297,41 @@ const Index = () => {
   useEffect(() => {
     localStorage.setItem('habits-v3', JSON.stringify(habits));
     if (user && dataLoaded) {
-      saveHabits(habits);
+      // Debounce save to prevent spamming
+      const timeoutId = setTimeout(() => {
+        saveHabits(habits);
+      }, 200);
+      return () => clearTimeout(timeoutId);
     }
   }, [habits, user, dataLoaded, saveHabits]);
 
   useEffect(() => {
     localStorage.setItem('schedule', JSON.stringify(schedule));
     if (user && dataLoaded) {
-      saveSchedule(schedule);
+      const timeoutId = setTimeout(() => {
+        saveSchedule(schedule);
+      }, 200);
+      return () => clearTimeout(timeoutId);
     }
   }, [schedule, user, dataLoaded, saveSchedule]);
 
   useEffect(() => {
     localStorage.setItem('reminders', JSON.stringify(reminders));
     if (user && dataLoaded) {
-      saveReminders(reminders);
+      const timeoutId = setTimeout(() => {
+        saveReminders(reminders);
+      }, 200);
+      return () => clearTimeout(timeoutId);
     }
   }, [reminders, user, dataLoaded, saveReminders]);
 
   useEffect(() => {
     localStorage.setItem('notificationPrefs', JSON.stringify(notificationPrefs));
     if (user && dataLoaded) {
-      saveSettings(notificationPrefs);
+      const timeoutId = setTimeout(() => {
+        saveSettings(notificationPrefs);
+      }, 200);
+      return () => clearTimeout(timeoutId);
     }
   }, [notificationPrefs, user, dataLoaded, saveSettings]);
 
@@ -317,9 +344,13 @@ const Index = () => {
         newCompletedDays[dayIndex] = !wasCompleted;
 
         // Send notification on completion (guarded for mobile browsers that don't support Notifications)
-        const canUseNotifications = typeof window !== 'undefined' && 'Notification' in window;
-        if (!wasCompleted && canUseNotifications && window.Notification.permission === 'granted') {
-          notifyHabitComplete(habit.name, habit.icon);
+        try {
+          const canUseNotifications = typeof window !== 'undefined' && 'Notification' in window;
+          if (!wasCompleted && canUseNotifications && window.Notification.permission === 'granted') {
+            notifyHabitComplete(habit.name, habit.icon);
+          }
+        } catch (e) {
+          console.error('Notification error:', e);
         }
 
         return { ...habit, completedDays: newCompletedDays };
@@ -330,7 +361,7 @@ const Index = () => {
 
   const handleAddHabit = (name: string, icon: string) => {
     const newHabit: Habit = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name,
       icon,
       completedDays: Array(7).fill(false),
@@ -371,6 +402,20 @@ const Index = () => {
     }));
   };
 
+  const handleToggleHabitVisibility = (habitId: string) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        const newHiddenState = !habit.hidden;
+        toast({
+          title: newHiddenState ? "Habit Hidden" : "Habit Visible",
+          description: `"${habit.name}" is now ${newHiddenState ? 'hidden' : 'visible'}.`,
+        });
+        return { ...habit, hidden: newHiddenState };
+      }
+      return habit;
+    }));
+  };
+
   const handleUpdateGoal = (habitId: string, goal: number) => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
@@ -391,7 +436,7 @@ const Index = () => {
 
   const handleAddScheduleItem = (time: string, task: string, emoji: string) => {
     const newItem: ScheduleItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       time,
       task,
       emoji,
@@ -414,7 +459,7 @@ const Index = () => {
 
   const handleAddReminder = (reminder: Omit<Reminder, 'id'>) => {
     const newReminder: Reminder = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       ...reminder,
     };
     setReminders(prev => [...prev, newReminder]);
@@ -436,9 +481,14 @@ const Index = () => {
     ));
   };
 
+  const visibleHabits = habits.filter(h => showHiddenHabits || !h.hidden);
+
+  const [motivationDismissed, setMotivationDismissed] = useState(false);
+
   return (
     <div className="min-h-screen bg-background pb-safe">
-      <MotivationModal />
+      <MotivationModal onDismiss={() => setMotivationDismissed(true)} />
+      <OnboardingTour start={motivationDismissed} />
       <NotificationPrompt />
       <MobileInstallPrompt />
       <ReminderAlert 
@@ -448,7 +498,20 @@ const Index = () => {
       />
       
       {/* Top Controls */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+      <div className="fixed bottom-4 right-4 md:top-4 md:bottom-auto z-50 flex items-center gap-2">
+        <Button 
+          id="hide-habit-btn"
+          variant="outline" 
+          size="icon" 
+          onClick={() => setShowHiddenHabits(!showHiddenHabits)} 
+          title={showHiddenHabits ? "Hide Hidden Habits" : "Show Hidden Habits"}
+          className={showHiddenHabits ? "bg-accent text-accent-foreground" : ""}
+        >
+          {showHiddenHabits ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+        </Button>
+        <Button id="journal-btn" variant="outline" size="icon" onClick={() => navigate('/journal')} title="Journal">
+          <Book className="h-4 w-4" />
+        </Button>
         {!user && !authLoading && (
           <div className="hidden sm:block">
             <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
@@ -456,8 +519,8 @@ const Index = () => {
             </Button>
           </div>
         )}
-        {user && <UserMenu />}
-        <ThemeToggle />
+        {user && <div id="user-menu-btn"><UserMenu /></div>}
+        <div id="theme-toggle-btn"><ThemeToggle /></div>
       </div>
       
       {/* Title */}
@@ -485,25 +548,28 @@ const Index = () => {
             <div className="lg:hidden space-y-4 animate-fade-in">
               <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
                 <MonthlyHabitCalendar
-                  habits={habits}
+                  habits={visibleHabits}
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
                   onToggleActiveDay={handleToggleActiveDay}
+                  onToggleVisibility={handleToggleHabitVisibility}
                 />
-                <AddHabitRow onAdd={handleAddHabit} />
+                <div id="add-habit-mobile">
+                  <AddHabitRow onAdd={handleAddHabit} />
+                </div>
               </div>
               
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
-                <WeeklyReportCards habits={habits} />
+                <WeeklyReportCards habits={visibleHabits} />
               </div>
             </div>
 
             {/* Mobile: Stats (streaks) - right after habits */}
-            <div className="lg:hidden">
-              <HabitStatistics habits={habits} />
-            </div>
+            {/* <div className="lg:hidden">
+              <HabitStatistics habits={visibleHabits} />
+            </div> */}
 
             {/* Mobile: Reminders */}
             <div className="lg:hidden">
@@ -531,7 +597,7 @@ const Index = () => {
 
             {/* Mobile: Goals & Settings */}
             <div className="lg:hidden space-y-4">
-              <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
+              <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
               <NotificationSettings
                 preferences={notificationPrefs}
                 onUpdate={setNotificationPrefs}
@@ -568,26 +634,29 @@ const Index = () => {
             <div className="hidden lg:block space-y-4 animate-fade-in">
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
                 <MonthlyHabitCalendar
-                  habits={habits}
+                  habits={visibleHabits}
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
                   onToggleActiveDay={handleToggleActiveDay}
+                  onToggleVisibility={handleToggleHabitVisibility}
                 />
-                <AddHabitRow onAdd={handleAddHabit} />
+                <div id="add-habit-desktop">
+                  <AddHabitRow onAdd={handleAddHabit} />
+                </div>
               </div>
               
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
-                <WeeklyReportCards habits={habits} />
+                <WeeklyReportCards habits={visibleHabits} />
               </div>
-              <HabitGoals habits={habits} onUpdateGoal={handleUpdateGoal} />
+              <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
             </div>
           </div>
         </div>
         
         {/* Mobile: Sign in prompt for non-logged users */}
-        {!user && !authLoading && (
+        {/* {!user && !authLoading && (
           <div className="sm:hidden mt-6 p-4 bg-popover rounded-2xl border border-border/50">
             <p className="text-sm text-muted-foreground mb-3 text-center">
               Sign in to sync your habits across all devices
@@ -596,7 +665,7 @@ const Index = () => {
               Sign in
             </Button>
           </div>
-        )}
+        )} */}
       </main>
     </div>
   );

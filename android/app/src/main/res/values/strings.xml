@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TruelyTech Habits</string>
+    <string name="title_activity_main">TruelyTech Habits</string>
+    <string name="package_name">com.truelytech.habits</string>
+    <string name="custom_url_scheme">com.truelytech.habits</string>
+</resources>

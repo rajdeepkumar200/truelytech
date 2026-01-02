@@ -20,6 +20,7 @@ export type Database = {
           category: string | null
           completed_days: boolean[]
           created_at: string
+          hidden: boolean | null
           icon: string
           id: string
           name: string
@@ -33,6 +34,7 @@ export type Database = {
           category?: string | null
           completed_days?: boolean[]
           created_at?: string
+          hidden?: boolean | null
           icon?: string
           id?: string
           name: string
@@ -46,6 +48,7 @@ export type Database = {
           category?: string | null
           completed_days?: boolean[]
           created_at?: string
+          hidden?: boolean | null
           icon?: string
           id?: string
           name?: string

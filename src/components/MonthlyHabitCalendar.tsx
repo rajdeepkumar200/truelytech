@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings, X } from 'lucide-react';
+import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings, X, Eye, EyeOff } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, getDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, getDay, isSameWeek } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,12 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import ConsistencyGraph from './ConsistencyGraph';
 
 interface Habit {
   id: string;
@@ -30,6 +30,7 @@ interface Habit {
   category?: string;
   streak?: number;
   weeklyGoal?: number;
+  hidden?: boolean;
 }
 
 interface MonthlyHabitCalendarProps {
@@ -38,6 +39,7 @@ interface MonthlyHabitCalendarProps {
   onDeleteHabit: (habitId: string) => void;
   onDeleteMultipleHabits?: (habitIds: string[]) => void;
   onToggleActiveDay?: (habitId: string, dayIndex: number) => void;
+  onToggleVisibility?: (habitId: string) => void;
 }
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -66,7 +68,8 @@ const MonthlyHabitCalendar = ({
   onToggleDay, 
   onDeleteHabit, 
   onDeleteMultipleHabits,
-  onToggleActiveDay
+  onToggleActiveDay,
+  onToggleVisibility
 }: MonthlyHabitCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -85,15 +88,19 @@ const MonthlyHabitCalendar = ({
 
   // Scroll to today on mount
   useEffect(() => {
-    const todayElement = document.getElementById('today-column');
-    if (todayElement && scrollRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
+    // Use a small timeout to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const todayElement = document.getElementById('today-column');
+      if (todayElement && scrollRef.current) {
         const elementLeft = todayElement.offsetLeft;
-        const containerWidth = scrollContainer.clientWidth;
-        scrollContainer.scrollLeft = elementLeft - containerWidth / 2 + todayElement.clientWidth / 2;
+        const containerWidth = scrollRef.current.clientWidth;
+        // Center the current day, but ensure it's clearly visible
+        // On mobile, we might want it slightly to the left of center if possible, 
+        // but centering is generally the safest bet for "in front" visibility
+        scrollRef.current.scrollLeft = elementLeft - containerWidth / 2 + todayElement.clientWidth / 2;
       }
-    }
+    }, 300); // Increased timeout slightly to ensure layout is stable
+    return () => clearTimeout(timer);
   }, [monthDays]);
 
   const toggleSelectHabit = (habitId: string) => {
@@ -224,7 +231,7 @@ const MonthlyHabitCalendar = ({
       {/* Calendar Grid */}
       <div className="flex">
         {/* Fixed Left Column: Habit names */}
-        <div className="flex-shrink-0 w-[200px] border-r border-border/30">
+        <div className="flex-shrink-0 w-[130px] sm:w-[200px] border-r border-border/30">
           {/* Header spacer */}
           <div className="h-[52px] border-b border-border/30 flex items-end pb-1 px-2">
             <span className="text-xs font-medium text-muted-foreground uppercase">My Habits</span>
@@ -292,7 +299,17 @@ const MonthlyHabitCalendar = ({
                             </button>
                           ))}
                         </div>
-                        <div className="pt-2 border-t border-border">
+                        <div className="pt-2 border-t border-border space-y-1">
+                          <button
+                            onClick={() => {
+                              onToggleVisibility?.(habit.id);
+                              setSettingsHabitId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                          >
+                            {habit.hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                            {habit.hidden ? "Unhide Habit" : "Hide Habit"}
+                          </button>
                           <button
                             onClick={() => {
                               setSettingsHabitId(null);
@@ -319,7 +336,7 @@ const MonthlyHabitCalendar = ({
         </div>
 
         {/* Scrollable Right Column: Days */}
-        <ScrollArea className="flex-1" ref={scrollRef}>
+        <div className="flex-1 overflow-x-auto" ref={scrollRef}>
           <div className="min-w-max">
             {/* Day headers with week grouping */}
             <div className="flex border-b border-border/30 h-[52px]">
@@ -368,7 +385,9 @@ const MonthlyHabitCalendar = ({
                     const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
                     const isCurrentDay = isToday(day);
                     const isActive = activeDays[dayIndex];
-                    const isComplete = habit.completedDays[dayIndex];
+                    // Only show completion status for the current week, as we don't have historical data
+                    const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
+                    const isComplete = isCurrentWeek ? habit.completedDays[dayIndex] : false;
                     const isWeekStart = dayOfWeek === 1;
 
                     return (
@@ -382,24 +401,30 @@ const MonthlyHabitCalendar = ({
                       >
                         {isActive ? (
                           isCurrentDay ? (
-                            <Checkbox
-                              checked={isComplete}
-                              onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
-                              className={cn(
-                                "w-5 h-5 border-2 transition-all",
-                                isComplete
-                                  ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
-                                  : "border-accent ring-1 ring-accent/30"
-                              )}
-                            />
+                            <div onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleDay(habit.id, dayIndex);
+                            }}>
+                              <Checkbox
+                                checked={isComplete}
+                                onCheckedChange={() => {}} // Handled by parent div to prevent double events
+                                className={cn(
+                                  "w-5 h-5 border-2 transition-all pointer-events-none", // Disable pointer events on checkbox to let div handle click
+                                  isComplete
+                                    ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
+                                    : "border-accent ring-1 ring-accent/30"
+                                )}
+                              />
+                            </div>
                           ) : (
                             <div
                               className={cn(
                                 "w-5 h-5 rounded border flex items-center justify-center",
                                 isComplete
                                   ? "bg-habit-checkbox border-habit-checkbox"
-                                  : "border-border/50 bg-muted/20"
+                                  : "border-border/30 bg-muted/10 opacity-50"
                               )}
+                              // onClick removed to prevent editing past/future days
                             >
                               {isComplete && <span className="text-[10px] text-white">✓</span>}
                             </div>
@@ -442,9 +467,11 @@ const MonthlyHabitCalendar = ({
                 );
               })}
             </div>
+            
+            {/* Consistency Graph */}
+            <ConsistencyGraph data={dailyProgress} days={monthDays} />
           </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Delete Confirmation Dialogs */}

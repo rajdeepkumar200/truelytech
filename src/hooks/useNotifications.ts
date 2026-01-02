@@ -196,11 +196,11 @@ export const useNotifications = (
   useEffect(() => {
     if (!preferences.enabled || Notification.permission !== 'granted') return;
 
-    // Check every 30 seconds
+    // Check every 2 seconds (as requested)
     intervalRef.current = window.setInterval(() => {
       checkNotifications();
       checkDailyReminder();
-    }, 30000);
+    }, 2000);
 
     // Initial check
     checkNotifications();

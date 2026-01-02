@@ -17,7 +17,7 @@ const quotes = [
   { text: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
 ];
 
-const MotivationModal = () => {
+const MotivationModal = ({ onDismiss }: { onDismiss?: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [quote, setQuote] = useState(quotes[0]);
 
@@ -28,6 +28,11 @@ const MotivationModal = () => {
     setIsOpen(true);
   }, []);
 
+  const handleDismiss = () => {
+    setIsOpen(false);
+    if (onDismiss) onDismiss();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -35,18 +40,10 @@ const MotivationModal = () => {
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
-        onClick={() => setIsOpen(false)}
       />
       
       {/* Modal */}
       <div className="relative bg-popover rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl animate-slide-up">
-        <button
-          onClick={() => setIsOpen(false)}
-          className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-card mb-4">
             <Sparkles className="w-6 h-6 text-card-foreground" />
@@ -65,7 +62,7 @@ const MotivationModal = () => {
           </p>
 
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={handleDismiss}
             className="w-full py-3 bg-card text-card-foreground rounded-xl font-medium hover:opacity-90 transition-opacity"
           >
             Let's Get Started! 💪

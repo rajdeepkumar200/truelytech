@@ -11,6 +11,7 @@ interface Habit {
   activeDays: boolean[];
   category?: string;
   weeklyGoal?: number;
+  hidden?: boolean;
 }
 
 interface ScheduleItem {
@@ -67,6 +68,7 @@ export const useDataSync = () => {
       activeDays: h.active_days,
       category: h.category || undefined,
       weeklyGoal: h.weekly_goal || undefined,
+      hidden: h.hidden || false,
     }));
   }, [user]);
 
@@ -96,7 +98,8 @@ export const useDataSync = () => {
         const isExisting = existingIds.has(h.id);
         
         if (isExisting) {
-          await supabase.from('habits').update({
+          // Note: 'hidden' column requires migration. If it fails, we catch and retry without it.
+          const { error } = await supabase.from('habits').update({
             name: h.name,
             icon: h.icon,
             completed_days: h.completedDays,
@@ -104,9 +107,23 @@ export const useDataSync = () => {
             category: h.category || null,
             weekly_goal: h.weeklyGoal || 0,
             sort_order: i,
+            hidden: h.hidden || false,
           }).eq('id', h.id);
+
+          if (error) {
+            // Fallback for missing column
+            await supabase.from('habits').update({
+              name: h.name,
+              icon: h.icon,
+              completed_days: h.completedDays,
+              active_days: h.activeDays,
+              category: h.category || null,
+              weekly_goal: h.weeklyGoal || 0,
+              sort_order: i,
+            }).eq('id', h.id);
+          }
         } else {
-          await supabase.from('habits').insert({
+          const { error } = await supabase.from('habits').insert({
             id: h.id,
             user_id: user.id,
             name: h.name,
@@ -116,7 +133,22 @@ export const useDataSync = () => {
             category: h.category || null,
             weekly_goal: h.weeklyGoal || 0,
             sort_order: i,
+            hidden: h.hidden || false,
           });
+
+          if (error) {
+             await supabase.from('habits').insert({
+              id: h.id,
+              user_id: user.id,
+              name: h.name,
+              icon: h.icon,
+              completed_days: h.completedDays,
+              active_days: h.activeDays,
+              category: h.category || null,
+              weekly_goal: h.weeklyGoal || 0,
+              sort_order: i,
+            });
+          }
         }
       }
     }
