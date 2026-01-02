@@ -45,8 +45,8 @@ This guide will help you turn your website into an Android app file (`.apk`) tha
     *   *(In your screenshot, it is the 7th option down, with an arrow `>` next to it).*
     *   When you hover over it, a side menu will pop out.
 
-3.  In that side menu, click **Build APK(s)**.
-    *   *Do NOT click "Generate Signed App Bundle or APK..." just yet.*
+3.  In that side menu, click **Generate APKs**.
+    *   *(It might be the first option in the small side menu).*
 
 4.  A progress bar will appear at the bottom right. Wait for it to finish.
 5.  When done, a popup will appear: "APK(s) generated successfully".
