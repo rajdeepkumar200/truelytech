@@ -30,9 +30,9 @@ export function OnboardingTour({ start }: OnboardingTourProps) {
       steps: [
         { 
           popover: { 
-            title: 'Welcome to TruelyTech!', 
+            title: 'Welcome to Habitex!', 
             description: 'Your personal habit tracker and productivity companion. Let\'s take a quick tour.',
-            side: "center", 
+            side: "top", 
             align: 'center' 
           } 
         },

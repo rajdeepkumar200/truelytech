@@ -7,15 +7,16 @@
     <meta name="description" content="Beautiful daily habit tracker to build consistency and track your weekly progress. Simple, elegant, and effective." />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="/" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" href="%BASE_URL%favicon.svg?v=20260102" type="image/svg+xml" />
+    <link rel="icon" href="%BASE_URL%favicon.ico?v=20260102" sizes="any" />
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#b8a09a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Daily Habits" />
-    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="%BASE_URL%pwa-192x192.png" />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     
     <meta property="og:title" content="Daily Habits | Track Your Weekly Progress" />
     <meta property="og:description" content="Beautiful daily habit tracker to build consistency and track your weekly progress." />
@@ -24,11 +25,7 @@
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="root">
-      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #fafafa; color: #333; font-family: sans-serif;">
-        <h1>Loading App...</h1>
-      </div>
-    </div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root"></div>
+    <script type="module" src="%BASE_URL%src/main.tsx"></script>
   </body>
 </html>

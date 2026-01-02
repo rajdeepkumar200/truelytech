@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
       // We register the service worker manually in code so we can skip it
       // inside Capacitor (Android) where SW caching can cause stale bundles.
       injectRegister: null,
-      includeAssets: ["favicon.ico", "robots.txt"],
+      includeAssets: ["favicon.ico", "favicon.svg", "robots.txt"],
       manifest: {
         name: "Daily Habits",
         short_name: "Habits",

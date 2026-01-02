@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <!-- Bullseye -->
+  <circle cx="32" cy="32" r="28" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="6" />
+  <circle cx="32" cy="32" r="18" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="6" />
+  <circle cx="32" cy="32" r="8" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="6" />
+  <circle cx="32" cy="32" r="4" fill="#E85B4F" />
+
+  <!-- Arrow (simple stylized) -->
+  <path d="M48 14 L34 28" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
+  <path d="M50 12 L56 18" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
+  <path d="M44 18 L50 24" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
+  <path d="M56 18 L50 24" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
+</svg>

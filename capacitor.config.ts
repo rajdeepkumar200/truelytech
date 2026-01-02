@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.truelytech.habits',
-  appName: 'TruelyTech Habits',
+  appName: 'Habitex',
   webDir: 'dist',
   server: {
     androidScheme: 'http',
