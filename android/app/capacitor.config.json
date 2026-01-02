@@ -1,0 +1,6 @@
+{
+  "appId": "com.truelytech.habits",
+  "appName": "habits",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
