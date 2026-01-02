@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // We register the service worker manually in code so we can skip it
+      // inside Capacitor (Android) where SW caching can cause stale bundles.
+      injectRegister: null,
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
         name: "Daily Habits",

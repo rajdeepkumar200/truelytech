@@ -132,6 +132,7 @@ const Index = () => {
     return localStorage.getItem('lastUserId');
   });
   const [reminderAlertType, setReminderAlertType] = useState<'eye' | 'water' | null>(null);
+  const [motivationDismissed, setMotivationDismissed] = useState(false);
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reminderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const today = new Date();
@@ -147,23 +148,10 @@ const Index = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Show loading state while checking auth
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Loading your habits...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If not authenticated, return null (will redirect via useEffect)
-  if (!user) return null;
-
   // Visual reminder alerts for eye blink and water intake
   useEffect(() => {
+    if (authLoading || !user) return;
+
     if (!notificationPrefs.eyeBlinkReminders && !notificationPrefs.waterIntakeReminders) {
       if (reminderIntervalRef.current) {
         clearInterval(reminderIntervalRef.current);
@@ -175,14 +163,15 @@ const Index = () => {
       const now = new Date();
       const minutes = now.getMinutes();
       const seconds = now.getSeconds();
+      const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
 
       // Eye blink - every 20 minutes
       if (notificationPrefs.eyeBlinkReminders && minutes % 20 === 0 && seconds < 5) {
         setReminderAlertType('eye');
         // Send notification if document is hidden (user not on screen)
-        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        if (document.hidden && notificationsSupported && window.Notification.permission === 'granted') {
           try {
-            new Notification('👁️ Eye Break!', {
+            new window.Notification('👁️ Eye Break!', {
               body: 'Look away from the screen for 20 seconds.',
               icon: '/pwa-192x192.png',
             });
@@ -197,9 +186,9 @@ const Index = () => {
       if (notificationPrefs.waterIntakeReminders && minutes % waterInterval === 0 && seconds < 5) {
         setReminderAlertType('water');
         // Send notification if document is hidden
-        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        if (document.hidden && notificationsSupported && window.Notification.permission === 'granted') {
           try {
-            new Notification('💧 Hydration Time!', {
+            new window.Notification('💧 Hydration Time!', {
               body: 'Take a sip of water to stay hydrated.',
               icon: '/pwa-192x192.png',
             });
@@ -507,7 +496,20 @@ const Index = () => {
 
   const visibleHabits = habits.filter(h => showHiddenHabits || !h.hidden);
 
-  const [motivationDismissed, setMotivationDismissed] = useState(false);
+  // Keep conditional rendering at the bottom so hook ordering is consistent.
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading your habits...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, render nothing (redirect handled in effect)
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background pb-safe">

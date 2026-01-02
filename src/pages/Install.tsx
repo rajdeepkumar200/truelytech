@@ -15,6 +15,8 @@ const Install = () => {
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
+  const apkUrl = `${import.meta.env.BASE_URL}app-release.apk`;
+
   useEffect(() => {
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -105,7 +107,7 @@ const Install = () => {
                 className="w-full" 
                 asChild
               >
-                <a href="/app-release.apk" download="DailyHabits.apk">
+                <a href={apkUrl} download="DailyHabits.apk">
                   <Download className="w-5 h-5 mr-2" />
                   Download APK
                 </a>

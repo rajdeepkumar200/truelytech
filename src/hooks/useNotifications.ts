@@ -198,7 +198,12 @@ export const useNotifications = (
   }, [preferences, sendNotification]);
 
   useEffect(() => {
-    if (!preferences.enabled || Notification.permission !== 'granted') return;
+    const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
+    if (!preferences.enabled || !notificationsSupported) return;
+
+    // Only run background checks if notifications are actually allowed.
+    // (On Android WebView, `Notification` may be undefined, so we must guard access.)
+    if (window.Notification.permission !== 'granted') return;
 
     // Check every 2 seconds (as requested)
     intervalRef.current = window.setInterval(() => {

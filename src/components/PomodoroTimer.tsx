@@ -59,17 +59,22 @@ const PomodoroTimer = () => {
       setIsRunning(false);
       
       // Send notification when timer completes
-      if (Notification.permission === 'granted') {
-        new Notification(
-          isBreak ? '🍅 Break Over!' : '☕ Time for a Break!',
-          {
-            body: isBreak 
-              ? 'Great rest! Ready to focus again?' 
-              : `You completed a ${workMinutes}-minute focus session! Take ${breakMinutes} minutes to recharge.`,
-            icon: '/pwa-192x192.png',
-            badge: '/pwa-192x192.png',
-          }
-        );
+      try {
+        const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
+        if (notificationsSupported && window.Notification.permission === 'granted') {
+          new window.Notification(
+            isBreak ? '🍅 Break Over!' : '☕ Time for a Break!',
+            {
+              body: isBreak
+                ? 'Great rest! Ready to focus again?'
+                : `You completed a ${workMinutes}-minute focus session! Take ${breakMinutes} minutes to recharge.`,
+              icon: '/pwa-192x192.png',
+              badge: '/pwa-192x192.png',
+            }
+          );
+        }
+      } catch {
+        // Ignore notification errors (e.g., unsupported platforms).
       }
     }
 

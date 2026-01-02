@@ -2,6 +2,20 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+// Register PWA service worker on the web only.
+// In Capacitor (Android), service worker caching can serve stale bundles.
+import { registerSW } from 'virtual:pwa-register';
+
+try {
+  const isCapacitorNative = typeof window !== 'undefined' &&
+    (window as any).Capacitor?.isNativePlatform?.() === true;
+  if (!isCapacitorNative) {
+    registerSW({ immediate: true });
+  }
+} catch {
+  // If SW registration fails, the app should still load.
+}
+
 // Global Error Handler to catch errors that happen outside React
 window.onerror = function (message, source, lineno, colno, error) {
   const errorDiv = document.createElement('div');

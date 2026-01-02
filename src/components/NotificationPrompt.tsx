@@ -10,10 +10,12 @@ const NotificationPrompt = () => {
   const [platform, setPlatform] = useState<'windows' | 'macos' | 'android' | 'ios' | 'other'>('other');
 
   useEffect(() => {
-    if (!('Notification' in window)) {
+    if (!(typeof window !== 'undefined' && 'Notification' in window)) {
       setPermission('unsupported');
       return;
     }
+
+    const NotificationApi = window.Notification;
 
     // Detect platform
     const userAgent = navigator.userAgent.toLowerCase();
@@ -27,11 +29,11 @@ const NotificationPrompt = () => {
       setPlatform('ios');
     }
 
-    setPermission(Notification.permission);
+    setPermission(NotificationApi.permission);
 
     // Show prompt if permission hasn't been asked yet
     const hasAsked = localStorage.getItem('notification-prompted');
-    if (Notification.permission === 'default' && !hasAsked) {
+    if (NotificationApi.permission === 'default' && !hasAsked) {
       // Delay showing prompt
       const timer = setTimeout(() => setShowPrompt(true), 1500);
       return () => clearTimeout(timer);
@@ -40,7 +42,14 @@ const NotificationPrompt = () => {
 
   const requestPermission = async () => {
     try {
-      const result = await Notification.requestPermission();
+      if (!(typeof window !== 'undefined' && 'Notification' in window)) {
+        setPermission('unsupported');
+        toast.error('Notifications are not supported on this device.');
+        return;
+      }
+
+      const NotificationApi = window.Notification;
+      const result = await NotificationApi.requestPermission();
       setPermission(result);
       localStorage.setItem('notification-prompted', 'true');
       setShowPrompt(false);
@@ -48,11 +57,15 @@ const NotificationPrompt = () => {
       if (result === 'granted') {
         toast.success('Notifications enabled! We\'ll remind you about your habits.');
         // Send a test notification
-        new Notification('Daily Habits', {
-          body: 'Notifications are now enabled! Stay consistent with your habits. 🎯',
-          icon: '/pwa-192x192.png',
-          badge: '/pwa-192x192.png',
-        });
+        try {
+          new NotificationApi('Daily Habits', {
+            body: 'Notifications are now enabled! Stay consistent with your habits. 🎯',
+            icon: '/pwa-192x192.png',
+            badge: '/pwa-192x192.png',
+          });
+        } catch {
+          // Ignore notification construction failures on some platforms.
+        }
         
         // Haptic feedback on mobile
         if (navigator.vibrate) {
