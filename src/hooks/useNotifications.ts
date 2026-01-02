@@ -57,12 +57,16 @@ export const useNotifications = (
   const intervalRef = useRef<number | null>(null);
 
   const sendNotification = useCallback((title: string, body: string, icon?: string) => {
-    if (Notification.permission === 'granted') {
-      new Notification(title, {
-        body,
-        icon: icon || '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
-      });
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, {
+          body,
+          icon: icon || '/pwa-192x192.png',
+          badge: '/pwa-192x192.png',
+        });
+      } catch (e) {
+        console.error('Notification error:', e);
+      }
       
       // Haptic feedback
       if (navigator.vibrate) {

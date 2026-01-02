@@ -180,11 +180,15 @@ const Index = () => {
       if (notificationPrefs.eyeBlinkReminders && minutes % 20 === 0 && seconds < 5) {
         setReminderAlertType('eye');
         // Send notification if document is hidden (user not on screen)
-        if (document.hidden && Notification.permission === 'granted') {
-          new Notification('👁️ Eye Break!', {
-            body: 'Look away from the screen for 20 seconds.',
-            icon: '/pwa-192x192.png',
-          });
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('👁️ Eye Break!', {
+              body: 'Look away from the screen for 20 seconds.',
+              icon: '/pwa-192x192.png',
+            });
+          } catch (e) {
+            console.error('Notification error:', e);
+          }
         }
       }
 
@@ -193,11 +197,15 @@ const Index = () => {
       if (notificationPrefs.waterIntakeReminders && minutes % waterInterval === 0 && seconds < 5) {
         setReminderAlertType('water');
         // Send notification if document is hidden
-        if (document.hidden && Notification.permission === 'granted') {
-          new Notification('💧 Hydration Time!', {
-            body: 'Take a sip of water to stay hydrated.',
-            icon: '/pwa-192x192.png',
-          });
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('💧 Hydration Time!', {
+              body: 'Take a sip of water to stay hydrated.',
+              icon: '/pwa-192x192.png',
+            });
+          } catch (e) {
+            console.error('Notification error:', e);
+          }
         }
       }
     };
