@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Book, Eye, EyeOff } from 'lucide-react';
 import ClockWidget from '@/components/ClockWidget';
@@ -508,8 +508,8 @@ const Index = () => {
     );
   }
 
-  // If not authenticated, render nothing (redirect handled in effect)
-  if (!user) return null;
+  // If not authenticated, send user to auth page.
+  if (!user) return <Navigate to="/auth" replace />;
 
   return (
     <div className="min-h-screen bg-background pb-safe">
