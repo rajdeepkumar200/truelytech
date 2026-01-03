@@ -16,6 +16,12 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId || !firebaseConfig.appId) {
+  console.error(
+    'Missing Firebase environment variables. Copy .env.example to .env and set VITE_FIREBASE_* values (and set them in Vercel).'
+  );
+}
+
 export const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const auth = getAuth(firebaseApp);

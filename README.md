@@ -35,6 +35,10 @@ A beautiful daily habit tracker to build consistency and track your weekly progr
    npm install
    ```
 
+4. Configure environment variables:
+   - Copy `.env.example` to `.env`
+   - Fill in your Firebase values (from Firebase Console → Project settings)
+
 4. Start the development server:
    ```sh
    npm run dev
@@ -47,8 +51,15 @@ A beautiful daily habit tracker to build consistency and track your weekly progr
 - Vite
 - Tailwind CSS
 - Shadcn UI
-- Supabase (for backend/auth)
+- Firebase Auth + Firestore
 - TanStack Query
+
+## Firebase / Firestore setup
+
+- Create a Firebase project
+- Enable Auth providers (Google + Email/Password)
+- Create a Firestore database
+- Apply the rules from `firestore.rules` in Firebase Console (Firestore → Rules)
 
 ## License
 
