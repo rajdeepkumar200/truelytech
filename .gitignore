@@ -17,6 +17,14 @@ dist-ssr
 .env.*
 !.env.example
 
+# Android signing keys (never commit)
+keystore/
+**/keystore/
+*.jks
+*.keystore
+*.p12
+*.pkcs12
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
