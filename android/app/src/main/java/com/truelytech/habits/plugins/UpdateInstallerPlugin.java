@@ -18,9 +18,21 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @CapacitorPlugin(name = "UpdateInstaller")
 public class UpdateInstallerPlugin extends Plugin {
+
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+
+    private void rejectOnMainThread(PluginCall call, String message) {
+        getActivity().runOnUiThread(() -> call.reject(message));
+    }
+
+    private void rejectOnMainThread(PluginCall call, String message, Exception error) {
+        getActivity().runOnUiThread(() -> call.reject(message, error));
+    }
 
     @PluginMethod
     public void downloadAndInstall(PluginCall call) {
@@ -30,7 +42,7 @@ public class UpdateInstallerPlugin extends Plugin {
             return;
         }
 
-        getBridge().getExecutorService().execute(() -> {
+        EXECUTOR.execute(() -> {
             try {
                 // Download APK to cache
                 URL url = new URL(urlString);
@@ -41,7 +53,7 @@ public class UpdateInstallerPlugin extends Plugin {
 
                 int code = connection.getResponseCode();
                 if (code < 200 || code >= 300) {
-                    call.reject("Download failed: HTTP " + code);
+                    rejectOnMainThread(call, "Download failed: HTTP " + code);
                     return;
                 }
 
@@ -63,9 +75,9 @@ public class UpdateInstallerPlugin extends Plugin {
                         Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                         intent.setData(Uri.parse("package:" + getContext().getPackageName()));
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        getActivity().startActivity(intent);
+                        getActivity().runOnUiThread(() -> getActivity().startActivity(intent));
 
-                        call.reject("Install permission required. Enable 'Install unknown apps' then try again.");
+                        rejectOnMainThread(call, "Install permission required. Enable 'Install unknown apps' then try again.");
                         return;
                     }
                 }
@@ -96,7 +108,7 @@ public class UpdateInstallerPlugin extends Plugin {
                     }
                 });
             } catch (Exception e) {
-                call.reject("Update failed", e);
+                rejectOnMainThread(call, "Update failed", e);
             }
         });
     }
