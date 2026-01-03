@@ -25,7 +25,37 @@
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+        Loading…
+      </div>
+    </div>
+    <script>
+      // If the JS bundle fails to load (or crashes before rendering), don't leave a blank screen.
+      // React will replace #root content quickly on success.
+      window.setTimeout(function () {
+        try {
+          var root = document.getElementById('root');
+          if (!root) return;
+          var hasRendered = root.children && root.children.length > 0 && root.textContent && root.textContent.trim() !== 'Loading…';
+          if (hasRendered) return;
+
+          root.innerHTML =
+            '<div style="padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;">' +
+            '<h3 style="margin:0 0 8px 0;">Habitex failed to load</h3>' +
+            '<p style="margin:0 0 10px 0;">This usually happens when environment variables are missing on Vercel, or a PWA service worker is serving a stale bundle.</p>' +
+            '<ol style="margin:0 0 10px 18px;">' +
+            '<li>Vercel → Project → Settings → Environment Variables: set all <code>VITE_FIREBASE_*</code> values</li>' +
+            '<li>Redeploy (Vercel → Deployments → Redeploy)</li>' +
+            '<li>In your browser: DevTools → Application → Service Workers → Unregister, then hard refresh</li>' +
+            '</ol>' +
+            '<p style="margin:0;">Open DevTools Console for the exact error.</p>' +
+            '</div>';
+        } catch (_) {
+          // ignore
+        }
+      }, 4000);
+    </script>
     <script type="module" src="%BASE_URL%src/main.tsx"></script>
   </body>
 </html>
