@@ -52,7 +52,12 @@ export default function UpdatePrompt() {
         if (!info?.versionName || !info?.apkUrl) return;
         if (info.versionName === currentVersion) return;
 
-        setApkUrl(`${updateBaseUrl}/${info.apkUrl}`);
+        const rawApkUrl = String(info.apkUrl);
+        const resolvedApkUrl = /^https?:\/\//i.test(rawApkUrl)
+          ? rawApkUrl
+          : `${updateBaseUrl}/${rawApkUrl.replace(/^\/+/, '')}`;
+
+        setApkUrl(resolvedApkUrl);
         setMessage(info.message ?? 'More amazing features and a more stable version are available.');
         setOpen(true);
       } catch {
