@@ -11,7 +11,7 @@ import {
   signOut as firebaseSignOut,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { auth } from '@/integrations/firebase/client';
+import { getFirebaseAuth } from '@/integrations/firebase/client';
 
 export interface AuthUser {
   id: string;
@@ -53,16 +53,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const session = null;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
-      setFirebaseUser(nextUser);
+    try {
+      const auth = getFirebaseAuth();
+      const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+        setFirebaseUser(nextUser);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    } catch {
+      // Firebase not configured yet (common on first Vercel deploy before env vars).
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+      return;
+    }
   }, []);
 
   const signInWithGoogle = async () => {
     try {
+      const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
 
       // Popup can fail on some WebViews; fall back to redirect.
@@ -79,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
+      const auth = getFirebaseAuth();
       await signInWithEmailAndPassword(auth, email, password);
       return { error: null };
     } catch (error) {
@@ -88,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUpWithEmail = async (email: string, password: string) => {
     try {
+      const auth = getFirebaseAuth();
       await createUserWithEmailAndPassword(auth, email, password);
       return { error: null };
     } catch (error) {
@@ -97,6 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithOtp = async (email: string) => {
     try {
+      const auth = getFirebaseAuth();
       // Use a real path (not hash) so Firebase can append its query params.
       // Our /public/auth/index.html redirects it back into HashRouter.
       const url = `${window.location.origin}/auth?mode=emailLink`;
@@ -122,6 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const resetPassword = async (email: string) => {
     try {
+      const auth = getFirebaseAuth();
       const url = `${window.location.origin}/auth?mode=reset`;
       await sendPasswordResetEmail(auth, email, { url });
       return { error: null };
@@ -131,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    const auth = getFirebaseAuth();
     await firebaseSignOut(auth);
   };
 

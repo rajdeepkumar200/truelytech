@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { ArrowLeft, Mail, Lock } from 'lucide-react';
-import { auth } from '@/integrations/firebase/client';
+import { getFirebaseAuth } from '@/integrations/firebase/client';
 import { confirmPasswordReset, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 
 const emailSchema = z.string().trim().email({ message: "Invalid email address" }).max(255);
@@ -84,6 +84,7 @@ const Auth = () => {
     const run = async () => {
       const modeParam = searchParams.get('mode');
       if (modeParam !== 'emailLink') return;
+      const auth = getFirebaseAuth();
       if (!isSignInWithEmailLink(auth, window.location.href)) return;
 
       const storedEmail = window.localStorage.getItem('habitex_emailLinkSignInEmail') || '';
@@ -318,6 +319,7 @@ const Auth = () => {
     }
 
     try {
+      const auth = getFirebaseAuth();
       await confirmPasswordReset(auth, oobCode, newPassword);
       toast({
         title: 'Password updated!',

@@ -10,8 +10,47 @@ import Install from "./pages/Install";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import UpdatePrompt from "./components/UpdatePrompt";
+import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
 
 const queryClient = new QueryClient();
+
+const FirebaseConfigError = () => {
+  const cfg = getFirebaseConfig();
+  const missing = [
+    ['VITE_FIREBASE_API_KEY', cfg.apiKey],
+    ['VITE_FIREBASE_AUTH_DOMAIN', cfg.authDomain],
+    ['VITE_FIREBASE_PROJECT_ID', cfg.projectId],
+    ['VITE_FIREBASE_APP_ID', cfg.appId],
+  ].filter(([, v]) => !v).map(([k]) => k);
+
+  return (
+    <div style={{ padding: 20, fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif' }}>
+      <h2 style={{ marginBottom: 8 }}>Firebase is not configured</h2>
+      <p style={{ marginTop: 0 }}>
+        This deploy is missing required Vercel environment variables.
+      </p>
+      <p style={{ marginTop: 0 }}>
+        Domain: <b>{window.location.host}</b>
+      </p>
+      {missing.length > 0 && (
+        <>
+          <p style={{ marginBottom: 6 }}>Missing:</p>
+          <ul>
+            {missing.map((k) => (
+              <li key={k}><code>{k}</code></li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p style={{ marginTop: 12, marginBottom: 6 }}>Fix:</p>
+      <ol>
+        <li>Vercel → Project → Settings → Environment Variables</li>
+        <li>Add all <code>VITE_FIREBASE_*</code> values (see <code>.env.example</code>)</li>
+        <li>Redeploy the latest deployment</li>
+      </ol>
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,6 +59,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <UpdatePrompt />
+        {!isFirebaseConfigured() ? (
+          <FirebaseConfigError />
+        ) : (
         <HashRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -30,6 +72,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </HashRouter>
+        )}
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>

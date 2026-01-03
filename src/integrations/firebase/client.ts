@@ -1,33 +1,80 @@
-import { initializeApp, getApps } from 'firebase/app';
+import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import {
+  Auth,
+  browserLocalPersistence,
   getAuth,
   indexedDBLocalPersistence,
   setPersistence,
-  browserLocalPersistence,
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { Firestore, getFirestore } from 'firebase/firestore';
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+type FirebaseConfig = {
+  apiKey?: string;
+  authDomain?: string;
+  projectId?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
 };
 
-if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId || !firebaseConfig.appId) {
-  console.error(
-    'Missing Firebase environment variables. Copy .env.example to .env and set VITE_FIREBASE_* values (and set them in Vercel).'
-  );
+export function getFirebaseConfig(): FirebaseConfig {
+  return {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  };
 }
 
-export const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+let cachedApp: FirebaseApp | null = null;
+let cachedAuth: Auth | null = null;
+let cachedDb: Firestore | null = null;
+let persistenceConfigured = false;
 
-export const auth = getAuth(firebaseApp);
-export const db = getFirestore(firebaseApp);
+export function isFirebaseConfigured(): boolean {
+  const cfg = getFirebaseConfig();
+  return !!(cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId);
+}
 
-// Best-effort persistence configuration; falls back if unavailable.
-setPersistence(auth, indexedDBLocalPersistence).catch(() => {
-  setPersistence(auth, browserLocalPersistence).catch(() => undefined);
-});
+export function getFirebaseApp(): FirebaseApp {
+  if (cachedApp) return cachedApp;
+
+  const apps = getApps();
+  if (apps.length) {
+    cachedApp = apps[0];
+    return cachedApp;
+  }
+
+  const cfg = getFirebaseConfig();
+  if (!isFirebaseConfigured()) {
+    throw new Error(
+      'Firebase is not configured. Set VITE_FIREBASE_* environment variables (see .env.example) and redeploy.'
+    );
+  }
+
+  cachedApp = initializeApp(cfg as Required<FirebaseConfig>);
+  return cachedApp;
+}
+
+export function getFirebaseAuth(): Auth {
+  if (cachedAuth) return cachedAuth;
+  cachedAuth = getAuth(getFirebaseApp());
+
+  if (!persistenceConfigured) {
+    persistenceConfigured = true;
+    // Best-effort persistence configuration; falls back if unavailable.
+    setPersistence(cachedAuth, indexedDBLocalPersistence).catch(() => {
+      setPersistence(cachedAuth!, browserLocalPersistence).catch(() => undefined);
+    });
+  }
+
+  return cachedAuth;
+}
+
+export function getFirebaseDb(): Firestore {
+  if (cachedDb) return cachedDb;
+  cachedDb = getFirestore(getFirebaseApp());
+  return cachedDb;
+}

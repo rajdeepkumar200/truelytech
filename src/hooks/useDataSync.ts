@@ -11,7 +11,7 @@ import {
   setDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from '@/integrations/firebase/client';
+import { getFirebaseDb } from '@/integrations/firebase/client';
 
 interface Habit {
   id: string;
@@ -55,18 +55,33 @@ interface NotificationPreferences {
 export const useDataSync = () => {
   const { user } = useAuth();
 
+  const getDb = () => {
+    try {
+      return getFirebaseDb();
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
   const habitsCollection = useCallback(() => {
     if (!user) return null;
+    const db = getDb();
+    if (!db) return null;
     return collection(db, 'users', user.id, 'habits');
   }, [user]);
 
   const scheduleCollection = useCallback(() => {
     if (!user) return null;
+    const db = getDb();
+    if (!db) return null;
     return collection(db, 'users', user.id, 'schedule_items');
   }, [user]);
 
   const remindersCollection = useCallback(() => {
     if (!user) return null;
+    const db = getDb();
+    if (!db) return null;
     return collection(db, 'users', user.id, 'reminders');
   }, [user]);
 
@@ -104,6 +119,8 @@ export const useDataSync = () => {
     const existingIds = new Set(existing.docs.map((d) => d.id));
     const currentIds = new Set(habits.map((h) => h.id));
 
+    const db = getDb();
+    if (!db) return;
     const batch = writeBatch(db);
 
     // Delete removed
@@ -162,6 +179,8 @@ export const useDataSync = () => {
     const existingIds = new Set(existing.docs.map((d) => d.id));
     const currentIds = new Set(schedule.map((s) => s.id));
 
+    const db = getDb();
+    if (!db) return;
     const batch = writeBatch(db);
 
     for (const id of existingIds) {
@@ -215,6 +234,8 @@ export const useDataSync = () => {
     const existingIds = new Set(existing.docs.map((d) => d.id));
     const currentIds = new Set(reminders.map((r) => r.id));
 
+    const db = getDb();
+    if (!db) return;
     const batch = writeBatch(db);
 
     for (const id of existingIds) {
@@ -241,6 +262,8 @@ export const useDataSync = () => {
   const fetchSettings = useCallback(async (): Promise<NotificationPreferences | null> => {
     if (!user) return null;
 
+    const db = getDb();
+    if (!db) return null;
     const settingsRef = doc(db, 'users', user.id, 'settings', 'notificationPreferences');
     const snap = await getDoc(settingsRef);
     if (!snap.exists()) return null;
@@ -251,6 +274,8 @@ export const useDataSync = () => {
   const saveSettings = useCallback(async (settings: NotificationPreferences) => {
     if (!user) return;
 
+    const db = getDb();
+    if (!db) return;
     const settingsRef = doc(db, 'users', user.id, 'settings', 'notificationPreferences');
     await setDoc(settingsRef, settings, { merge: true });
   }, [user]);
