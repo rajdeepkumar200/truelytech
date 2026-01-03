@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { ArrowLeft, Mail, Lock } from 'lucide-react';
+import { auth } from '@/integrations/firebase/client';
+import { confirmPasswordReset, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 
 const emailSchema = z.string().trim().email({ message: "Invalid email address" }).max(255);
 const passwordSchema = z.string().min(6, { message: "Password must be at least 6 characters" }).max(72);
@@ -57,8 +59,6 @@ const Auth = () => {
   // Handle redirect back from password recovery links (and show backend error messages nicely)
   useEffect(() => {
     const modeParam = searchParams.get('mode');
-    const typeParam = searchParams.get('type');
-
     const error = searchParams.get('error_description') ?? searchParams.get('error');
     if (error) {
       toast({
@@ -68,7 +68,8 @@ const Auth = () => {
       });
     }
 
-    const isRecovery = typeParam === 'recovery' || modeParam === 'reset' || modeParam === 'recovery';
+    // Firebase password reset links include ?mode=resetPassword&oobCode=...
+    const isRecovery = modeParam === 'reset' || modeParam === 'resetPassword' || !!searchParams.get('oobCode');
     if (isRecovery) {
       setMode('new-password');
       toast({
@@ -76,6 +77,46 @@ const Auth = () => {
         description: 'Enter your new password to finish resetting your account.',
       });
     }
+  }, [searchParams, toast]);
+
+  // Handle Firebase email-link sign-in when user opens their email link
+  useEffect(() => {
+    const run = async () => {
+      const modeParam = searchParams.get('mode');
+      if (modeParam !== 'emailLink') return;
+      if (!isSignInWithEmailLink(auth, window.location.href)) return;
+
+      const storedEmail = window.localStorage.getItem('habitex_emailLinkSignInEmail') || '';
+      if (!storedEmail) {
+        toast({
+          title: 'Missing email',
+          description: 'Please enter your email again to finish signing in.',
+          variant: 'destructive',
+        });
+        setMode('otp-request');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        await signInWithEmailLink(auth, storedEmail, window.location.href);
+        window.localStorage.removeItem('habitex_emailLinkSignInEmail');
+        toast({
+          title: 'Signed in',
+          description: 'You are now signed in.',
+        });
+      } catch (e) {
+        toast({
+          title: 'Sign in failed',
+          description: (e as Error).message,
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void run();
   }, [searchParams, toast]);
 
   // Redirect if already logged in (except during recovery)
@@ -265,23 +306,32 @@ const Auth = () => {
     setErrors({});
     setLoading(true);
 
-    const { supabase } = await import('@/integrations/supabase/client');
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    setLoading(false);
-
-    if (error) {
+    const oobCode = searchParams.get('oobCode');
+    if (!oobCode) {
+      setLoading(false);
       toast({
-        title: 'Failed to update password',
-        description: error.message,
+        title: 'Missing reset code',
+        description: 'Please open the password reset link from your email again.',
         variant: 'destructive',
       });
-    } else {
+      return;
+    }
+
+    try {
+      await confirmPasswordReset(auth, oobCode, newPassword);
       toast({
         title: 'Password updated!',
-        description: 'Your password has been successfully changed.',
+        description: 'Your password has been successfully changed. Please sign in again.',
       });
-      navigate('/');
+      navigate('/auth');
+    } catch (error) {
+      toast({
+        title: 'Failed to update password',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 

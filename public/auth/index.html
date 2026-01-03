@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Habitex Auth</title>
+    <script>
+      (function () {
+        var url = new URL(window.location.href);
+        // Preserve Firebase query params (oobCode, mode, etc)
+        var target = '/#/auth' + (url.search || '');
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body>
+    Redirecting…
+  </body>
+</html>

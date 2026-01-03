@@ -1,10 +1,30 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  sendSignInLinkToEmail,
+  sendPasswordResetEmail,
+  signOut as firebaseSignOut,
+  User as FirebaseUser,
+} from 'firebase/auth';
+import { auth } from '@/integrations/firebase/client';
+
+export interface AuthUser {
+  id: string;
+  email?: string | null;
+}
+
+export interface AuthSession {
+  access_token: string;
+}
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: AuthSession | null;
   loading: boolean;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -18,102 +38,100 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+  const user = useMemo<AuthUser | null>(() => {
+    if (!firebaseUser) return null;
+    return {
+      id: firebaseUser.uid,
+      email: firebaseUser.email,
+    };
+  }, [firebaseUser]);
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+  // Kept for compatibility with existing code; Firebase access tokens are fetched on-demand.
+  const session = null;
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setFirebaseUser(nextUser);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-      },
-    });
-    
-    return { error: error as Error | null };
+    try {
+      const provider = new GoogleAuthProvider();
+
+      // Popup can fail on some WebViews; fall back to redirect.
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        await signInWithRedirect(auth, provider);
+      }
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    return { error: error as Error | null };
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
   const signUpWithEmail = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
-    
-    return { error: error as Error | null };
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
   const signInWithOtp = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    try {
+      // Use a real path (not hash) so Firebase can append its query params.
+      // Our /public/auth/index.html redirects it back into HashRouter.
+      const url = `${window.location.origin}/auth?mode=emailLink`;
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: redirectUrl,
-      },
-    });
-
-    return { error: error as Error | null };
+      await sendSignInLinkToEmail(auth, email, {
+        url,
+        handleCodeInApp: true,
+      });
+      window.localStorage.setItem('habitex_emailLinkSignInEmail', email);
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
   const verifyOtp = async (email: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email',
-    });
-    
-    return { error: error as Error | null };
+    // Firebase email-link sign-in doesn't use an in-app token.
+    // Keep method for API compatibility.
+    void email;
+    void token;
+    return { error: null };
   };
 
   const resetPassword = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/auth?mode=reset`;
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
-    
-    return { error: error as Error | null };
+    try {
+      const url = `${window.location.origin}/auth?mode=reset`;
+      await sendPasswordResetEmail(auth, email, { url });
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await firebaseSignOut(auth);
   };
 
   return (

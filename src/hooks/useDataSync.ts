@@ -1,7 +1,17 @@
-import { useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  writeBatch,
+} from 'firebase/firestore';
+import { db } from '@/integrations/firebase/client';
 
 interface Habit {
   id: string;
@@ -44,298 +54,205 @@ interface NotificationPreferences {
 
 export const useDataSync = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
+
+  const habitsCollection = useCallback(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.id, 'habits');
+  }, [user]);
+
+  const scheduleCollection = useCallback(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.id, 'schedule_items');
+  }, [user]);
+
+  const remindersCollection = useCallback(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.id, 'reminders');
+  }, [user]);
 
   // Fetch habits from database
   const fetchHabits = useCallback(async (): Promise<Habit[]> => {
     if (!user) return [];
-    
-    const { data, error } = await supabase
-      .from('habits')
-      .select('*')
-      .order('sort_order', { ascending: true });
-    
-    if (error) {
-      console.error('Error fetching habits:', error);
-      return [];
-    }
-    
-    return data.map(h => ({
-      id: h.id,
-      name: h.name,
-      icon: h.icon,
-      completedDays: h.completed_days,
-      activeDays: h.active_days,
-      category: h.category || undefined,
-      weeklyGoal: h.weekly_goal || undefined,
-      hidden: h.hidden || false,
-    }));
-  }, [user]);
+
+    const col = habitsCollection();
+    if (!col) return [];
+
+    const snap = await getDocs(query(col, orderBy('sortOrder', 'asc')));
+    return snap.docs.map((d) => {
+      const data = d.data() as any;
+      return {
+        id: d.id,
+        name: data.name,
+        icon: data.icon,
+        completedDays: (data.completedDays ?? []) as boolean[],
+        activeDays: (data.activeDays ?? []) as boolean[],
+        category: data.category ?? undefined,
+        weeklyGoal: data.weeklyGoal ?? undefined,
+        hidden: data.hidden ?? false,
+      };
+    });
+  }, [user, habitsCollection]);
 
   // Save habits to database using upsert for proper sync
   const saveHabits = useCallback(async (habits: Habit[]) => {
     if (!user) return;
-    
-    // Get existing habit IDs from cloud
-    const { data: existingHabits } = await supabase
-      .from('habits')
-      .select('id')
-      .eq('user_id', user.id);
-    
-    const existingIds = new Set(existingHabits?.map(h => h.id) || []);
-    const currentIds = new Set(habits.map(h => h.id));
-    
-    // Delete habits that no longer exist locally
-    const toDelete = [...existingIds].filter(id => !currentIds.has(id));
-    if (toDelete.length > 0) {
-      await supabase.from('habits').delete().in('id', toDelete);
-    }
-    
-    // Upsert all current habits
-    if (habits.length > 0) {
-      for (let i = 0; i < habits.length; i++) {
-        const h = habits[i];
-        const isExisting = existingIds.has(h.id);
-        
-        if (isExisting) {
-          // Note: 'hidden' column requires migration. If it fails, we catch and retry without it.
-          const { error } = await supabase.from('habits').update({
-            name: h.name,
-            icon: h.icon,
-            completed_days: h.completedDays,
-            active_days: h.activeDays,
-            category: h.category || null,
-            weekly_goal: h.weeklyGoal || 0,
-            sort_order: i,
-            hidden: h.hidden || false,
-          }).eq('id', h.id);
 
-          if (error) {
-            // Fallback for missing column
-            await supabase.from('habits').update({
-              name: h.name,
-              icon: h.icon,
-              completed_days: h.completedDays,
-              active_days: h.activeDays,
-              category: h.category || null,
-              weekly_goal: h.weeklyGoal || 0,
-              sort_order: i,
-            }).eq('id', h.id);
-          }
-        } else {
-          const { error } = await supabase.from('habits').insert({
-            id: h.id,
-            user_id: user.id,
-            name: h.name,
-            icon: h.icon,
-            completed_days: h.completedDays,
-            active_days: h.activeDays,
-            category: h.category || null,
-            weekly_goal: h.weeklyGoal || 0,
-            sort_order: i,
-            hidden: h.hidden || false,
-          });
+    const col = habitsCollection();
+    if (!col) return;
 
-          if (error) {
-             await supabase.from('habits').insert({
-              id: h.id,
-              user_id: user.id,
-              name: h.name,
-              icon: h.icon,
-              completed_days: h.completedDays,
-              active_days: h.activeDays,
-              category: h.category || null,
-              weekly_goal: h.weeklyGoal || 0,
-              sort_order: i,
-            });
-          }
-        }
+    const existing = await getDocs(col);
+    const existingIds = new Set(existing.docs.map((d) => d.id));
+    const currentIds = new Set(habits.map((h) => h.id));
+
+    const batch = writeBatch(db);
+
+    // Delete removed
+    for (const id of existingIds) {
+      if (!currentIds.has(id)) {
+        batch.delete(doc(db, 'users', user.id, 'habits', id));
       }
     }
-  }, [user]);
+
+    // Upsert current (keep stable IDs)
+    habits.forEach((h, index) => {
+      batch.set(doc(db, 'users', user.id, 'habits', h.id), {
+        name: h.name,
+        icon: h.icon,
+        completedDays: h.completedDays,
+        activeDays: h.activeDays,
+        category: h.category ?? null,
+        weeklyGoal: h.weeklyGoal ?? null,
+        hidden: h.hidden ?? false,
+        sortOrder: index,
+        updatedAt: Date.now(),
+      });
+    });
+
+    await batch.commit();
+  }, [user, habitsCollection]);
 
   // Fetch schedule items
   const fetchSchedule = useCallback(async (): Promise<ScheduleItem[]> => {
     if (!user) return [];
-    
-    const { data, error } = await supabase
-      .from('schedule_items')
-      .select('*')
-      .order('time', { ascending: true });
-    
-    if (error) {
-      console.error('Error fetching schedule:', error);
-      return [];
-    }
-    
-    return data.map(s => ({
-      id: s.id,
-      time: s.time,
-      task: s.task,
-      emoji: s.emoji || undefined,
-      completed: s.completed || undefined,
-    }));
-  }, [user]);
+
+    const col = scheduleCollection();
+    if (!col) return [];
+
+    const snap = await getDocs(query(col, orderBy('time', 'asc')));
+    return snap.docs.map((d) => {
+      const data = d.data() as any;
+      return {
+        id: d.id,
+        time: data.time,
+        task: data.task,
+        emoji: data.emoji ?? undefined,
+        completed: data.completed ?? undefined,
+      };
+    });
+  }, [user, scheduleCollection]);
 
   // Save schedule items using upsert for proper sync
   const saveSchedule = useCallback(async (schedule: ScheduleItem[]) => {
     if (!user) return;
-    
-    const { data: existingItems } = await supabase
-      .from('schedule_items')
-      .select('id')
-      .eq('user_id', user.id);
-    
-    const existingIds = new Set(existingItems?.map(s => s.id) || []);
-    const currentIds = new Set(schedule.map(s => s.id));
-    
-    const toDelete = [...existingIds].filter(id => !currentIds.has(id));
-    if (toDelete.length > 0) {
-      await supabase.from('schedule_items').delete().in('id', toDelete);
-    }
-    
-    for (const s of schedule) {
-      if (existingIds.has(s.id)) {
-        await supabase.from('schedule_items').update({
-          time: s.time,
-          task: s.task,
-          emoji: s.emoji || '📋',
-          completed: s.completed || false,
-        }).eq('id', s.id);
-      } else {
-        await supabase.from('schedule_items').insert({
-          user_id: user.id,
-          time: s.time,
-          task: s.task,
-          emoji: s.emoji || '📋',
-          completed: s.completed || false,
-        });
+
+    const col = scheduleCollection();
+    if (!col) return;
+
+    const existing = await getDocs(col);
+    const existingIds = new Set(existing.docs.map((d) => d.id));
+    const currentIds = new Set(schedule.map((s) => s.id));
+
+    const batch = writeBatch(db);
+
+    for (const id of existingIds) {
+      if (!currentIds.has(id)) {
+        batch.delete(doc(db, 'users', user.id, 'schedule_items', id));
       }
     }
-  }, [user]);
+
+    schedule.forEach((s) => {
+      batch.set(doc(db, 'users', user.id, 'schedule_items', s.id), {
+        time: s.time,
+        task: s.task,
+        emoji: s.emoji ?? null,
+        completed: s.completed ?? false,
+        updatedAt: Date.now(),
+      });
+    });
+
+    await batch.commit();
+  }, [user, scheduleCollection]);
 
   // Fetch reminders
   const fetchReminders = useCallback(async (): Promise<Reminder[]> => {
     if (!user) return [];
-    
-    const { data, error } = await supabase
-      .from('reminders')
-      .select('*');
-    
-    if (error) {
-      console.error('Error fetching reminders:', error);
-      return [];
-    }
-    
-    return data.map(r => ({
-      id: r.id,
-      day: r.day,
-      time: r.time,
-      name: r.name,
-      emoji: r.emoji || '🔔',
-      completed: r.completed || undefined,
-    }));
-  }, [user]);
+
+    const col = remindersCollection();
+    if (!col) return [];
+
+    const snap = await getDocs(col);
+    return snap.docs.map((d) => {
+      const data = d.data() as any;
+      return {
+        id: d.id,
+        day: data.day,
+        time: data.time,
+        name: data.name,
+        emoji: data.emoji ?? '🔔',
+        completed: data.completed ?? undefined,
+      };
+    });
+  }, [user, remindersCollection]);
 
   // Save reminders using upsert for proper sync
   const saveReminders = useCallback(async (reminders: Reminder[]) => {
     if (!user) return;
-    
-    const { data: existingReminders } = await supabase
-      .from('reminders')
-      .select('id')
-      .eq('user_id', user.id);
-    
-    const existingIds = new Set(existingReminders?.map(r => r.id) || []);
-    const currentIds = new Set(reminders.map(r => r.id));
-    
-    const toDelete = [...existingIds].filter(id => !currentIds.has(id));
-    if (toDelete.length > 0) {
-      await supabase.from('reminders').delete().in('id', toDelete);
-    }
-    
-    for (const r of reminders) {
-      if (existingIds.has(r.id)) {
-        await supabase.from('reminders').update({
-          day: r.day,
-          time: r.time,
-          name: r.name,
-          emoji: r.emoji || '🔔',
-          completed: r.completed || false,
-        }).eq('id', r.id);
-      } else {
-        await supabase.from('reminders').insert({
-          user_id: user.id,
-          day: r.day,
-          time: r.time,
-          name: r.name,
-          emoji: r.emoji || '🔔',
-          completed: r.completed || false,
-        });
+
+    const col = remindersCollection();
+    if (!col) return;
+
+    const existing = await getDocs(col);
+    const existingIds = new Set(existing.docs.map((d) => d.id));
+    const currentIds = new Set(reminders.map((r) => r.id));
+
+    const batch = writeBatch(db);
+
+    for (const id of existingIds) {
+      if (!currentIds.has(id)) {
+        batch.delete(doc(db, 'users', user.id, 'reminders', id));
       }
     }
-  }, [user]);
+
+    reminders.forEach((r) => {
+      batch.set(doc(db, 'users', user.id, 'reminders', r.id), {
+        day: r.day,
+        time: r.time,
+        name: r.name,
+        emoji: r.emoji ?? '🔔',
+        completed: r.completed ?? false,
+        updatedAt: Date.now(),
+      });
+    });
+
+    await batch.commit();
+  }, [user, remindersCollection]);
 
   // Fetch settings
   const fetchSettings = useCallback(async (): Promise<NotificationPreferences | null> => {
     if (!user) return null;
-    
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('*')
-      .single();
-    
-    if (error) {
-      console.error('Error fetching settings:', error);
-      return null;
-    }
-    
-    return {
-      enabled: data.notification_enabled,
-      reminderTime: data.reminder_time,
-      habitCompletions: data.habit_completions,
-      dailyReminder: data.daily_reminder,
-      scheduleReminders: data.schedule_reminders,
-      customReminders: data.custom_reminders,
-      eyeBlinkReminders: data.eye_blink_reminders,
-      waterIntakeReminders: data.water_intake_reminders,
-    };
+
+    const settingsRef = doc(db, 'users', user.id, 'settings', 'notificationPreferences');
+    const snap = await getDoc(settingsRef);
+    if (!snap.exists()) return null;
+    return snap.data() as NotificationPreferences;
   }, [user]);
 
   // Save settings with upsert
   const saveSettings = useCallback(async (settings: NotificationPreferences) => {
     if (!user) return;
-    
-    // First check if settings exist
-    const { data: existing } = await supabase
-      .from('user_settings')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-    
-    const settingsData = {
-      notification_enabled: settings.enabled,
-      reminder_time: settings.reminderTime,
-      habit_completions: settings.habitCompletions,
-      daily_reminder: settings.dailyReminder,
-      schedule_reminders: settings.scheduleReminders,
-      custom_reminders: settings.customReminders,
-      eye_blink_reminders: settings.eyeBlinkReminders,
-      water_intake_reminders: settings.waterIntakeReminders,
-    };
-    
-    if (existing) {
-      const { error } = await supabase
-        .from('user_settings')
-        .update(settingsData)
-        .eq('user_id', user.id);
-      if (error) console.error('Error updating settings:', error);
-    } else {
-      const { error } = await supabase
-        .from('user_settings')
-        .insert({ user_id: user.id, ...settingsData });
-      if (error) console.error('Error inserting settings:', error);
-    }
+
+    const settingsRef = doc(db, 'users', user.id, 'settings', 'notificationPreferences');
+    await setDoc(settingsRef, settings, { merge: true });
   }, [user]);
 
   // Migration is disabled - each user starts fresh with their own cloud data
