@@ -3,7 +3,7 @@ import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, getDay, isSameWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, getDay, isSameWeek, isBefore, isAfter, startOfDay } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -385,9 +385,15 @@ const MonthlyHabitCalendar = ({
                     const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
                     const isCurrentDay = isToday(day);
                     const isActive = activeDays[dayIndex];
-                    // Only show completion status for the current week, as we don't have historical data
+                    const today = startOfDay(new Date());
+                    const dayStart = startOfDay(day);
+                    const isFutureDay = isAfter(dayStart, today);
+                    const isPastDay = isBefore(dayStart, today);
+                    
+                    // Only show completion status for current week AND not future days
                     const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
-                    const isComplete = isCurrentWeek ? habit.completedDays[dayIndex] : false;
+                    const canShowCompletion = isCurrentWeek && !isFutureDay;
+                    const isComplete = canShowCompletion ? habit.completedDays[dayIndex] : false;
                     const isWeekStart = dayOfWeek === 1;
 
                     return (
@@ -400,7 +406,7 @@ const MonthlyHabitCalendar = ({
                         )}
                       >
                         {isActive ? (
-                          isCurrentDay ? (
+                          (isCurrentDay || (isCurrentWeek && isPastDay)) ? (
                             <div onClick={(e) => {
                               e.stopPropagation();
                               onToggleDay(habit.id, dayIndex);
