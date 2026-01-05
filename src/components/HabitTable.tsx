@@ -308,8 +308,10 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
               return (
                 <div key={habit.id} className="flex items-center py-2 h-[44px] min-w-max touch-manipulation">
                   <div className="flex gap-4 px-3">
-                    {habit.completedDays.map((isComplete, dayIndex) => {
+                    {habit.completedDays.map((completed, dayIndex) => {
                       if (dayIndex === currentDayIndex) return null;
+                      const isFutureDay = dayIndex > currentDayIndex;
+                      const isComplete = completed && !isFutureDay;
 
                       return (
                         <div key={dayIndex} className="w-8 flex items-center justify-center touch-manipulation">
@@ -321,7 +323,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                                   ? "bg-habit-checkbox border-habit-checkbox"
                                   : "border-border opacity-40"
                               )}
-                              title="Only today can be modified"
+                              title={isFutureDay ? "Cannot complete future habits" : "Only today can be modified"}
                             >
                               {isComplete && <span className="text-xs text-white">✓</span>}
                             </div>
@@ -527,10 +529,10 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                               <Trash2 className="w-3 h-3 text-destructive" />
                             </button>
                           </div>
-
-                          {/* Day Checkboxes */}
-                          {habit.completedDays.map((isComplete, dayIndex) => {
+completed, dayIndex) => {
                             const isCurrentDay = dayIndex === currentDayIndex;
+                            const isFutureDay = dayIndex > currentDayIndex;
+                            const isComplete = completed && !isFutureDay;
 
                             return (
                               <div key={dayIndex} className="flex items-center justify-center">
@@ -553,6 +555,8 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                                         isComplete
                                           ? "bg-habit-checkbox border-habit-checkbox"
                                           : "border-border opacity-40"
+                                      )}
+                                      title={isFutureDay ? "Cannot complete future habits" : "Only today can be modified"}
                                       )}
                                       title="Only today can be modified"
                                     >

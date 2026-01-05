@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { format, addDays, subDays, isSameDay, isToday, startOfWeek, endOfWeek, isSameWeek, getDay } from 'date-fns';
+import { format, addDays, subDays, isSameDay, isToday, startOfWeek, endOfWeek, isSameWeek, getDay, isAfter, startOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -86,7 +86,8 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
           if (habit.hidden) return null;
 
           const isActiveDay = habit.activeDays[dayIndex];
-          const isCompleted = isCurrentWeek && habit.completedDays[dayIndex];
+          const isFutureDay = isAfter(startOfDay(selectedDate), startOfDay(new Date()));
+          const isCompleted = isCurrentWeek && !isFutureDay && habit.completedDays[dayIndex];
 
           if (!isActiveDay && isCurrentWeek) return null; // Don't show if not active today
 
@@ -97,10 +98,11 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
                 "flex items-center justify-between p-4 rounded-xl border transition-all duration-200",
                 isCompleted 
                   ? "bg-primary/10 border-primary/20" 
-                  : "bg-card border-border/50 hover:border-border"
+                  : "bg-card border-border/50 hover:border-border",
+                isFutureDay && "opacity-50 cursor-not-allowed"
               )}
               onClick={() => {
-                if (isCurrentWeek) {
+                if (isCurrentWeek && !isFutureDay) {
                   onToggleDay(habit.id, dayIndex);
                 }
               }}

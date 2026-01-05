@@ -512,7 +512,7 @@ const Index = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="min-h-screen bg-background pb-safe">
+    <div className="min-h-screen bg-background pb-safe pt-safe">
       <MotivationModal onDismiss={() => setMotivationDismissed(true)} />
       <OnboardingTour start={motivationDismissed} />
       <NotificationPrompt />
@@ -524,7 +524,7 @@ const Index = () => {
       />
       
       {/* Top Controls */}
-      <div className="fixed bottom-4 right-4 md:top-4 md:bottom-auto z-50 flex items-center gap-2">
+      <div className="fixed bottom-4 left-4 md:left-auto md:right-4 md:top-4 md:bottom-auto z-50 flex items-center gap-2">
         <Button 
           id="hide-habit-btn"
           variant="outline" 
