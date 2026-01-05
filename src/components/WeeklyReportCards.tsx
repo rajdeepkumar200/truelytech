@@ -1,8 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { format, startOfWeek, addDays, isToday, isBefore, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Calendar, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Calendar, BarChart3 } from 'lucide-react';
 
 interface Habit {
   id: string;
@@ -58,7 +57,6 @@ const CircularProgress = ({ percentage, size = 80 }: { percentage: number; size?
 
 const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
-  const scrollRef = useRef<HTMLDivElement>(null);
   const today = new Date();
 
   // Generate week days starting from Monday
@@ -139,25 +137,6 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
     });
   }, [habits, today]);
 
-  // Scroll to today on mount
-  useEffect(() => {
-    if (scrollRef.current) {
-      const todayCard = scrollRef.current.querySelector('[data-today="true"]');
-      if (todayCard) {
-        todayCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
-  }, [viewMode]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (!scrollRef.current) return;
-    const scrollAmount = 300;
-    scrollRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  };
-
   return (
     <div className="space-y-3">
       {/* Header with toggle */}
@@ -193,28 +172,14 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
         </div>
       </div>
       
-      {/* Cards - horizontal scroll */}
-      <div className="relative group/scroll">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full shadow-md opacity-0 group-hover/scroll:opacity-100 transition-opacity disabled:opacity-0 bg-background/80 backdrop-blur-sm border border-border"
-          onClick={() => scroll('left')}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        <div
-          ref={scrollRef}
-          className="flex gap-3 overflow-x-auto pb-2 scrollbar-none"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
+      {/* Cards */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {(viewMode === 'weekly' ? weekDays : monthDays).map((day, idx) => (
           <div
             key={idx}
             data-today={day.isToday}
             className={cn(
-              "flex-shrink-0 w-[160px] rounded-xl border p-3 transition-all",
+              "min-w-0 rounded-xl border p-3 transition-all",
               day.isToday 
                 ? "bg-habit-checkbox/10 border-habit-checkbox/30" 
                 : "bg-popover border-border/50"
@@ -269,16 +234,6 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
             </div>
           </div>
         ))}
-        </div>
-
-        <Button
-          variant="secondary"
-          size="icon"
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full shadow-md opacity-0 group-hover/scroll:opacity-100 transition-opacity disabled:opacity-0 bg-background/80 backdrop-blur-sm border border-border"
-          onClick={() => scroll('right')}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );
