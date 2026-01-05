@@ -1,5 +1,5 @@
 {
   "versionName": "1.1.1",
-  "apkUrl": "https://habitency.vercel.app/habitency.apk",
+  "apkUrl": "/habitency.apk?v=1.1.1",
   "message": "Final Update with fixes and improvements."
 }

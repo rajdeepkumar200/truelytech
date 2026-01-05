@@ -14,11 +14,26 @@
         {
           "key": "Content-Disposition",
           "value": "attachment; filename=habitency.apk"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/app-update.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
         }
       ]
     }
   ],
   "routes": [
+    { "src": "/install", "dest": "/install/index.html" },
+    { "src": "/install/", "dest": "/install/index.html" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

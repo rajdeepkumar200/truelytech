@@ -1,4 +1,4 @@
-import { LogOut, User } from 'lucide-react';
+import { Download, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,9 @@ const UserMenu = () => {
 
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
   const initials = displayName.slice(0, 2).toUpperCase();
+
+  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+  const apkHref = `/habitency.apk?v=${Date.now()}`;
 
   return (
     <DropdownMenu>
@@ -35,6 +38,14 @@ const UserMenu = () => {
         <div className="px-2 pb-1.5 text-xs text-muted-foreground truncate">
           {user.email}
         </div>
+        {isAndroid && (
+          <DropdownMenuItem asChild className="cursor-pointer">
+            <a href={apkHref} download>
+              <Download className="mr-2 h-4 w-4" />
+              Download APK
+            </a>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
