@@ -1,37 +1,24 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "cleanUrls": false,
   "framework": "vite",
-  "headers": [
+  "routes": [
     {
-      "source": "/habitency.apk",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/vnd.android.package-archive"
-        },
-        {
-          "key": "Content-Disposition",
-          "value": "attachment; filename=habitency.apk"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-store"
-        }
-      ]
+      "src": "/habitency\\.apk",
+      "dest": "/habitency.apk",
+      "headers": {
+        "Content-Type": "application/vnd.android.package-archive",
+        "Content-Disposition": "attachment; filename=habitency.apk",
+        "Cache-Control": "no-store"
+      }
     },
     {
-      "source": "/app-update.json",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store"
-        }
-      ]
-    }
-  ],
-  "routes": [
+      "src": "/app-update\\.json",
+      "dest": "/app-update.json",
+      "headers": {
+        "Cache-Control": "no-store"
+      }
+    },
     { "src": "/install", "dest": "/install/index.html" },
     { "src": "/install/", "dest": "/install/index.html" },
     { "handle": "filesystem" },
