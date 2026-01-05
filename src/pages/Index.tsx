@@ -54,6 +54,31 @@ interface Reminder {
   completed?: boolean;
 }
 
+// Get current day index (0 = Monday, 6 = Sunday)
+const getCurrentDayIndex = (): number => {
+  const day = new Date().getDay();
+  return day === 0 ? 6 : day - 1;
+};
+
+// Data model note: `completedDays` is stored as a simple Mon-Sun array.
+// To avoid showing/keeping future days as completed, we always clear
+// completion flags for days after today.
+const sanitizeHabitsForToday = (habits: Habit[]): Habit[] => {
+  const currentDayIndex = getCurrentDayIndex();
+  return habits.map((habit) => {
+    const completedDays = (habit.completedDays?.length === 7 ? habit.completedDays : Array(7).fill(false)).slice();
+    for (let i = currentDayIndex + 1; i < 7; i++) {
+      completedDays[i] = false;
+    }
+
+    return {
+      ...habit,
+      completedDays,
+      activeDays: habit.activeDays || Array(7).fill(true),
+    };
+  });
+};
+
 const defaultHabits: Habit[] = [
   { id: '1', name: 'clean desk', icon: '🧹', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
   { id: '2', name: 'check into notion', icon: '💻', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
@@ -91,10 +116,7 @@ const Index = () => {
     const saved = localStorage.getItem('habits-v3');
     if (saved) {
       const parsed = JSON.parse(saved);
-      return parsed.map((h: any) => ({
-        ...h,
-        activeDays: h.activeDays || Array(7).fill(true)
-      }));
+      return sanitizeHabitsForToday(parsed);
     }
     return defaultHabits;
   });
@@ -265,7 +287,7 @@ const Index = () => {
       ]);
       
       if (cloudHabits.length > 0) {
-        setHabits(cloudHabits);
+        setHabits(sanitizeHabitsForToday(cloudHabits));
       }
       if (cloudSchedule.length > 0) {
         setSchedule(cloudSchedule);
@@ -350,6 +372,9 @@ const Index = () => {
 
 
   const handleToggleDay = useCallback((habitId: string, dayIndex: number) => {
+    // Prevent toggling future days (in the current Mon-Sun array model)
+    if (dayIndex > getCurrentDayIndex()) return;
+
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
         const newCompletedDays = [...habit.completedDays];
