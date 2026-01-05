@@ -429,7 +429,7 @@ const MonthlyHabitCalendar = ({
                         )}
                       >
                         {isActive ? (
-                          (isCurrentDay || (isCurrentWeek && isPastDay)) ? (
+                          isCurrentDay ? (
                             <div onClick={(e) => {
                               e.stopPropagation();
                               onToggleDay(habit.id, dayIndex);
