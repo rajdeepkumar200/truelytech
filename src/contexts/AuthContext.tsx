@@ -71,15 +71,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
+      
+      // Force account selection prompt
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
 
-      // Popup can fail on some WebViews; fall back to redirect.
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (e) {
-        await signInWithRedirect(auth, provider);
-      }
+      // Always use popup on Android/Capacitor (redirect doesn't work in WebView)
+      await signInWithPopup(auth, provider);
       return { error: null };
     } catch (error) {
+      console.error('Google Sign-In error:', error);
       return { error: error as Error };
     }
   };
