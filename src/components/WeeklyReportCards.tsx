@@ -173,13 +173,13 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
       </div>
       
       {/* Cards */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-wrap gap-3">
         {(viewMode === 'weekly' ? weekDays : monthDays).map((day, idx) => (
           <div
             key={idx}
             data-today={day.isToday}
             className={cn(
-              "min-w-0 rounded-xl border p-3 transition-all",
+              "w-full sm:w-[160px] rounded-xl border p-3 transition-all",
               day.isToday 
                 ? "bg-habit-checkbox/10 border-habit-checkbox/30" 
                 : "bg-popover border-border/50"
