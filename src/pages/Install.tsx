@@ -15,7 +15,7 @@ const Install = () => {
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
-  const [apkUrl, setApkUrl] = useState<string>('');
+  const [apkUrl, setApkUrl] = useState<string>('/habitency.apk');
 
   useEffect(() => {
     // Fetch the latest APK URL from app-update.json with cache busting

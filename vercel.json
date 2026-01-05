@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "cleanUrls": true,
+  "cleanUrls": false,
   "framework": "vite",
   "headers": [
     {
@@ -28,7 +28,7 @@
       "destination": "/app-update.json"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!habitency.apk|app-update.json|assets/|favicon|sw.js|workbox).*)",
       "destination": "/index.html"
     }
   ]
