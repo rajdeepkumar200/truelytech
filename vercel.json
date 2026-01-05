@@ -20,6 +20,14 @@
   ],
   "rewrites": [
     {
+      "source": "/habitency.apk",
+      "destination": "/habitency.apk"
+    },
+    {
+      "source": "/app-update.json",
+      "destination": "/app-update.json"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
