@@ -180,6 +180,15 @@ const MonthlyHabitCalendar = ({
     });
   };
 
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    const scrollAmount = 300;
+    scrollRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Month Header */}
@@ -336,8 +345,22 @@ const MonthlyHabitCalendar = ({
         </div>
 
         {/* Scrollable Right Column: Days */}
-        <div className="flex-1 overflow-x-auto" ref={scrollRef}>
-          <div className="min-w-max">
+        <div className="flex-1 relative group/scroll">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full shadow-md opacity-0 group-hover/scroll:opacity-100 transition-opacity disabled:opacity-0 bg-background/80 backdrop-blur-sm border border-border"
+            onClick={() => scroll('left')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <div
+            className="overflow-x-auto scrollbar-none"
+            ref={scrollRef}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <div className="min-w-max">
             {/* Day headers with week grouping */}
             <div className="flex border-b border-border/30 h-[52px]">
               {monthDays.map((day, idx) => {
@@ -476,7 +499,17 @@ const MonthlyHabitCalendar = ({
             
             {/* Consistency Graph */}
             <ConsistencyGraph data={dailyProgress} days={monthDays} />
+            </div>
           </div>
+
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full shadow-md opacity-0 group-hover/scroll:opacity-100 transition-opacity disabled:opacity-0 bg-background/80 backdrop-blur-sm border border-border"
+            onClick={() => scroll('right')}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
