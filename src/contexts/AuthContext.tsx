@@ -6,12 +6,14 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
   sendSignInLinkToEmail,
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '@/integrations/firebase/client';
+import { Capacitor } from '@capacitor/core';
 
 export interface AuthUser {
   id: string;
@@ -55,6 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       const auth = getFirebaseAuth();
+
+      // If we initiated Google sign-in via redirect (Capacitor/Android), resolve it.
+      // This also surfaces any redirect errors into console for debugging.
+      getRedirectResult(auth).catch((e) => {
+        // It's ok if there is no redirect result.
+        console.warn('Firebase redirect result error:', e);
+      });
+
       const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
         setFirebaseUser(nextUser);
         setLoading(false);
@@ -77,8 +87,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         prompt: 'select_account'
       });
 
-      // Always use popup on Android/Capacitor (redirect doesn't work in WebView)
-      await signInWithPopup(auth, provider);
+      // On Android/Capacitor, popup commonly opens the system browser.
+      // The browser can't reach the app's internal http://localhost origin, causing
+      // "localhost refused to connect". Use redirect so auth happens within WebView.
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+        await signInWithRedirect(auth, provider);
+      } else {
+        await signInWithPopup(auth, provider);
+      }
       return { error: null };
     } catch (error) {
       console.error('Google Sign-In error:', error);
