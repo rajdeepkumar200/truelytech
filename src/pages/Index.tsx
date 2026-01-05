@@ -656,7 +656,7 @@ const Index = () => {
             </div>
 
             {/* Desktop: Left Column */}
-            <div className="hidden lg:block space-y-5">
+            <div className="hidden lg:block space-y-5 min-w-0">
               <div className="flex justify-start">
                 <ClockWidget />
               </div>
@@ -682,7 +682,7 @@ const Index = () => {
             </div>
 
             {/* Desktop: Right Column */}
-            <div className="hidden lg:block space-y-4 animate-fade-in">
+            <div className="hidden lg:block space-y-4 animate-fade-in min-w-0">
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
                 <MonthlyHabitCalendar
                   habits={visibleHabits}

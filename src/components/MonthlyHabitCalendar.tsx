@@ -345,7 +345,7 @@ const MonthlyHabitCalendar = ({
         </div>
 
         {/* Scrollable Right Column: Days */}
-        <div className="flex-1 relative group/scroll">
+        <div className="flex-1 min-w-0 relative group/scroll">
           <Button
             variant="secondary"
             size="icon"
@@ -356,7 +356,7 @@ const MonthlyHabitCalendar = ({
           </Button>
 
           <div
-            className="overflow-x-auto scrollbar-none"
+            className="overflow-x-auto scrollbar-none max-w-full"
             ref={scrollRef}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
