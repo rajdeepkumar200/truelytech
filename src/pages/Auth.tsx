@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { ArrowLeft, Mail, Lock } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Download } from 'lucide-react';
 import { getFirebaseAuth } from '@/integrations/firebase/client';
 import { confirmPasswordReset, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 
@@ -32,6 +32,8 @@ const Auth = () => {
   const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithOtp, resetPassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
 
   // Basic SEO for /auth
   useEffect(() => {
@@ -581,6 +583,16 @@ const Auth = () => {
             {getSubheaderText()}
           </p>
         </div>
+
+        {/* Android APK download (public, no separate page) */}
+        {isAndroid && (
+          <Button asChild variant="outline" className="w-full gap-2 h-11">
+            <a href="/habitency.apk" download>
+              <Download className="w-5 h-5" />
+              Download Android APK
+            </a>
+          </Button>
+        )}
 
         {/* Google Sign In - only show on initial screens */}
         {(mode === 'otp-request' || mode === 'login' || mode === 'signup') && (

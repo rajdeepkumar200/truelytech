@@ -161,13 +161,8 @@ const MobileInstallPrompt = () => {
             </Button>
           )}
           {isAndroid && (
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <a href="/install">
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <a href="/habitency.apk" download>
                 <Download className="w-4 h-4" />
                 APK
               </a>
