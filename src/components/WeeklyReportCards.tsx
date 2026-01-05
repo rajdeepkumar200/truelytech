@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, startOfWeek, addDays, isToday, isBefore, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar, BarChart3 } from 'lucide-react';
@@ -57,6 +57,7 @@ const CircularProgress = ({ percentage, size = 80 }: { percentage: number; size?
 
 const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+  const scrollRef = useRef<HTMLDivElement>(null);
   const today = new Date();
 
   // Generate week days starting from Monday
@@ -137,6 +138,15 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
     });
   }, [habits, today]);
 
+  // Keep the current day card visible
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const todayCard = scrollRef.current.querySelector('[data-today="true"]');
+    if (todayCard) {
+      todayCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [viewMode]);
+
   return (
     <div className="space-y-3">
       {/* Header with toggle */}
@@ -172,14 +182,18 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
         </div>
       </div>
       
-      {/* Cards */}
-      <div className="flex flex-wrap gap-3">
+      {/* Cards - single row with horizontal scroll */}
+      <div
+        ref={scrollRef}
+        className="flex flex-nowrap gap-3 overflow-x-auto pb-2 scrollbar-none"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
         {(viewMode === 'weekly' ? weekDays : monthDays).map((day, idx) => (
           <div
             key={idx}
             data-today={day.isToday}
             className={cn(
-              "w-full sm:w-[160px] rounded-xl border p-3 transition-all",
+              "flex-shrink-0 w-[160px] rounded-xl border p-3 transition-all",
               day.isToday 
                 ? "bg-habit-checkbox/10 border-habit-checkbox/30" 
                 : "bg-popover border-border/50"
