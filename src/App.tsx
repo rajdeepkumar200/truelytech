@@ -10,6 +10,7 @@ import Install from "./pages/Install";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import UpdatePrompt from "./components/UpdatePrompt";
+import BrandFooter from "./components/BrandFooter";
 import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
 
 const queryClient = new QueryClient();
@@ -60,18 +61,28 @@ const App = () => (
         <Sonner />
         <UpdatePrompt />
         {!isFirebaseConfigured() ? (
-          <FirebaseConfigError />
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1">
+              <FirebaseConfigError />
+            </div>
+            <BrandFooter />
+          </div>
         ) : (
-        <HashRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/journal" element={<Journal />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/install" element={<Install />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </HashRouter>
+          <HashRouter>
+            <div className="min-h-screen flex flex-col">
+              <div className="flex-1">
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/journal" element={<Journal />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/install" element={<Install />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+              <BrandFooter />
+            </div>
+          </HashRouter>
         )}
       </TooltipProvider>
     </AuthProvider>
