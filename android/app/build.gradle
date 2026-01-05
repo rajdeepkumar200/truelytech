@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.truelytech.habits"
+    namespace = "com.truelytech.habitency"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.truelytech.habits"
+        applicationId "com.truelytech.habitency"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3

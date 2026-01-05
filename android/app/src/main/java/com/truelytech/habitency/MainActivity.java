@@ -1,9 +1,9 @@
-package com.truelytech.habits;
+package com.truelytech.habitency;
 
 import com.getcapacitor.BridgeActivity;
 import android.os.Bundle;
 
-import com.truelytech.habits.plugins.UpdateInstallerPlugin;
+import com.truelytech.habitency.plugins.UpdateInstallerPlugin;
 
 public class MainActivity extends BridgeActivity {
 	@Override

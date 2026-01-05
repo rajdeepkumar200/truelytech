@@ -1,4 +1,4 @@
-package com.truelytech.habits.plugins;
+package com.truelytech.habitency.plugins;
 
 import android.content.Intent;
 import android.net.Uri;

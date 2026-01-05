@@ -22,6 +22,9 @@ out/
 # Android Studio generated release output folder (do not commit)
 app/release/
 
+# Firebase config (contains sensitive project IDs)
+app/google-services.json
+
 # Gradle files
 .gradle/
 build/

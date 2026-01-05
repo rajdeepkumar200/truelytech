@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const serverUrl = process.env.CAPACITOR_SERVER_URL;
 
 const config: CapacitorConfig = {
-  appId: 'com.truelytech.habits',
+  appId: 'com.truelytech.habitency',
   appName: 'Habitex',
   webDir: 'dist',
   server: {
