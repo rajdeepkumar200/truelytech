@@ -15,9 +15,19 @@ const Install = () => {
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
-  const apkUrl = `${import.meta.env.BASE_URL}app-release.apk`;
+  const [apkUrl, setApkUrl] = useState<string>('');
 
   useEffect(() => {
+    // Fetch the latest APK URL from app-update.json with cache busting
+    fetch(`/app-update.json?ts=${Date.now()}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.apkUrl) {
+          setApkUrl(data.apkUrl);
+        }
+      })
+      .catch(err => console.error('Failed to fetch update info:', err));
+
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
