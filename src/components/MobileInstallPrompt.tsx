@@ -11,6 +11,7 @@ const MobileInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
@@ -32,6 +33,10 @@ const MobileInstallPrompt = () => {
     // Check if iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(iOS);
+
+    // Check if Android
+    const android = /Android/i.test(navigator.userAgent);
+    setIsAndroid(android);
 
     // Check if mobile
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -153,6 +158,19 @@ const MobileInstallPrompt = () => {
             <Button onClick={() => setShowIOSInstructions(true)} size="sm" className="flex-1 gap-2">
               <Download className="w-4 h-4" />
               How to Install
+            </Button>
+          )}
+          {isAndroid && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <a href="/install">
+                <Download className="w-4 h-4" />
+                APK
+              </a>
             </Button>
           )}
           <Button onClick={handleDismiss} variant="outline" size="sm">

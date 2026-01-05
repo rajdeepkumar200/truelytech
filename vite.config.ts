@@ -51,6 +51,9 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Prevent the service worker SPA fallback from hijacking APK/JSON requests.
+        // Without this, navigating to /habitency.apk can return index.html (looks like the website).
+        navigateFallbackDenylist: [/^\/habitency\.apk$/i, /^\/app-update\.json$/i, /\.apk$/i],
       },
     }),
   ].filter(Boolean),

@@ -18,18 +18,8 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/habitency.apk",
-      "destination": "/habitency.apk"
-    },
-    {
-      "source": "/app-update.json",
-      "destination": "/app-update.json"
-    },
-    {
-      "source": "/((?!habitency.apk|app-update.json|assets/|favicon|sw.js|workbox).*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
