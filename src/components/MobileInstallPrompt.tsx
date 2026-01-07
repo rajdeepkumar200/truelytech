@@ -15,8 +15,13 @@ const MobileInstallPrompt = () => {
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Don't show if already installed
+    // Don't show if already installed or running as native app
     if (window.matchMedia('(display-mode: standalone)').matches) {
+      return;
+    }
+
+    // Don't show if running in Capacitor (native app)
+    if ((window as any).Capacitor?.isNativePlatform?.()) {
       return;
     }
 

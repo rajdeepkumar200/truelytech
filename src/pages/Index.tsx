@@ -550,7 +550,7 @@ const Index = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="min-h-screen bg-background pb-safe pt-safe">
+    <div className="min-h-screen bg-background pb-safe pt-safe px-safe">
       <MotivationModal onDismiss={() => setMotivationDismissed(true)} />
       
       <OnboardingTour start={motivationDismissed} />
