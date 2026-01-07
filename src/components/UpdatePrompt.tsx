@@ -20,6 +20,8 @@ type UpdateInfo = {
   message?: string;
 };
 
+const PROMPT_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours
+
 function normalizeBaseUrl(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
 }
@@ -92,10 +94,15 @@ export default function UpdatePrompt() {
         // Only prompt when we can confidently tell the remote version is newer.
         if (cmp === null || cmp <= 0) return;
 
-        // Avoid re-showing the same update repeatedly during one install cycle.
-        const lastOffered = localStorage.getItem('habitex_lastOfferedVersion') ?? '';
-        if (normalizeVersion(lastOffered) === remoteVersion) return;
-        localStorage.setItem('habitex_lastOfferedVersion', remoteVersion);
+        // Avoid spamming the same prompt every time the app starts.
+        // Still allows re-prompting later if user dismissed or install failed.
+        const lastPromptedVersion = normalizeVersion(localStorage.getItem('habitex_lastPromptedVersion') ?? '');
+        const lastPromptedAt = Number(localStorage.getItem('habitex_lastPromptedAt') ?? '0');
+        if (lastPromptedVersion === remoteVersion && Number.isFinite(lastPromptedAt)) {
+          if (Date.now() - lastPromptedAt < PROMPT_COOLDOWN_MS) return;
+        }
+        localStorage.setItem('habitex_lastPromptedVersion', remoteVersion);
+        localStorage.setItem('habitex_lastPromptedAt', String(Date.now()));
 
         const rawApkUrl = String(info.apkUrl);
         const resolvedApkUrl = /^https?:\/\//i.test(rawApkUrl)
