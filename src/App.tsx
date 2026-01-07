@@ -61,7 +61,7 @@ const App = () => (
         <Sonner />
         <UpdatePrompt />
         {!isFirebaseConfigured() ? (
-          <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
             <div className="flex-1">
               <FirebaseConfigError />
             </div>
@@ -69,7 +69,7 @@ const App = () => (
           </div>
         ) : (
           <HashRouter>
-            <div className="min-h-screen flex flex-col">
+            <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
               <div className="flex-1">
                 <Routes>
                   <Route path="/" element={<Index />} />
