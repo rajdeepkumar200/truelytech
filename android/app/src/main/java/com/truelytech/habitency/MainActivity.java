@@ -2,13 +2,26 @@ package com.truelytech.habitency;
 
 import com.getcapacitor.BridgeActivity;
 import android.os.Bundle;
+import android.os.Build;
+import android.view.WindowManager;
 import android.webkit.WebView;
+
+import androidx.core.view.WindowCompat;
 
 import com.truelytech.habitency.plugins.UpdateInstallerPlugin;
 
 public class MainActivity extends BridgeActivity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
+		// Ensure the app content is laid out below system bars (status bar / notch area)
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+		// Avoid drawing into the display cutout (notch) area.
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+			WindowManager.LayoutParams lp = getWindow().getAttributes();
+			lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
+			getWindow().setAttributes(lp);
+		}
+
 		super.onCreate(savedInstanceState);
 		registerPlugin(UpdateInstallerPlugin.class);
 		
