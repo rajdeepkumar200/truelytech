@@ -22,7 +22,7 @@ public class MainActivity extends BridgeActivity {
 	}
 	
 	@Override
-	protected void onSaveInstanceState(Bundle outState) {
+	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
 		// Save WebView state to prevent refresh
 		if (this.bridge != null && this.bridge.getWebView() != null) {
@@ -31,7 +31,7 @@ public class MainActivity extends BridgeActivity {
 	}
 	
 	@Override
-	protected void onRestoreInstanceState(Bundle savedInstanceState) {
+	public void onRestoreInstanceState(Bundle savedInstanceState) {
 		super.onRestoreInstanceState(savedInstanceState);
 		// Restore WebView state
 		if (this.bridge != null && this.bridge.getWebView() != null && savedInstanceState != null) {
@@ -40,7 +40,7 @@ public class MainActivity extends BridgeActivity {
 	}
 	
 	@Override
-	protected void onPause() {
+	public void onPause() {
 		super.onPause();
 		// Don't pause WebView timers to keep Pomodoro running
 		if (this.bridge != null && this.bridge.getWebView() != null) {
