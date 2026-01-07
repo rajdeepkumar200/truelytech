@@ -59,6 +59,7 @@ export default function UpdatePrompt() {
   const [apkUrl, setApkUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showRestartPrompt, setShowRestartPrompt] = useState(false);
 
   const updateBaseUrl = useMemo(() => {
     const raw = (import.meta.env.VITE_UPDATE_BASE_URL as string | undefined) ?? '';
@@ -123,7 +124,11 @@ export default function UpdatePrompt() {
 
         setApkUrl(cacheBustedApkUrl);
         setMessage(info.message ?? 'More amazing features and a more stable version are available.');
-        setOpen(true);
+        
+        // Delay showing the update prompt by 5 seconds after app launch
+        setTimeout(() => {
+          setOpen(true);
+        }, 5000);
       } catch {
         // Ignore update check failures.
       }
@@ -137,15 +142,44 @@ export default function UpdatePrompt() {
     try {
       setIsUpdating(true);
       await UpdateInstaller.downloadAndInstall({ url: apkUrl });
-    } catch {
-      // If install fails, just keep the dialog closed.
+      // If successful, show restart prompt
+      setOpen(false);
+      setShowRestartPrompt(true);
+    } catch (error) {
+      // If install fails, just keep the dialog closed
+      console.error('Update failed:', error);
     } finally {
       setIsUpdating(false);
-      setOpen(false);
     }
   };
 
-  if (!open) return null;
+  const onRestart = () => {
+    // Restart the app using Capacitor App plugin
+    App.exitApp();
+  };
+
+  if (!open && !showRestartPrompt) return null;
+
+  // Show restart prompt after successful installation
+  if (showRestartPrompt) {
+    return (
+      <AlertDialog open={true}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update installed successfully!</AlertDialogTitle>
+            <AlertDialogDescription>
+              The app has been updated. Please restart to apply the changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={onRestart}>
+              Restart Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
 
   return (
     <AlertDialog
