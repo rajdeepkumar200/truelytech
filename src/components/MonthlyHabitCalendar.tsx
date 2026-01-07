@@ -148,7 +148,19 @@ const MonthlyHabitCalendar = ({
 
   // Calculate daily progress for each day of the month
   const dailyProgress = useMemo(() => {
+    const today = startOfDay(new Date());
+    
     return monthDays.map((day) => {
+      const dayStart = startOfDay(day);
+      const isFutureDay = isAfter(dayStart, today);
+      const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
+      
+      // Only show progress for current week (completedDays is a weekly array)
+      // Past weeks show stale data from the weekly array, so hide it
+      if (isFutureDay || !isCurrentWeek) {
+        return 0;
+      }
+      
       const dayOfWeek = getDay(day);
       const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       
@@ -346,15 +358,6 @@ const MonthlyHabitCalendar = ({
 
         {/* Scrollable Right Column: Days */}
         <div className="flex-1 min-w-0 relative group/scroll">
-          <Button
-            variant="secondary"
-            size="icon"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full shadow-md opacity-0 group-hover/scroll:opacity-100 transition-opacity disabled:opacity-0 bg-background/80 backdrop-blur-sm border border-border"
-            onClick={() => scroll('left')}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
           <div
             className="overflow-x-auto scrollbar-none max-w-full"
             ref={scrollRef}
@@ -475,6 +478,7 @@ const MonthlyHabitCalendar = ({
                 const dayOfWeek = getDay(day);
                 const isCurrentDay = isToday(day);
                 const isWeekStart = dayOfWeek === 1;
+                const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
 
                 return (
                   <div
@@ -485,13 +489,15 @@ const MonthlyHabitCalendar = ({
                       isCurrentDay && "bg-accent/10 rounded-b-lg"
                     )}
                   >
-                    <span className={cn(
-                      "text-[10px] font-medium",
-                      progress >= 80 ? "text-accent" :
-                      progress >= 50 ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      {progress}%
-                    </span>
+                    {isCurrentWeek && (
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        progress >= 80 ? "text-accent" :
+                        progress >= 50 ? "text-foreground" : "text-muted-foreground"
+                      )}>
+                        {progress}%
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -501,15 +507,6 @@ const MonthlyHabitCalendar = ({
             <ConsistencyGraph data={dailyProgress} days={monthDays} />
             </div>
           </div>
-
-          <Button
-            variant="secondary"
-            size="icon"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full shadow-md opacity-0 group-hover/scroll:opacity-100 transition-opacity disabled:opacity-0 bg-background/80 backdrop-blur-sm border border-border"
-            onClick={() => scroll('right')}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 

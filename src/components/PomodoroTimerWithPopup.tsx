@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Settings, Volume2, VolumeX, Maximize2, X } from 'lucide-react';
+import { Play, Pause, RotateCcw, Settings, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -7,7 +7,11 @@ import { playTick, playComplete, playBreakOver, triggerHaptic, resumeAudioContex
 
 const presetTimes = [5, 10, 15, 20, 25, 30, 45, 60];
 
-const PomodoroTimerWithPopup = () => {
+interface PomodoroTimerWithPopupProps {
+  onPomodoroStateChange?: (isActive: boolean, isBreak: boolean) => void;
+}
+
+const PomodoroTimerWithPopup = ({ onPomodoroStateChange }: PomodoroTimerWithPopupProps) => {
   const [workMinutes, setWorkMinutes] = useState(25);
   const [breakMinutes, setBreakMinutes] = useState(5);
   const [timeLeft, setTimeLeft] = useState(workMinutes * 60);
@@ -100,6 +104,13 @@ const PomodoroTimerWithPopup = () => {
     
     setIsRunning(!isRunning);
   };
+
+  // Notify parent when Pomodoro state changes (running + work mode = active focus)
+  useEffect(() => {
+    if (onPomodoroStateChange) {
+      onPomodoroStateChange(isRunning && !isBreak, isBreak);
+    }
+  }, [isRunning, isBreak, onPomodoroStateChange]);
 
   const handleExpandChoice = (expand: boolean) => {
     setShowExpandPrompt(false);
@@ -314,13 +325,6 @@ const PomodoroTimerWithPopup = () => {
       {/* Full Screen Timer Popup */}
       <Dialog open={showPopup} onOpenChange={setShowPopup}>
         <DialogContent className="sm:max-w-[400px] p-8 bg-background/95 backdrop-blur-lg">
-          <button
-            onClick={() => setShowPopup(false)}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-          
           <div className="text-center">
             <div className={cn(
               "text-2xl font-semibold mb-6",

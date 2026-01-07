@@ -214,11 +214,13 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
           {/* Fixed Left Column: Habit names + Today */}
           <div className="flex-shrink-0">
             {/* Header */}
-            <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
+            <div className="flex items-center h-[44px] text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
               {selectedHabits.size > 0 && <div className="w-6 pl-1"></div>}
               <div className={cn("pl-2", selectedHabits.size > 0 ? "w-[80px]" : "w-[100px]")}>Habit</div>
               <div className="w-12 text-center font-semibold text-accent">{days[currentDayIndex]}</div>
             </div>
+            {/* Spacer row to align with right column header */}
+            <div className="h-[44px]"></div>
             {/* Rows */}
             {habits.map((habit) => {
               const activeDays = habit.activeDays || Array(7).fill(true);
@@ -287,7 +289,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
           {/* Scrollable Right Column: Other days */}
           <div className="flex-1 overflow-x-auto touch-pan-x overscroll-x-contain border-l border-border/30">
             {/* Header */}
-            <div className="flex items-center py-2 text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30 min-w-max">
+            <div className="flex items-center h-[44px] text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30 min-w-max">
               <div className="flex gap-4 px-3">
                 {days.map((day, index) => {
                   if (index === currentDayIndex) return null;
@@ -529,7 +531,9 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                               <Trash2 className="w-3 h-3 text-destructive" />
                             </button>
                           </div>
-completed, dayIndex) => {
+
+                          {/* Day Checkboxes */}
+                          {habit.completedDays.map((completed, dayIndex) => {
                             const isCurrentDay = dayIndex === currentDayIndex;
                             const isFutureDay = dayIndex > currentDayIndex;
                             const isComplete = completed && !isFutureDay;
@@ -557,8 +561,6 @@ completed, dayIndex) => {
                                           : "border-border opacity-40"
                                       )}
                                       title={isFutureDay ? "Cannot complete future habits" : "Only today can be modified"}
-                                      )}
-                                      title="Only today can be modified"
                                     >
                                       {isComplete && <span className="text-xs text-white">✓</span>}
                                     </div>

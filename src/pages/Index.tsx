@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Book, Eye, EyeOff } from 'lucide-react';
+import { Book } from 'lucide-react';
 import ClockWidget from '@/components/ClockWidget';
 import HabitTable from '@/components/HabitTable';
 import MonthlyHabitCalendar from '@/components/MonthlyHabitCalendar';
@@ -11,12 +11,9 @@ import HabitGoals from '@/components/HabitGoals';
 import AddHabitRow from '@/components/AddHabitRow';
 import MotivationModal from '@/components/MotivationModal';
 import NotificationPrompt from '@/components/NotificationPrompt';
-import NotificationSettings from '@/components/NotificationSettings';
 import PomodoroTimerWithPopup from '@/components/PomodoroTimerWithPopup';
+import SettingsDialog from '@/components/SettingsDialog';
 import RemindersRedesigned from '@/components/RemindersRedesigned';
-import ThemeToggle from '@/components/ThemeToggle';
-
-import UserMenu from '@/components/UserMenu';
 import MobileInstallPrompt from '@/components/MobileInstallPrompt';
 import ReminderAlert from '@/components/ReminderAlert';
 import { OnboardingTour } from '@/components/OnboardingTour';
@@ -146,9 +143,11 @@ const Index = () => {
       waterIntakeReminders: false,
       waterIntakeInterval: 30,
       soundEnabled: true,
+      alarmTone: 'classic',
     };
   });
 
+  const [isPomodoroFocusActive, setIsPomodoroFocusActive] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [lastUserId, setLastUserId] = useState<string | null>(() => {
     return localStorage.getItem('lastUserId');
@@ -170,11 +169,19 @@ const Index = () => {
     }
   }, [user, authLoading, navigate]);
 
+  // Handle Pomodoro state changes - auto-enable reminders during focus sessions
+  const handlePomodoroStateChange = (isActive: boolean, isBreak: boolean) => {
+    setIsPomodoroFocusActive(isActive && !isBreak);
+  };
+
   // Visual reminder alerts for eye blink and water intake
   useEffect(() => {
     if (authLoading || !user) return;
 
-    if (!notificationPrefs.eyeBlinkReminders && !notificationPrefs.waterIntakeReminders) {
+    // Auto-enable reminders when Pomodoro focus is active
+    const shouldEnableReminders = isPomodoroFocusActive || notificationPrefs.eyeBlinkReminders || notificationPrefs.waterIntakeReminders;
+
+    if (!shouldEnableReminders) {
       if (reminderIntervalRef.current) {
         clearInterval(reminderIntervalRef.current);
       }
@@ -187,8 +194,11 @@ const Index = () => {
       const seconds = now.getSeconds();
       const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
 
-      // Eye blink - every 20 minutes
-      if (notificationPrefs.eyeBlinkReminders && minutes % 20 === 0 && seconds < 5) {
+      // Eye blink - every 20 minutes (mandatory during Pomodoro focus)
+      const shouldShowEyeReminder = (isPomodoroFocusActive || notificationPrefs.eyeBlinkReminders) && 
+                                     minutes % 20 === 0 && seconds < 5;
+      
+      if (shouldShowEyeReminder) {
         setReminderAlertType('eye');
         // Send notification if document is hidden (user not on screen)
         if (document.hidden && notificationsSupported && window.Notification.permission === 'granted') {
@@ -203,9 +213,12 @@ const Index = () => {
         }
       }
 
-      // Water intake - customizable interval (default 30 minutes)
+      // Water intake - customizable interval (mandatory during Pomodoro focus, default 30 minutes)
       const waterInterval = notificationPrefs.waterIntakeInterval || 30;
-      if (notificationPrefs.waterIntakeReminders && minutes % waterInterval === 0 && seconds < 5) {
+      const shouldShowWaterReminder = (isPomodoroFocusActive || notificationPrefs.waterIntakeReminders) && 
+                                       minutes % waterInterval === 0 && seconds < 5;
+      
+      if (shouldShowWaterReminder) {
         setReminderAlertType('water');
         // Send notification if document is hidden
         if (document.hidden && notificationsSupported && window.Notification.permission === 'granted') {
@@ -228,7 +241,7 @@ const Index = () => {
         clearInterval(reminderIntervalRef.current);
       }
     };
-  }, [notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders, notificationPrefs.waterIntakeInterval]);
+  }, [notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders, notificationPrefs.waterIntakeInterval, isPomodoroFocusActive]);
 
   // Reset data when user changes (login/logout/switch accounts) - clear shared local storage
   useEffect(() => {
@@ -539,6 +552,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-safe pt-safe">
       <MotivationModal onDismiss={() => setMotivationDismissed(true)} />
+      
       <OnboardingTour start={motivationDismissed} />
       <NotificationPrompt />
       <MobileInstallPrompt />
@@ -546,23 +560,20 @@ const Index = () => {
         type={reminderAlertType} 
         onDismiss={() => setReminderAlertType(null)} 
         soundEnabled={notificationPrefs.soundEnabled !== false}
+        alarmTone={notificationPrefs.alarmTone || 'classic'}
       />
       
       {/* Top Controls */}
       <div className="fixed bottom-4 left-4 md:left-auto md:right-4 md:top-4 md:bottom-auto z-50 flex items-center gap-2">
-        <Button 
-          id="hide-habit-btn"
-          variant="outline" 
-          size="icon" 
-          onClick={() => setShowHiddenHabits(!showHiddenHabits)} 
-          title={showHiddenHabits ? "Hide Hidden Habits" : "Show Hidden Habits"}
-          className={showHiddenHabits ? "bg-accent text-accent-foreground" : ""}
-        >
-          {showHiddenHabits ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-        </Button>
         <Button id="journal-btn" variant="outline" size="icon" onClick={() => navigate('/journal')} title="Journal">
           <Book className="h-4 w-4" />
         </Button>
+        <SettingsDialog 
+          notificationPrefs={notificationPrefs}
+          onUpdateNotificationPrefs={setNotificationPrefs}
+          showHiddenHabits={showHiddenHabits}
+          onToggleHiddenHabits={() => setShowHiddenHabits(!showHiddenHabits)}
+        />
         {!user && !authLoading && (
           <div className="hidden sm:block">
             <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
@@ -570,18 +581,16 @@ const Index = () => {
             </Button>
           </div>
         )}
-        {user && <div id="user-menu-btn"><UserMenu /></div>}
-        <div id="theme-toggle-btn"><ThemeToggle /></div>
       </div>
       
       {/* Title */}
       <header className="pt-4 pb-4 px-4 sm:px-6">
         <div className="flex flex-col items-center">
-          <div className="text-center">
-            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-foreground tracking-tight">
+          <div className="text-center group">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent tracking-tight transition-all duration-500 hover:scale-105">
               Daily Habits
             </h1>
-            <p className="text-muted-foreground text-xs sm:text-sm mt-1">Build better routines, one day at a time</p>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1 transition-all duration-300 group-hover:text-accent">Build better routines, one day at a time ✨</p>
           </div>
           {/* Clock Widget - Mobile only */}
           <div className="lg:hidden mt-3">
@@ -634,25 +643,24 @@ const Index = () => {
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
                 waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
                 soundEnabled={notificationPrefs.soundEnabled !== false}
+                alarmTone={notificationPrefs.alarmTone || 'classic'}
+                habits={habits}
                 onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
                 onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
                 onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
+                onAlarmToneChange={(tone) => setNotificationPrefs(prev => ({ ...prev, alarmTone: tone }))}
               />
             </div>
 
             {/* Mobile: Pomodoro Timer */}
             <div className="lg:hidden">
-              <PomodoroTimerWithPopup />
+              <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
             </div>
 
-            {/* Mobile: Goals & Settings */}
+            {/* Mobile: Goals */}
             <div className="lg:hidden space-y-4">
               <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
-              <NotificationSettings
-                preferences={notificationPrefs}
-                onUpdate={setNotificationPrefs}
-              />
             </div>
 
             {/* Desktop: Left Column */}
@@ -669,16 +677,15 @@ const Index = () => {
                 waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
                 waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
                 soundEnabled={notificationPrefs.soundEnabled !== false}
+                alarmTone={notificationPrefs.alarmTone || 'classic'}
+                habits={habits}
                 onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
                 onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
                 onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
                 onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
+                onAlarmToneChange={(tone) => setNotificationPrefs(prev => ({ ...prev, alarmTone: tone }))}
               />
-              <PomodoroTimerWithPopup />
-              <NotificationSettings
-                preferences={notificationPrefs}
-                onUpdate={setNotificationPrefs}
-              />
+              <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
             </div>
 
             {/* Desktop: Right Column */}

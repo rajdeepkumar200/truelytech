@@ -25,13 +25,13 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={() => setIsDark(!isDark)}
-      className="p-2.5 rounded-xl bg-popover border border-border/50 hover:bg-muted transition-colors"
+      className="p-2.5 rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 border-2 border-border/50 hover:border-accent hover:from-accent/30 hover:to-primary/30 hover:shadow-lg hover:shadow-accent/30 transition-all duration-300 hover:scale-110 active:scale-95 ripple group"
       aria-label="Toggle theme"
     >
       {isDark ? (
-        <Sun className="w-5 h-5 text-foreground" />
+        <Sun className="w-5 h-5 text-accent transition-all duration-500 group-hover:rotate-180 group-hover:scale-110 drop-shadow-md" />
       ) : (
-        <Moon className="w-5 h-5 text-foreground" />
+        <Moon className="w-5 h-5 text-primary transition-all duration-500 group-hover:rotate-[20deg] group-hover:scale-110 drop-shadow-md" />
       )}
     </button>
   );

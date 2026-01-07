@@ -45,6 +45,7 @@ export interface NotificationPreferences {
   waterIntakeReminders?: boolean;
   waterIntakeInterval?: number;
   soundEnabled?: boolean;
+  alarmTone?: 'classic' | 'digital' | 'gentle';
 }
 
 export const useNotifications = (

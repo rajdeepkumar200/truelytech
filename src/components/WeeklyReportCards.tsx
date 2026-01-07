@@ -104,46 +104,85 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
     });
   }, [habits, today]);
 
-  // Generate month days
-  const monthDays = useMemo(() => {
+  // Generate month weeks with aggregated data
+  const monthWeeks = useMemo(() => {
     const start = startOfMonth(today);
     const end = endOfMonth(today);
     const days = eachDayOfInterval({ start, end });
     
-    return days.map(day => {
+    // Group days by week
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
+    
+    days.forEach((day, idx) => {
+      currentWeek.push(day);
       const dayOfWeek = getDay(day);
-      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       
+      // Sunday or last day of month - complete the week
+      if (dayOfWeek === 0 || idx === days.length - 1) {
+        weeks.push([...currentWeek]);
+        currentWeek = [];
+      }
+    });
+    
+    return weeks.map((weekDays, weekIdx) => {
       let totalActive = 0;
       let totalCompleted = 0;
-      const tasksForDay: { icon: string; name: string; completed: boolean }[] = [];
+      const weekTasks: { icon: string; name: string; completed: number; total: number }[] = [];
       
+      // Aggregate data for all days in this week
       habits.forEach(habit => {
-        if (habit.activeDays[dayIndex]) {
-          totalActive++;
-          const isComplete = habit.completedDays[dayIndex];
-          if (isComplete) totalCompleted++;
-          tasksForDay.push({ icon: habit.icon, name: habit.name, completed: isComplete });
+        let habitActiveCount = 0;
+        let habitCompletedCount = 0;
+        
+        weekDays.forEach(day => {
+          const dayOfWeek = getDay(day);
+          const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          
+          if (habit.activeDays[dayIndex]) {
+            habitActiveCount++;
+            totalActive++;
+            if (habit.completedDays[dayIndex]) {
+              habitCompletedCount++;
+              totalCompleted++;
+            }
+          }
+        });
+        
+        if (habitActiveCount > 0) {
+          weekTasks.push({
+            icon: habit.icon,
+            name: habit.name,
+            completed: habitCompletedCount,
+            total: habitActiveCount
+          });
         }
       });
       
+      const weekStart = weekDays[0];
+      const weekEnd = weekDays[weekDays.length - 1];
+      const containsToday = weekDays.some(day => isToday(day));
+      
       return {
-        date: day,
+        weekNumber: weekIdx + 1,
+        weekStart,
+        weekEnd,
+        days: weekDays,
         progress: totalActive > 0 ? Math.round((totalCompleted / totalActive) * 100) : 0,
         completed: totalCompleted,
         total: totalActive,
-        tasks: tasksForDay,
-        isToday: isToday(day)
+        tasks: weekTasks,
+        isCurrentWeek: containsToday
       };
     });
   }, [habits, today]);
 
-  // Keep the current day card visible
+  // Keep the current day/week card visible
   useEffect(() => {
     if (!scrollRef.current) return;
-    const todayCard = scrollRef.current.querySelector('[data-today="true"]');
-    if (todayCard) {
-      todayCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    const activeCard = scrollRef.current.querySelector(viewMode === 'weekly' ? '[data-today="true"]' : '[data-current="true"]');
+    if (activeCard) {
+      activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
   }, [viewMode]);
 
@@ -188,7 +227,9 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
         className="flex flex-nowrap gap-3 overflow-x-auto pb-2 scrollbar-none"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {(viewMode === 'weekly' ? weekDays : monthDays).map((day, idx) => (
+        {viewMode === 'weekly' ? (
+          // Weekly view - show individual days
+          weekDays.map((day, idx) => (
           <div
             key={idx}
             data-today={day.isToday}
@@ -247,7 +288,70 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
               </div>
             </div>
           </div>
-        ))}
+        ))
+        ) : (
+          // Monthly view - show weeks
+          monthWeeks.map((week, idx) => (
+            <div
+              key={idx}
+              data-current={week.isCurrentWeek}
+              className={cn(
+                "flex-shrink-0 w-[180px] rounded-xl border p-3 transition-all",
+                week.isCurrentWeek 
+                  ? "bg-habit-checkbox/10 border-habit-checkbox/30" 
+                  : "bg-popover border-border/50"
+              )}
+            >
+              {/* Week header */}
+              <div className="text-center mb-3">
+                <p className={cn(
+                  "text-sm font-semibold",
+                  week.isCurrentWeek ? "text-habit-checkbox" : "text-foreground"
+                )}>
+                  Week {week.weekNumber}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {format(week.weekStart, 'dd MMM')} - {format(week.weekEnd, 'dd MMM')}
+                </p>
+              </div>
+              
+              {/* Circular progress */}
+              <div className="flex justify-center mb-3">
+                <CircularProgress percentage={week.progress} size={70} />
+              </div>
+              
+              {/* Tasks list with counts */}
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase font-medium text-muted-foreground mb-1">Habits Progress</p>
+                <div className="max-h-[100px] overflow-y-auto space-y-1 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {week.tasks.slice(0, 5).map((task, taskIdx) => (
+                    <div 
+                      key={taskIdx}
+                      className="flex items-center gap-1.5 text-xs py-0.5"
+                    >
+                      <span className="text-xs">{task.icon}</span>
+                      <span className="truncate flex-1">{task.name}</span>
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        task.completed === task.total ? "text-habit-checkbox" : "text-muted-foreground"
+                      )}>
+                        {task.completed}/{task.total}
+                      </span>
+                    </div>
+                  ))}
+                  {week.tasks.length > 5 && (
+                    <p className="text-[10px] text-muted-foreground">
+                      +{week.tasks.length - 5} more
+                    </p>
+                  )}
+                  {week.tasks.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No habits scheduled</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

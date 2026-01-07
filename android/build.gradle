@@ -17,6 +17,16 @@ buildscript {
 
 apply from: "variables.gradle"
 
+// Kotlin 1.8+ merges many JDK7/JDK8 extensions into kotlin-stdlib.
+// Some transitive deps (often via AndroidX test/coroutines) still pull
+// kotlin-stdlib-jdk7/jdk8, which can cause Duplicate class errors.
+subprojects { subproject ->
+    subproject.configurations.configureEach { cfg ->
+        cfg.exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+        cfg.exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+    }
+}
+
 allprojects {
     repositories {
         google()

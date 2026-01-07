@@ -1,9 +1,29 @@
 import { useState } from 'react';
-import { Plus, Trash2, Bell, CheckCircle2, Clock, Eye, Droplets, Volume2, VolumeX } from 'lucide-react';
+import {
+  Activity,
+  Plus,
+  Trash2,
+  Bell,
+  CheckCircle2,
+  Clock,
+  Eye,
+  Droplets,
+  Volume2,
+  VolumeX,
+  Calendar as CalendarIcon,
+  Settings,
+  ChevronDown,
+} from 'lucide-react';
+import { playAlarmTone, type AlarmTone } from '@/hooks/useSound';
 import { cn } from '@/lib/utils';
 import EmojiPicker from './EmojiPicker';
 import SwipeableItem from './SwipeableItem';
 import AppleTimePicker from './AppleTimePicker';
+import { AppleDatePicker } from './AppleDatePicker';
+import { DateTimePicker } from './DateTimePicker';
+import EyeBreakFullscreen from './reminders/EyeBreakFullscreen';
+import BodyActiveFullscreen from './reminders/BodyActiveFullscreen';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,15 +54,20 @@ interface RemindersProps {
   waterIntakeEnabled?: boolean;
   waterIntakeInterval?: number;
   soundEnabled?: boolean;
+  alarmTone?: 'classic' | 'digital' | 'gentle';
+  habits?: Array<{ name?: string; title?: string; emoji?: string; }>;
   onToggleEyeBlink?: (enabled: boolean) => void;
   onToggleWaterIntake?: (enabled: boolean) => void;
   onWaterIntakeIntervalChange?: (interval: number) => void;
   onToggleSound?: (enabled: boolean) => void;
+  onAlarmToneChange?: (tone: 'classic' | 'digital' | 'gentle') => void;
 }
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const waterIntervalOptions = [15, 20, 30, 45, 60];
+
+type FullScreenView = 'eye-break' | 'body-active' | null;
 
 const RemindersRedesigned = ({ 
   reminders, 
@@ -54,18 +79,52 @@ const RemindersRedesigned = ({
   waterIntakeEnabled = false,
   waterIntakeInterval = 30,
   soundEnabled = true,
-  onToggleEyeBlink,
+  alarmTone = 'classic',  habits,  onToggleEyeBlink,
   onToggleWaterIntake,
   onWaterIntakeIntervalChange,
   onToggleSound,
+  onAlarmToneChange,
 }: RemindersProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newDay, setNewDay] = useState('Monday');
   const [newTime, setNewTime] = useState('09:00');
   const [newName, setNewName] = useState('');
   const [newEmoji, setNewEmoji] = useState('🔔');
+  const [newDate, setNewDate] = useState<Date | undefined>(undefined);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateTimePickerOpen, setDateTimePickerOpen] = useState(false);
+  const [fullScreen, setFullScreen] = useState<FullScreenView>(null);
+  const [soundSettingsExpanded, setSoundSettingsExpanded] = useState(false);
+
+  const alarmToneLabel = (tone: 'classic' | 'digital' | 'gentle') => {
+    switch (tone) {
+      case 'classic':
+        return 'Alarm 1';
+      case 'digital':
+        return 'Alarm 2';
+      case 'gentle':
+        return 'Alarm 3';
+      default:
+        return 'Alarm';
+    }
+  };
+
+  const cycleAlarmTone = () => {
+    const order: Array<'classic' | 'digital' | 'gentle'> = ['classic', 'digital', 'gentle'];
+    const idx = Math.max(0, order.indexOf(alarmTone));
+    const next = order[(idx + 1) % order.length];
+    onAlarmToneChange?.(next);
+    // Play preview of the new tone
+    playAlarmTone(next, 'eye');
+  };
+
+  const handleAlarmToneChange = (tone: AlarmTone) => {
+    onAlarmToneChange?.(tone);
+    // Play preview of the selected tone
+    playAlarmTone(tone, 'eye');
+  };
 
   const handleAdd = () => {
     if (newTime && newName.trim()) {
@@ -101,8 +160,9 @@ const RemindersRedesigned = ({
   // Compact mobile version
   if (compact) {
     return (
-      <div className="bg-gradient-to-br from-accent/5 via-popover to-primary/5 rounded-2xl border border-border/50 overflow-hidden shadow-sm">
-        <div className="p-4 space-y-4">
+      <>
+        <div className="bg-gradient-to-br from-accent/5 via-popover to-primary/5 rounded-2xl border border-border/50 overflow-hidden shadow-sm">
+          <div className="p-4 space-y-4">
           {/* Header */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -119,7 +179,10 @@ const RemindersRedesigned = ({
           {/* Quick toggles row */}
           <div className="grid grid-cols-3 gap-2">
             <button
-              onClick={() => onToggleEyeBlink?.(!eyeBlinkEnabled)}
+              onClick={() => {
+                if (!eyeBlinkEnabled) onToggleEyeBlink?.(true);
+                setFullScreen('eye-break');
+              }}
               className={cn(
                 "flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all duration-200",
                 eyeBlinkEnabled 
@@ -129,6 +192,14 @@ const RemindersRedesigned = ({
             >
               <Eye className="w-4 h-4" />
               <span className="text-[10px] font-medium">Eye 20m</span>
+            </button>
+
+            <button
+              onClick={() => setFullScreen('body-active')}
+              className="flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all duration-200 bg-muted/50 text-muted-foreground hover:bg-muted"
+            >
+              <Activity className="w-4 h-4" />
+              <span className="text-[10px] font-medium">Active</span>
             </button>
             <button
               onClick={() => onToggleWaterIntake?.(!waterIntakeEnabled)}
@@ -142,18 +213,51 @@ const RemindersRedesigned = ({
               <Droplets className="w-4 h-4" />
               <span className="text-[10px] font-medium">Water {waterIntakeInterval}m</span>
             </button>
+          </div>
+
+          {/* Sound settings with gear icon and dropdown */}
+          <div className="bg-foreground/5 rounded-xl overflow-hidden">
             <button
-              onClick={() => onToggleSound?.(!soundEnabled)}
-              className={cn(
-                "flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all duration-200",
-                soundEnabled 
-                  ? "bg-foreground/10 text-foreground" 
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              )}
+              onClick={() => setSoundSettingsExpanded(!soundSettingsExpanded)}
+              className="w-full flex items-center gap-2 py-2 px-3 hover:bg-foreground/10 transition-colors"
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              <span className="text-[10px] font-medium">Sound</span>
+              <Settings className="w-4 h-4 text-muted-foreground" />
+              <div className="flex-1 flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground">Sound</span>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={soundEnabled}
+                    onCheckedChange={(checked) => {
+                      onToggleSound?.(checked);
+                      if (checked) setSoundSettingsExpanded(true);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <ChevronDown className={cn(
+                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                    soundSettingsExpanded && "rotate-180"
+                  )} />
+                </div>
+              </div>
             </button>
+            {soundEnabled && soundSettingsExpanded && (
+              <div className="flex items-center justify-center gap-1.5 px-3 pb-2 animate-fade-in">
+                {(['classic', 'digital', 'gentle'] as const).map((tone) => (
+                  <button
+                    key={tone}
+                    onClick={() => handleAlarmToneChange(tone)}
+                    className={cn(
+                      "flex-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all duration-200 hover:scale-105 active:scale-95",
+                      alarmTone === tone
+                        ? "bg-gradient-to-r from-primary to-accent text-accent-foreground shadow-md"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {alarmToneLabel(tone)}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Water interval selector */}
@@ -212,15 +316,36 @@ const RemindersRedesigned = ({
             <div className="space-y-2 p-3 bg-muted/30 rounded-xl">
               <div className="flex gap-2 items-center">
                 <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
-                <select
-                  value={newDay}
-                  onChange={(e) => setNewDay(e.target.value)}
-                  className="text-xs bg-background rounded-lg px-2 py-1.5 text-foreground border border-border"
+                {/* Date selector (optional) */}
+                <button
+                  onClick={() => setDatePickerOpen(true)}
+                  className="flex items-center gap-1 px-2 py-1.5 bg-background rounded-lg text-xs text-foreground border border-border"
                 >
-                  {daysOfWeek.map(day => (
-                    <option key={day} value={day}>{shortDays[daysOfWeek.indexOf(day)]}</option>
-                  ))}
-                </select>
+                  <CalendarIcon className="w-3 h-3" />
+                  {newDate ? newDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Date'}
+                </button>
+                {/* Day of week (used if no date selected) */}
+                {!newDate && (
+                  <select
+                    value={newDay}
+                    onChange={(e) => setNewDay(e.target.value)}
+                    className="text-xs bg-background rounded-lg px-2 py-1.5 text-foreground border border-border"
+                  >
+                    {daysOfWeek.map(day => (
+                      <option key={day} value={day}>{shortDays[daysOfWeek.indexOf(day)]}</option>
+                    ))}
+                  </select>
+                )}
+                {/* Clear date button */}
+                {newDate && (
+                  <button
+                    onClick={() => setNewDate(undefined)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    title="Clear date"
+                  >
+                    ✕
+                  </button>
+                )}
                 <button
                   onClick={() => setTimePickerOpen(true)}
                   className="flex items-center gap-1 px-2 py-1.5 bg-background rounded-lg text-xs text-foreground border border-border"
@@ -261,6 +386,13 @@ const RemindersRedesigned = ({
           onOpenChange={setTimePickerOpen}
         />
 
+        <AppleDatePicker
+          value={newDate}
+          onChange={setNewDate}
+          open={datePickerOpen}
+          onOpenChange={setDatePickerOpen}
+        />
+
         <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -276,6 +408,19 @@ const RemindersRedesigned = ({
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      <EyeBreakFullscreen
+        open={fullScreen === 'eye-break'}
+        onOpenChange={(open) => setFullScreen(open ? 'eye-break' : null)}
+        soundEnabled={!!soundEnabled}
+      />
+      <BodyActiveFullscreen
+        open={fullScreen === 'body-active'}
+        onOpenChange={(open) => setFullScreen(open ? 'body-active' : null)}
+        soundEnabled={!!soundEnabled}
+        habits={habits}
+      />
+    </>
     );
   }
 
@@ -292,8 +437,28 @@ const RemindersRedesigned = ({
             <div className="flex-1">
               <h3 className="font-semibold text-foreground">Reminders</h3>
               <p className="text-xs text-muted-foreground">{pendingReminders.length} active</p>
-            </div>
-          </div>
+            </div>            <button
+              onClick={() => setSoundSettingsExpanded(!soundSettingsExpanded)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <Settings className="w-4 h-4 text-muted-foreground" />
+              <div className="text-right">
+                <div className="text-xs font-medium text-foreground">Sound</div>
+                <div className="text-[10px] text-muted-foreground">{soundEnabled ? alarmToneLabel(alarmTone) : 'Off'}</div>
+              </div>
+              <Switch
+                checked={soundEnabled}
+                onCheckedChange={(checked) => {
+                  onToggleSound?.(checked);
+                  if (checked) setSoundSettingsExpanded(true);
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <ChevronDown className={cn(
+                "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                soundSettingsExpanded && "rotate-180"
+              )} />
+            </button>          </div>
         </div>
 
         <div className="p-5 space-y-5">
@@ -301,7 +466,10 @@ const RemindersRedesigned = ({
           <div className="grid grid-cols-3 gap-3">
             {/* Eye Blink */}
             <button
-              onClick={() => onToggleEyeBlink?.(!eyeBlinkEnabled)}
+              onClick={() => {
+                if (!eyeBlinkEnabled) onToggleEyeBlink?.(true);
+                setFullScreen('eye-break');
+              }}
               className={cn(
                 "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
                 eyeBlinkEnabled 
@@ -318,6 +486,20 @@ const RemindersRedesigned = ({
               <div className="text-center">
                 <span className="text-xs font-medium block">Eye Break</span>
                 <span className="text-[10px] opacity-70">20 min</span>
+              </div>
+            </button>
+
+            {/* Body Active */}
+            <button
+              onClick={() => setFullScreen('body-active')}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/50"
+            >
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted">
+                <Activity className="w-5 h-5" />
+              </div>
+              <div className="text-center">
+                <span className="text-xs font-medium block">Body Active</span>
+                <span className="text-[10px] opacity-70">Focus</span>
               </div>
             </button>
 
@@ -342,29 +524,33 @@ const RemindersRedesigned = ({
                 <span className="text-[10px] opacity-70">{waterIntakeInterval} min</span>
               </div>
             </button>
-
-            {/* Sound */}
-            <button
-              onClick={() => onToggleSound?.(!soundEnabled)}
-              className={cn(
-                "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
-                soundEnabled 
-                  ? "bg-foreground/5 border-border text-foreground" 
-                  : "bg-muted/30 border-border/50 text-muted-foreground hover:bg-muted/50"
-              )}
-            >
-              <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                soundEnabled ? "bg-foreground/10" : "bg-muted"
-              )}>
-                {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </div>
-              <div className="text-center">
-                <span className="text-xs font-medium block">Sound</span>
-                <span className="text-[10px] opacity-70">{soundEnabled ? 'On' : 'Off'}</span>
-              </div>
-            </button>
           </div>
+
+          {/* Alarm tone selector (collapsible) */}
+          {soundEnabled && soundSettingsExpanded && (
+            <div className="flex flex-col gap-2 py-3 px-4 bg-foreground/5 rounded-xl animate-fade-in">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Alarm Tone</span>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                {(['classic', 'digital', 'gentle'] as const).map((tone) => (
+                  <button
+                    key={tone}
+                    onClick={() => handleAlarmToneChange(tone)}
+                    className={cn(
+                      "flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 active:scale-95 ripple",
+                      alarmTone === tone
+                        ? "bg-gradient-to-r from-primary to-accent text-accent-foreground shadow-lg"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {alarmToneLabel(tone)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Water interval selector */}
           {waterIntakeEnabled && (
@@ -459,22 +645,49 @@ const RemindersRedesigned = ({
             <div className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border/50">
               <div className="flex gap-2 items-center flex-wrap">
                 <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
-                <select
-                  value={newDay}
-                  onChange={(e) => setNewDay(e.target.value)}
-                  className="text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground"
-                >
-                  {daysOfWeek.map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
+                {/* Combined Date & Time selector */}
                 <button
-                  onClick={() => setTimePickerOpen(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground hover:bg-muted/50"
+                  onClick={() => setDateTimePickerOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground hover:bg-muted/50 hover:border-primary/50 transition-colors"
                 >
-                  <Clock className="w-4 h-4" />
-                  {newTime}
+                  {newDate ? (
+                    <>
+                      <CalendarIcon className="w-4 h-4" />
+                      {newDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <span className="text-muted-foreground">•</span>
+                      <Clock className="w-4 h-4" />
+                      {newTime}
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-4 h-4" />
+                      {newTime}
+                      <span className="text-muted-foreground text-xs">(tap to set date)</span>
+                    </>
+                  )}
                 </button>
+                {/* Day of week selector when no date is set */}
+                {!newDate && (
+                  <select
+                    value={newDay}
+                    onChange={(e) => setNewDay(e.target.value)}
+                    className="text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground"
+                  >
+                    {daysOfWeek.map(day => (
+                      <option key={day} value={day}>{day}</option>
+                    ))}
+                  </select>
+                )}
+                {/* Clear date button */}
+                {newDate && (
+                  <button
+                    onClick={() => setNewDate(undefined)}
+                    className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-border bg-background"
+                    title="Clear date"
+                  >
+                    Clear date
+                  </button>
+                )}
               </div>
               <input
                 type="text"
@@ -519,6 +732,23 @@ const RemindersRedesigned = ({
         onOpenChange={setTimePickerOpen}
       />
 
+      <AppleDatePicker
+        value={newDate}
+        onChange={setNewDate}
+        open={datePickerOpen}
+        onOpenChange={setDatePickerOpen}
+      />
+
+      <DateTimePicker
+        open={dateTimePickerOpen}
+        onOpenChange={setDateTimePickerOpen}
+        date={newDate}
+        time={newTime}
+        onDateChange={setNewDate}
+        onTimeChange={setNewTime}
+        onConfirm={() => {}}
+      />
+
       <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -533,6 +763,18 @@ const RemindersRedesigned = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EyeBreakFullscreen
+        open={fullScreen === 'eye-break'}
+        onOpenChange={(open) => setFullScreen(open ? 'eye-break' : null)}
+        soundEnabled={!!soundEnabled}
+      />
+      <BodyActiveFullscreen
+        open={fullScreen === 'body-active'}
+        onOpenChange={(open) => setFullScreen(open ? 'body-active' : null)}
+        soundEnabled={!!soundEnabled}
+        habits={habits}
+      />
     </>
   );
 };

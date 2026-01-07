@@ -56,12 +56,13 @@ const AddHabitRow = ({ onAdd }: AddHabitRowProps) => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="w-full py-2 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors border-t border-border"
+        className="w-full py-3 flex items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-all duration-300 border-t border-border group hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5"
         title="New habit"
       >
-        <div className="w-7 h-7 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
-          <Plus className="w-4 h-4" />
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 hover:from-primary/30 hover:to-accent/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-90 shadow-md group-hover:shadow-lg group-hover:shadow-primary/30">
+          <Plus className="w-5 h-5 transition-transform duration-300" />
         </div>
+        <span className="text-sm font-medium group-hover:translate-x-1 transition-transform duration-300">Add New Habit</span>
       </button>
     );
   }
@@ -74,7 +75,7 @@ const AddHabitRow = ({ onAdd }: AddHabitRowProps) => {
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-lg hover:bg-muted/80 transition-colors"
+              className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-2xl hover:from-primary/30 hover:to-accent/30 hover:scale-110 active:scale-95 transition-all duration-300 shadow-sm hover:shadow-md ripple"
             >
               {selectedIcon}
             </button>
@@ -112,8 +113,8 @@ const AddHabitRow = ({ onAdd }: AddHabitRowProps) => {
                         setSelectedIcon(emoji);
                         setEmojiPickerOpen(false);
                       }}
-                      className={`w-7 h-7 flex items-center justify-center text-base hover:bg-muted rounded transition-colors ${
-                        selectedIcon === emoji ? 'bg-primary/20 ring-1 ring-primary' : ''
+                      className={`w-7 h-7 flex items-center justify-center text-base rounded transition-all duration-200 hover:scale-125 active:scale-95 ${
+                        selectedIcon === emoji ? 'bg-gradient-to-br from-primary/30 to-accent/30 ring-2 ring-accent shadow-md' : 'hover:bg-muted'
                       }`}
                     >
                       {emoji}
@@ -140,9 +141,9 @@ const AddHabitRow = ({ onAdd }: AddHabitRowProps) => {
         <button
           type="submit"
           disabled={!name.trim()}
-          className="px-4 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-1.5 text-sm rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground hover:shadow-lg hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ripple font-medium"
         >
-          Add
+          Add Habit
         </button>
         <button
           type="button"
@@ -150,7 +151,7 @@ const AddHabitRow = ({ onAdd }: AddHabitRowProps) => {
             setIsOpen(false);
             setName('');
           }}
-          className="px-4 py-1.5 text-sm rounded-md text-muted-foreground hover:bg-muted transition-colors"
+          className="px-4 py-1.5 text-sm rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 hover:scale-105 active:scale-95"
         >
           Cancel
         </button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, addDays, subDays, isSameDay, isToday, startOfWeek, endOfWeek, isSameWeek, getDay, isAfter, startOfDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
@@ -55,11 +55,7 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
   return (
     <div className="flex flex-col space-y-4" {...handlers}>
       {/* Date Navigation Header */}
-      <div className="flex items-center justify-between bg-card rounded-xl p-4 shadow-sm border border-border/50">
-        <Button variant="ghost" size="icon" onClick={handlePrevDay}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        
+      <div className="flex items-center justify-center bg-card rounded-xl p-4 shadow-sm border border-border/50">
         <div className="flex flex-col items-center">
           <span className="text-sm text-muted-foreground uppercase font-medium">
             {isToday(selectedDate) ? 'Today' : format(selectedDate, 'EEEE')}
@@ -68,10 +64,6 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
             {format(selectedDate, 'MMMM d')}
           </span>
         </div>
-
-        <Button variant="ghost" size="icon" onClick={handleNextDay}>
-          <ChevronRight className="h-5 w-5" />
-        </Button>
       </div>
 
       {/* Habits List */}

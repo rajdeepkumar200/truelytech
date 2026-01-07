@@ -1,31 +1,24 @@
-import { useState, useEffect } from 'react';
-import { X, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-const quotes = [
-  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-  { text: "Success is the sum of small efforts repeated day in and day out.", author: "Robert Collier" },
-  { text: "We are what we repeatedly do. Excellence is not an act, but a habit.", author: "Aristotle" },
-  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
-  { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
-  { text: "Small daily improvements are the key to staggering long-term results.", author: "Robin Sharma" },
-  { text: "Motivation is what gets you started. Habit is what keeps you going.", author: "Jim Ryun" },
-  { text: "Your future is created by what you do today, not tomorrow.", author: "Robert Kiyosaki" },
-  { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
-  { text: "The journey of a thousand miles begins with a single step.", author: "Lao Tzu" },
-  { text: "It's not about being the best. It's about being better than you were yesterday.", author: "Unknown" },
-  { text: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
-];
+import { useEffect, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 
 const MotivationModal = ({ onDismiss }: { onDismiss?: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [quote, setQuote] = useState(quotes[0]);
+
+  const quotes = [
+    'Small steps every day.',
+    'Do it for future you.',
+    'Discipline beats motivation.',
+    'One more rep.',
+    'Breathe. Reset. Continue.',
+  ];
+
+  const [quote, setQuote] = useState('');
 
   useEffect(() => {
-    // Show a new random quote every time the app starts
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
     setQuote(randomQuote);
     setIsOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDismiss = () => {
@@ -53,13 +46,9 @@ const MotivationModal = ({ onDismiss }: { onDismiss?: () => void }) => {
             Daily Motivation
           </h2>
 
-          <blockquote className="text-lg text-foreground leading-relaxed mb-3">
-            "{quote.text}"
+          <blockquote className="text-lg text-foreground leading-relaxed mb-6">
+            "{quote}"
           </blockquote>
-
-          <p className="text-sm text-muted-foreground mb-6">
-            — {quote.author}
-          </p>
 
           <button
             onClick={handleDismiss}
