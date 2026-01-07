@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,10 +24,39 @@ function normalizeBaseUrl(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
 }
 
+function normalizeVersion(input: string): string {
+  return String(input ?? '').trim().replace(/^v\s*/i, '');
+}
+
+function parseSemver(input: string): number[] | null {
+  const v = normalizeVersion(input);
+  const match = v.match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?/);
+  if (!match) return null;
+  const parts = match.slice(1).filter(Boolean).map((x) => Number(x));
+  if (parts.some((n) => Number.isNaN(n))) return null;
+  while (parts.length < 3) parts.push(0);
+  return parts;
+}
+
+function compareVersions(aRaw: string, bRaw: string): number | null {
+  const a = parseSemver(aRaw);
+  const b = parseSemver(bRaw);
+  if (!a || !b) return null;
+  const max = Math.max(a.length, b.length);
+  for (let i = 0; i < max; i += 1) {
+    const av = a[i] ?? 0;
+    const bv = b[i] ?? 0;
+    if (av > bv) return 1;
+    if (av < bv) return -1;
+  }
+  return 0;
+}
+
 export default function UpdatePrompt() {
   const [open, setOpen] = useState(false);
   const [apkUrl, setApkUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const updateBaseUrl = useMemo(() => {
     const raw = (import.meta.env.VITE_UPDATE_BASE_URL as string | undefined) ?? '';
@@ -37,11 +67,17 @@ export default function UpdatePrompt() {
     const run = async () => {
       // Only show in the native Android app.
       if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+
+      // Avoid showing update prompts during Android Studio dev/live-reload runs.
+      // In that mode the app is pointing at a dev server and updates via APK are irrelevant.
+      if (import.meta.env.DEV) return;
+
       if (!updateBaseUrl) return;
 
       try {
         const appInfo = await App.getInfo();
-        const currentVersion = appInfo.version;
+        const currentVersion = normalizeVersion(appInfo.version ?? '');
+        if (!currentVersion) return;
 
         const res = await fetch(`${updateBaseUrl}/app-update.json?ts=${Date.now()}`, {
           cache: 'no-store',
@@ -50,14 +86,35 @@ export default function UpdatePrompt() {
         const info = (await res.json()) as UpdateInfo;
 
         if (!info?.versionName || !info?.apkUrl) return;
-        if (info.versionName === currentVersion) return;
+
+        const remoteVersion = normalizeVersion(info.versionName);
+        const cmp = compareVersions(remoteVersion, currentVersion);
+        // Only prompt when we can confidently tell the remote version is newer.
+        if (cmp === null || cmp <= 0) return;
+
+        // Avoid re-showing the same update repeatedly during one install cycle.
+        const lastOffered = localStorage.getItem('habitex_lastOfferedVersion') ?? '';
+        if (normalizeVersion(lastOffered) === remoteVersion) return;
+        localStorage.setItem('habitex_lastOfferedVersion', remoteVersion);
 
         const rawApkUrl = String(info.apkUrl);
         const resolvedApkUrl = /^https?:\/\//i.test(rawApkUrl)
           ? rawApkUrl
           : `${updateBaseUrl}/${rawApkUrl.replace(/^\/+/, '')}`;
 
-        setApkUrl(resolvedApkUrl);
+        // Cache-bust the APK URL to avoid stale/cached downloads.
+        const cacheBustedApkUrl = (() => {
+          try {
+            const u = new URL(resolvedApkUrl, window.location.origin);
+            u.searchParams.set('ts', String(Date.now()));
+            return u.toString();
+          } catch {
+            const joiner = resolvedApkUrl.includes('?') ? '&' : '?';
+            return `${resolvedApkUrl}${joiner}ts=${Date.now()}`;
+          }
+        })();
+
+        setApkUrl(cacheBustedApkUrl);
         setMessage(info.message ?? 'More amazing features and a more stable version are available.');
         setOpen(true);
       } catch {
@@ -71,10 +128,12 @@ export default function UpdatePrompt() {
   const onUpdate = async () => {
     if (!apkUrl) return;
     try {
+      setIsUpdating(true);
       await UpdateInstaller.downloadAndInstall({ url: apkUrl });
     } catch {
       // If install fails, just keep the dialog closed.
     } finally {
+      setIsUpdating(false);
       setOpen(false);
     }
   };
@@ -82,17 +141,33 @@ export default function UpdatePrompt() {
   if (!open) return null;
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        // Freeze the app during update.
+        if (isUpdating) return;
+        setOpen(next);
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Update available</AlertDialogTitle>
           <AlertDialogDescription>
-            {message ?? 'More amazing features and a more stable version are available.'}
+            {isUpdating ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Downloading & installing update…
+              </span>
+            ) : (
+              message ?? 'More amazing features and a more stable version are available.'
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Later</AlertDialogCancel>
-          <AlertDialogAction onClick={onUpdate}>Update</AlertDialogAction>
+          {!isUpdating && <AlertDialogCancel>Later</AlertDialogCancel>}
+          <AlertDialogAction onClick={onUpdate} disabled={isUpdating}>
+            {isUpdating ? 'Updating…' : 'Update'}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
