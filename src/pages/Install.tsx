@@ -15,11 +15,14 @@ const Install = () => {
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
-  const [apkUrl, setApkUrl] = useState<string>('/habitency.apk');
+  // Default to empty until we fetch the real URL.
+  const [apkUrl, setApkUrl] = useState<string>('');
 
   useEffect(() => {
     // Fetch the latest APK URL from app-update.json with cache busting
-    fetch(`/app-update.json?ts=${Date.now()}`)
+    // Use Vite base URL so this works on subpath deployments.
+    const updateUrl = `${import.meta.env.BASE_URL}app-update.json?ts=${Date.now()}`;
+    fetch(updateUrl, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.apkUrl) {
@@ -117,7 +120,7 @@ const Install = () => {
                 className="w-full" 
                 asChild
               >
-                <a href={apkUrl} download="DailyHabits.apk">
+                <a href={apkUrl || '#'}>
                   <Download className="w-5 h-5 mr-2" />
                   Download APK
                 </a>

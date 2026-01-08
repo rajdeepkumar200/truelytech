@@ -32,12 +32,18 @@ function normalizeVersion(input: string): string {
 
 function parseSemver(input: string): number[] | null {
   const v = normalizeVersion(input);
-  const match = v.match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?/);
-  if (!match) return null;
-  const parts = match.slice(1).filter(Boolean).map((x) => Number(x));
-  if (parts.some((n) => Number.isNaN(n))) return null;
+  // Accept common formats like:
+  // - 2.0.1
+  // - v2.0-1 (treated like 2.0.1)
+  // - 2.0.1.4
+  const groups = v.match(/\d+/g);
+  if (!groups || groups.length === 0) return null;
+  const parts = groups.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+  if (parts.length === 0) return null;
+  // Normalize to at least 3 parts for stable comparisons.
   while (parts.length < 3) parts.push(0);
-  return parts;
+  // Keep at most 4 numeric components.
+  return parts.slice(0, 4);
 }
 
 function compareVersions(aRaw: string, bRaw: string): number | null {
@@ -60,6 +66,7 @@ export default function UpdatePrompt() {
   const [message, setMessage] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showRestartPrompt, setShowRestartPrompt] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const updateBaseUrl = useMemo(() => {
     const raw = (import.meta.env.VITE_UPDATE_BASE_URL as string | undefined) ?? '';
@@ -141,13 +148,19 @@ export default function UpdatePrompt() {
     if (!apkUrl) return;
     try {
       setIsUpdating(true);
+      setErrorMessage(null);
       await UpdateInstaller.downloadAndInstall({ url: apkUrl });
       // If successful, show restart prompt
       setOpen(false);
       setShowRestartPrompt(true);
     } catch (error) {
-      // If install fails, just keep the dialog closed
-      console.error('Update failed:', error);
+      // Keep the dialog open and show the error so user knows what to fix.
+      const msg =
+        typeof error === 'string'
+          ? error
+          : (error as any)?.message || 'Update failed. Please try again.';
+      setErrorMessage(msg);
+      setOpen(true);
     } finally {
       setIsUpdating(false);
     }
@@ -199,6 +212,8 @@ export default function UpdatePrompt() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Downloading & installing update…
               </span>
+            ) : errorMessage ? (
+              errorMessage
             ) : (
               message ?? 'More amazing features and a more stable version are available.'
             )}
