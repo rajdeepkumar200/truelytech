@@ -1,1 +1,0 @@
-ALTER TABLE public.habits ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT false;
