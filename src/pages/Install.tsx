@@ -20,9 +20,14 @@ const Install = () => {
 
   useEffect(() => {
     // Fetch the latest APK URL from app-update.json with cache busting
-    // Use Vite base URL so this works on subpath deployments.
-    const updateUrl = `${import.meta.env.BASE_URL}app-update.json?ts=${Date.now()}`;
-    fetch(updateUrl, { cache: 'no-store' })
+    // Build an absolute URL so routes like /install don't turn this into /install/app-update.json.
+    // Works for:
+    // - BASE_URL = '/' (Vercel typical)
+    // - BASE_URL = './' (relative builds)
+    // - BASE_URL = '/subpath/' (subpath deploys)
+    const updateUrl = new URL(`${import.meta.env.BASE_URL}app-update.json`, window.location.origin);
+    updateUrl.searchParams.set('ts', String(Date.now()));
+    fetch(updateUrl.toString(), { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data.apkUrl) {
