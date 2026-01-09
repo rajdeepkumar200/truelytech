@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Download, Share, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToastAction } from '@/components/ui/toast';
+import { toast } from '@/hooks/use-toast';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -12,6 +14,7 @@ const MobileInstallPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [isWindows, setIsWindows] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
@@ -43,6 +46,10 @@ const MobileInstallPrompt = () => {
     const android = /Android/i.test(navigator.userAgent);
     setIsAndroid(android);
 
+    // Check if Windows desktop
+    const windows = /Windows/i.test(navigator.userAgent);
+    setIsWindows(windows);
+
     // Check if mobile
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     if (mobile) {
@@ -64,6 +71,35 @@ const MobileInstallPrompt = () => {
     };
   }, []);
 
+  // Windows: show a one-time in-app install notification when install becomes available.
+  useEffect(() => {
+    if (!isWindows) return;
+    if (!deferredPrompt) return;
+
+    // Respect dismissal cooldown for auto-notification only.
+    const dismissed = localStorage.getItem('install-prompt-dismissed');
+    if (dismissed) {
+      const dismissedTime = parseInt(dismissed, 10);
+      if (!Number.isNaN(dismissedTime) && Date.now() - dismissedTime < 24 * 60 * 60 * 1000) {
+        return;
+      }
+    }
+
+    const alreadyShown = sessionStorage.getItem('install-prompt-toast-shown');
+    if (alreadyShown) return;
+    sessionStorage.setItem('install-prompt-toast-shown', '1');
+
+    toast({
+      title: 'Install Habitency',
+      description: 'Install the app for faster access (WebAPK/PWA).',
+      action: (
+        <ToastAction altText="Install" onClick={() => void handleInstall()}>
+          Install
+        </ToastAction>
+      ),
+    });
+  }, [deferredPrompt, isWindows]);
+
   const handleInstall = async () => {
     if (!deferredPrompt) return;
 
@@ -82,7 +118,11 @@ const MobileInstallPrompt = () => {
     localStorage.setItem('install-prompt-dismissed', Date.now().toString());
   };
 
-  if (!showPrompt) return null;
+  const canShowDesktopInstall =
+    isWindows &&
+    !!deferredPrompt &&
+    !window.matchMedia('(display-mode: standalone)').matches &&
+    !(window as any).Capacitor?.isNativePlatform?.();
 
   // iOS instructions modal
   if (showIOSInstructions) {
@@ -132,53 +172,68 @@ const MobileInstallPrompt = () => {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 sm:hidden animate-slide-up">
-      <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-xl">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-primary flex items-center justify-center">
-              <Download className="w-5 h-5 text-accent-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Install Daily Habits</p>
-              <p className="text-xs text-muted-foreground">Quick access from home screen</p>
-            </div>
-          </div>
-          <button onClick={handleDismiss} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex gap-2 mt-3">
-          {isIOS ? (
-            <Button onClick={() => setShowIOSInstructions(true)} size="sm" className="flex-1 gap-2">
-              <Share className="w-4 h-4" />
-              How to Install
-            </Button>
-          ) : deferredPrompt ? (
-            <Button onClick={handleInstall} size="sm" className="flex-1 gap-2">
-              <Download className="w-4 h-4" />
-              Install Now
-            </Button>
-          ) : (
-            <Button onClick={() => setShowIOSInstructions(true)} size="sm" className="flex-1 gap-2">
-              <Download className="w-4 h-4" />
-              How to Install
-            </Button>
-          )}
-          {isAndroid && (
-            <Button asChild variant="outline" size="sm" className="gap-2">
-              <a href="/habitency.apk" download>
-                <Download className="w-4 h-4" />
-                APK
-              </a>
-            </Button>
-          )}
-          <Button onClick={handleDismiss} variant="outline" size="sm">
-            Later
+    <>
+      {/* Windows desktop: persistent install button */}
+      {canShowDesktopInstall && (
+        <div className="fixed bottom-4 right-4 z-50 hidden sm:block">
+          <Button onClick={handleInstall} className="gap-2">
+            <Download className="w-4 h-4" />
+            Install
           </Button>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Mobile install prompt */}
+      {showPrompt && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 sm:hidden animate-slide-up">
+          <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-primary flex items-center justify-center">
+                  <Download className="w-5 h-5 text-accent-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Install Habitency</p>
+                  <p className="text-xs text-muted-foreground">Quick access from home screen</p>
+                </div>
+              </div>
+              <button onClick={handleDismiss} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex gap-2 mt-3">
+              {isIOS ? (
+                <Button onClick={() => setShowIOSInstructions(true)} size="sm" className="flex-1 gap-2">
+                  <Share className="w-4 h-4" />
+                  How to Install
+                </Button>
+              ) : deferredPrompt ? (
+                <Button onClick={handleInstall} size="sm" className="flex-1 gap-2">
+                  <Download className="w-4 h-4" />
+                  Install Now
+                </Button>
+              ) : (
+                <Button onClick={() => setShowIOSInstructions(true)} size="sm" className="flex-1 gap-2">
+                  <Download className="w-4 h-4" />
+                  How to Install
+                </Button>
+              )}
+              {isAndroid && (
+                <Button asChild variant="outline" size="sm" className="gap-2">
+                  <a href="/habitency.apk" download>
+                    <Download className="w-4 h-4" />
+                    APK
+                  </a>
+                </Button>
+              )}
+              <Button onClick={handleDismiss} variant="outline" size="sm">
+                Later
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

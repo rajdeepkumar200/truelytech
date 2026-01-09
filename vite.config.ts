@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
+const ICON_VERSION = "20260110";
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   base: "./",
@@ -20,7 +22,13 @@ export default defineConfig(({ mode }) => ({
       // We register the service worker manually in code so we can skip it
       // inside Capacitor (Android) where SW caching can cause stale bundles.
       injectRegister: null,
-      includeAssets: ["favicon.ico", "favicon.svg", "robots.txt"],
+      includeAssets: [
+        "favicon.ico",
+        "favicon.svg",
+        "robots.txt",
+        "pwa-192x192.png",
+        "pwa-512x512.png",
+      ],
       manifest: {
         name: "Daily Habits",
         short_name: "Habits",
@@ -32,17 +40,17 @@ export default defineConfig(({ mode }) => ({
         start_url: "/",
         icons: [
           {
-            src: "/pwa-192x192.png",
+            src: `/pwa-192x192.png?v=${ICON_VERSION}`,
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "/pwa-512x512.png",
+            src: `/pwa-512x512.png?v=${ICON_VERSION}`,
             sizes: "512x512",
             type: "image/png",
           },
           {
-            src: "/pwa-512x512.png",
+            src: `/pwa-512x512.png?v=${ICON_VERSION}`,
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

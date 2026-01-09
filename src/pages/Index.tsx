@@ -17,9 +17,11 @@ import RemindersRedesigned from '@/components/RemindersRedesigned';
 import MobileInstallPrompt from '@/components/MobileInstallPrompt';
 import ReminderAlert from '@/components/ReminderAlert';
 import { OnboardingTour } from '@/components/OnboardingTour';
+import { PaywallDialog } from '@/components/PaywallDialog';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
+import { useEntitlement } from '@/hooks/useEntitlement';
 import { useNotifications, NotificationPreferences } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 
@@ -99,6 +101,7 @@ const defaultSchedule: ScheduleItem[] = [
 
 const Index = () => {
   const navigate = useNavigate();
+  const entitlement = useEntitlement();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { 
@@ -108,6 +111,8 @@ const Index = () => {
     fetchSettings, saveSettings,
     migrateLocalData 
   } = useDataSync();
+
+  const [paywallOpen, setPaywallOpen] = useState(false);
   
   const [habits, setHabits] = useState<Habit[]>(() => {
     const saved = localStorage.getItem('habits-v3');
@@ -241,7 +246,7 @@ const Index = () => {
         clearInterval(reminderIntervalRef.current);
       }
     };
-  }, [notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders, notificationPrefs.waterIntakeInterval, isPomodoroFocusActive]);
+  }, [authLoading, user, notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders, notificationPrefs.waterIntakeInterval, isPomodoroFocusActive]);
 
   // Reset data when user changes (login/logout/switch accounts) - clear shared local storage
   useEffect(() => {
@@ -285,7 +290,7 @@ const Index = () => {
       setLastUserId(null);
       setDataLoaded(false);
     }
-  }, [user?.id, lastUserId]);
+  }, [user, lastUserId]);
 
   // Sync data function
   const syncData = useCallback(async () => {
@@ -552,6 +557,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-safe pt-safe px-safe">
       <MotivationModal onDismiss={() => setMotivationDismissed(true)} />
+
+      <PaywallDialog
+        open={paywallOpen}
+        onOpenChange={setPaywallOpen}
+        trialDaysLeft={entitlement.trialDaysLeft}
+      />
       
       <OnboardingTour start={motivationDismissed} />
       <NotificationPrompt />
@@ -564,8 +575,20 @@ const Index = () => {
       />
       
       {/* Top Controls */}
-      <div className="fixed bottom-4 left-4 md:left-auto md:right-4 md:top-4 md:bottom-auto z-50 flex items-center gap-2">
-        <Button id="journal-btn" variant="outline" size="icon" onClick={() => navigate('/journal')} title="Journal">
+      <div className="fixed top-0 right-0 z-50 pt-safe pr-safe p-4 flex items-center gap-2">
+        <Button
+          id="journal-btn"
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            if (entitlement.isLocked) {
+              setPaywallOpen(true);
+              return;
+            }
+            navigate('/journal');
+          }}
+          title={entitlement.isLocked ? 'Journal (Locked)' : 'Journal'}
+        >
           <Book className="h-4 w-4" />
         </Button>
         <SettingsDialog 
@@ -622,7 +645,17 @@ const Index = () => {
               
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
-                <WeeklyReportCards habits={visibleHabits} />
+                {entitlement.isLocked ? (
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="font-semibold">Weekly Report</h3>
+                      <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                    </div>
+                    <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                  </div>
+                ) : (
+                  <WeeklyReportCards habits={visibleHabits} />
+                )}
               </div>
             </div>
 
@@ -633,34 +666,64 @@ const Index = () => {
 
             {/* Mobile: Reminders */}
             <div className="lg:hidden">
-              <RemindersRedesigned
-                reminders={reminders}
-                onAdd={handleAddReminder}
-                onDelete={handleDeleteReminder}
-                onToggleComplete={handleToggleReminderComplete}
-                compact
-                eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
-                waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
-                waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
-                soundEnabled={notificationPrefs.soundEnabled !== false}
-                alarmTone={notificationPrefs.alarmTone || 'classic'}
-                habits={habits}
-                onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
-                onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
-                onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
-                onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
-                onAlarmToneChange={(tone) => setNotificationPrefs(prev => ({ ...prev, alarmTone: tone }))}
-              />
+              {entitlement.isLocked ? (
+                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
+                  <div>
+                    <h3 className="font-semibold">Reminders</h3>
+                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                  </div>
+                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                </div>
+              ) : (
+                <RemindersRedesigned
+                  reminders={reminders}
+                  onAdd={handleAddReminder}
+                  onDelete={handleDeleteReminder}
+                  onToggleComplete={handleToggleReminderComplete}
+                  compact
+                  eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
+                  waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
+                  waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
+                  soundEnabled={notificationPrefs.soundEnabled !== false}
+                  alarmTone={notificationPrefs.alarmTone || 'classic'}
+                  habits={habits}
+                  onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
+                  onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
+                  onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
+                  onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
+                  onAlarmToneChange={(tone) => setNotificationPrefs(prev => ({ ...prev, alarmTone: tone }))}
+                />
+              )}
             </div>
 
             {/* Mobile: Pomodoro Timer */}
             <div className="lg:hidden">
-              <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
+              {entitlement.isLocked ? (
+                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
+                  <div>
+                    <h3 className="font-semibold">Pomodoro</h3>
+                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                  </div>
+                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                </div>
+              ) : (
+                <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
+              )}
             </div>
 
             {/* Mobile: Goals */}
             <div className="lg:hidden space-y-4">
-              <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
+              {entitlement.isLocked ? (
+                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
+                  <div>
+                    <h3 className="font-semibold">Goals</h3>
+                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                  </div>
+                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                </div>
+              ) : (
+                <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
+              )}
             </div>
 
             {/* Desktop: Left Column */}
@@ -668,24 +731,45 @@ const Index = () => {
               <div className="flex justify-start">
                 <ClockWidget />
               </div>
-              <RemindersRedesigned
-                reminders={reminders}
-                onAdd={handleAddReminder}
-                onDelete={handleDeleteReminder}
-                onToggleComplete={handleToggleReminderComplete}
-                eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
-                waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
-                waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
-                soundEnabled={notificationPrefs.soundEnabled !== false}
-                alarmTone={notificationPrefs.alarmTone || 'classic'}
-                habits={habits}
-                onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
-                onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
-                onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
-                onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
-                onAlarmToneChange={(tone) => setNotificationPrefs(prev => ({ ...prev, alarmTone: tone }))}
-              />
-              <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
+              {entitlement.isLocked ? (
+                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
+                  <div>
+                    <h3 className="font-semibold">Reminders</h3>
+                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                  </div>
+                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                </div>
+              ) : (
+                <RemindersRedesigned
+                  reminders={reminders}
+                  onAdd={handleAddReminder}
+                  onDelete={handleDeleteReminder}
+                  onToggleComplete={handleToggleReminderComplete}
+                  eyeBlinkEnabled={notificationPrefs.eyeBlinkReminders}
+                  waterIntakeEnabled={notificationPrefs.waterIntakeReminders}
+                  waterIntakeInterval={notificationPrefs.waterIntakeInterval || 30}
+                  soundEnabled={notificationPrefs.soundEnabled !== false}
+                  alarmTone={notificationPrefs.alarmTone || 'classic'}
+                  habits={habits}
+                  onToggleEyeBlink={(enabled) => setNotificationPrefs(prev => ({ ...prev, eyeBlinkReminders: enabled }))}
+                  onToggleWaterIntake={(enabled) => setNotificationPrefs(prev => ({ ...prev, waterIntakeReminders: enabled }))}
+                  onWaterIntakeIntervalChange={(interval) => setNotificationPrefs(prev => ({ ...prev, waterIntakeInterval: interval }))}
+                  onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
+                  onAlarmToneChange={(tone) => setNotificationPrefs(prev => ({ ...prev, alarmTone: tone }))}
+                />
+              )}
+
+              {entitlement.isLocked ? (
+                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
+                  <div>
+                    <h3 className="font-semibold">Pomodoro</h3>
+                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                  </div>
+                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                </div>
+              ) : (
+                <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
+              )}
             </div>
 
             {/* Desktop: Right Column */}
@@ -706,9 +790,29 @@ const Index = () => {
               
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
-                <WeeklyReportCards habits={visibleHabits} />
+                {entitlement.isLocked ? (
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="font-semibold">Weekly Report</h3>
+                      <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                    </div>
+                    <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                  </div>
+                ) : (
+                  <WeeklyReportCards habits={visibleHabits} />
+                )}
               </div>
-              <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
+              {entitlement.isLocked ? (
+                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
+                  <div>
+                    <h3 className="font-semibold">Goals</h3>
+                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
+                  </div>
+                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                </div>
+              ) : (
+                <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
+              )}
             </div>
           </div>
         </div>

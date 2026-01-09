@@ -3,19 +3,15 @@ import { Bell, X, Smartphone, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { checkNotificationPermission, requestNotificationPermission, type AppNotificationPermission } from '@/lib/notifications';
 
 const NotificationPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
+  const [permission, setPermission] = useState<AppNotificationPermission>('prompt');
   const [platform, setPlatform] = useState<'windows' | 'macos' | 'android' | 'ios' | 'other'>('other');
 
   useEffect(() => {
-    if (!(typeof window !== 'undefined' && 'Notification' in window)) {
-      setPermission('unsupported');
-      return;
-    }
-
-    const NotificationApi = window.Notification;
+    let cancelled = false;
 
     // Detect platform
     const userAgent = navigator.userAgent.toLowerCase();
@@ -29,27 +25,29 @@ const NotificationPrompt = () => {
       setPlatform('ios');
     }
 
-    setPermission(NotificationApi.permission);
+    (async () => {
+      const current = await checkNotificationPermission();
+      if (cancelled) return;
+      setPermission(current);
 
-    // Show prompt if permission hasn't been asked yet
-    const hasAsked = localStorage.getItem('notification-prompted');
-    if (NotificationApi.permission === 'default' && !hasAsked) {
-      // Delay showing prompt
-      const timer = setTimeout(() => setShowPrompt(true), 1500);
-      return () => clearTimeout(timer);
-    }
+      // Show prompt if permission hasn't been asked yet
+      const hasAsked = localStorage.getItem('notification-prompted');
+      if (current === 'prompt' && !hasAsked) {
+        const timer = setTimeout(() => {
+          if (!cancelled) setShowPrompt(true);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const requestPermission = async () => {
     try {
-      if (!(typeof window !== 'undefined' && 'Notification' in window)) {
-        setPermission('unsupported');
-        toast.error('Notifications are not supported on this device.');
-        return;
-      }
-
-      const NotificationApi = window.Notification;
-      const result = await NotificationApi.requestPermission();
+      const result = await requestNotificationPermission();
       setPermission(result);
       localStorage.setItem('notification-prompted', 'true');
       setShowPrompt(false);
@@ -58,11 +56,13 @@ const NotificationPrompt = () => {
         toast.success('Notifications enabled! We\'ll remind you about your habits.');
         // Send a test notification
         try {
-          new NotificationApi('Daily Habits', {
-            body: 'Notifications are now enabled! Stay consistent with your habits. 🎯',
-            icon: '/pwa-192x192.png',
-            badge: '/pwa-192x192.png',
-          });
+          if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+            new window.Notification('Daily Habits', {
+              body: 'Notifications are now enabled! Stay consistent with your habits. 🎯',
+              icon: '/pwa-192x192.png',
+              badge: '/pwa-192x192.png',
+            });
+          }
         } catch {
           // Ignore notification construction failures on some platforms.
         }
@@ -73,6 +73,8 @@ const NotificationPrompt = () => {
         }
       } else if (result === 'denied') {
         toast.error('Notifications blocked. You can enable them in your browser/system settings.');
+      } else if (result === 'unsupported') {
+        toast.error('Notifications are not supported on this device.');
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -100,7 +102,7 @@ const NotificationPrompt = () => {
     }
   };
 
-  if (!showPrompt || permission !== 'default') return null;
+  if (!showPrompt || permission !== 'prompt') return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">

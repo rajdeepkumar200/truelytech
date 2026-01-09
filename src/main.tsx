@@ -6,6 +6,16 @@ import "./index.css";
 // In Capacitor (Android), service worker caching can serve stale bundles.
 import { registerSW } from 'virtual:pwa-register';
 
+// Apply theme ASAP: default to system unless user explicitly chose light/dark.
+try {
+  const saved = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const shouldBeDark = saved === 'dark' ? true : saved === 'light' ? false : !!prefersDark;
+  document.documentElement.classList.toggle('dark', shouldBeDark);
+} catch {
+  // ignore
+}
+
 try {
   const isCapacitorNative = typeof window !== 'undefined' &&
     (window as any).Capacitor?.isNativePlatform?.() === true;

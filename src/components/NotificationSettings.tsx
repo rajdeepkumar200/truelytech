@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Bell, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { requestNotificationPermission } from '@/lib/notifications';
 
 export interface NotificationPreferences {
   enabled: boolean;
@@ -44,24 +45,10 @@ const NotificationSettings = ({ preferences, onUpdate }: NotificationSettingsPro
 
   const handleMasterToggle = async () => {
     if (!preferences.enabled) {
-      const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
-      if (!notificationsSupported) {
-        // Not supported on this platform (e.g., Android WebView). Keep disabled.
-        onUpdate({ ...preferences, enabled: false });
-        return;
-      }
-
-      // Request permission
       try {
-        const permissionState = window.Notification.permission;
-        if (permissionState === 'default') {
-          const permission = await window.Notification.requestPermission();
-          if (permission === 'granted') {
-            onUpdate({ ...preferences, enabled: true });
-          }
-        } else if (permissionState === 'granted') {
-          onUpdate({ ...preferences, enabled: true });
-        }
+        const permission = await requestNotificationPermission();
+        if (permission === 'granted') onUpdate({ ...preferences, enabled: true });
+        else onUpdate({ ...preferences, enabled: false });
       } catch {
         onUpdate({ ...preferences, enabled: false });
       }

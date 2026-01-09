@@ -216,7 +216,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
             {/* Header */}
             <div className="flex items-center h-[44px] text-xs text-muted-foreground uppercase tracking-wide border-b border-border/30">
               {selectedHabits.size > 0 && <div className="w-6 pl-1"></div>}
-              <div className={cn("pl-2", selectedHabits.size > 0 ? "w-[80px]" : "w-[100px]")}>Habit</div>
+              <div className={cn("pl-2", selectedHabits.size > 0 ? "w-[120px]" : "w-[140px]")}>Habit</div>
               <div className="w-12 text-center font-semibold text-accent">{days[currentDayIndex]}</div>
             </div>
             {/* Spacer row to align with right column header */}
@@ -247,9 +247,9 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                       </button>
                     </div>
                   )}
-                  <div className={cn("flex items-center gap-1 min-w-0 pl-2", selectedHabits.size > 0 ? "w-[80px]" : "w-[100px]")}>
+                  <div className={cn("flex items-center gap-1 min-w-0 pl-2", selectedHabits.size > 0 ? "w-[120px]" : "w-[140px]")}>
                     <span className="text-sm">{habit.icon}</span>
-                    <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
+                    <span className="text-xs text-foreground flex-1 whitespace-normal break-words leading-tight">{habit.name}</span>
                     {streak > 0 && (
                       <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
                         <Flame className="w-2.5 h-2.5 text-orange-500" />

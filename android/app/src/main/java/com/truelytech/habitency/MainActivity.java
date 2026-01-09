@@ -9,6 +9,7 @@ import android.webkit.WebView;
 import androidx.core.view.WindowCompat;
 
 import com.truelytech.habitency.plugins.UpdateInstallerPlugin;
+import com.truelytech.habitency.plugins.PomodoroForegroundPlugin;
 
 public class MainActivity extends BridgeActivity {
 	@Override
@@ -24,6 +25,7 @@ public class MainActivity extends BridgeActivity {
 
 		super.onCreate(savedInstanceState);
 		registerPlugin(UpdateInstallerPlugin.class);
+		registerPlugin(PomodoroForegroundPlugin.class);
 		
 		// Keep WebView in memory and prevent it from being destroyed
 		if (this.bridge != null && this.bridge.getWebView() != null) {

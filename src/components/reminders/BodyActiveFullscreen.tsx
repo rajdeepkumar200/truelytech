@@ -87,6 +87,14 @@ export default function BodyActiveFullscreen({ open, onOpenChange, soundEnabled,
 
   const [mode, setMode] = useState<Mode>('choose');
 
+  const [meditationVideoReady, setMeditationVideoReady] = useState(false);
+  const [pushupVideoReady, setPushupVideoReady] = useState(false);
+
+  useEffect(() => {
+    if (mode !== 'meditation') setMeditationVideoReady(false);
+    if (mode !== 'pushups') setPushupVideoReady(false);
+  }, [mode]);
+
   // meditation
   const [meditationSeconds, setMeditationSeconds] = useState(10 * 60);
   const [meditationRunning, setMeditationRunning] = useState(false);
@@ -420,15 +428,36 @@ export default function BodyActiveFullscreen({ open, onOpenChange, soundEnabled,
             )}
 
             {mode === 'meditation' && (
-              <div className="relative h-full -mx-5 -my-6">
-                <div className="absolute inset-0">
+              <div className="relative h-full -mx-5 -my-6 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {/* Mobile-only: blurred cover layer to avoid empty bars while keeping the main video fully visible */}
                   <video
                     src="/reminders/meditation.mp4"
-                    className="w-full h-full object-contain opacity-60"
+                    className={cn(
+                      'absolute inset-0 w-full h-full object-cover blur-md scale-110 saturate-150 sm:hidden transition-opacity duration-500',
+                      meditationVideoReady ? 'opacity-85' : 'opacity-0'
+                    )}
                     autoPlay
                     loop
                     muted
                     playsInline
+                    preload="auto"
+                    aria-hidden
+                  />
+                  <video
+                    src="/reminders/meditation.mp4"
+                    className={cn(
+                      'w-auto h-auto max-w-full max-h-[90dvh] object-contain scale-[1.3] sm:scale-100 sm:w-full sm:h-full sm:max-h-none transition-opacity duration-500',
+                      meditationVideoReady ? 'opacity-85' : 'opacity-0'
+                    )}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    onLoadStart={() => setMeditationVideoReady(false)}
+                    onLoadedData={() => setMeditationVideoReady(true)}
+                    onPlaying={() => setMeditationVideoReady(true)}
                   />
                 </div>
 
@@ -492,15 +521,36 @@ export default function BodyActiveFullscreen({ open, onOpenChange, soundEnabled,
             )}
 
             {mode === 'pushups' && (
-              <div className="relative h-full -mx-5 -my-6">
-                <div className="absolute inset-0">
+              <div className="relative h-full -mx-5 -my-6 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {/* Mobile-only: blurred cover layer to avoid empty bars while keeping the main video fully visible */}
                   <video
                     src="/reminders/pushup.mp4"
-                    className="w-full h-full object-contain opacity-60"
+                    className={cn(
+                      'absolute inset-0 w-full h-full object-cover blur-md scale-110 saturate-150 sm:hidden transition-opacity duration-500',
+                      pushupVideoReady ? 'opacity-85' : 'opacity-0'
+                    )}
                     autoPlay
                     loop
                     muted
                     playsInline
+                    preload="auto"
+                    aria-hidden
+                  />
+                  <video
+                    src="/reminders/pushup.mp4"
+                    className={cn(
+                      'w-auto h-auto max-w-full max-h-[90dvh] object-contain scale-[1.3] sm:scale-100 sm:w-full sm:h-full sm:max-h-none transition-opacity duration-500',
+                      pushupVideoReady ? 'opacity-85' : 'opacity-0'
+                    )}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    onLoadStart={() => setPushupVideoReady(false)}
+                    onLoadedData={() => setPushupVideoReady(true)}
+                    onPlaying={() => setPushupVideoReady(true)}
                   />
                 </div>
 

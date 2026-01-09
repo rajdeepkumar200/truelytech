@@ -4,6 +4,10 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { playTick, playComplete, playBreakOver, triggerHaptic, resumeAudioContext } from '@/hooks/useSound';
+import { sendNotificationNow } from '@/lib/notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { isNative, checkNotificationPermission } from '@/lib/notifications';
+import { PomodoroForeground } from '@/plugins/pomodoroForeground';
 
 const presetTimes = [5, 10, 15, 20, 25, 30, 45, 60];
 
@@ -22,6 +26,113 @@ const PomodoroTimerWithPopup = ({ onPomodoroStateChange }: PomodoroTimerWithPopu
   const [showExpandPrompt, setShowExpandPrompt] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastTickRef = useRef<number>(0);
+  const endAtEpochMsRef = useRef<number | null>(null);
+  const pomodoroNotifIdsRef = useRef<number[]>([]);
+
+  const ensurePomodoroChannels = async () => {
+    if (!isNative()) return;
+    try {
+      await LocalNotifications.createChannel({
+        id: 'habitency_pomodoro_alerts',
+        name: 'Pomodoro Alerts',
+        importance: 5,
+        visibility: 1,
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const stableId = (input: string) => {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) hash = (hash * 31 + input.charCodeAt(i)) | 0;
+    return Math.abs(hash) || 1;
+  };
+
+  const cancelPomodoroAlerts = async () => {
+    if (!isNative()) return;
+    const ids = pomodoroNotifIdsRef.current;
+    if (!ids.length) return;
+    try {
+      await LocalNotifications.cancel({ notifications: ids.map((id) => ({ id })) });
+    } catch {
+      // ignore
+    }
+    pomodoroNotifIdsRef.current = [];
+  };
+
+  const schedulePomodoroAlerts = async (endAtEpochMs: number, kind: 'focus' | 'break') => {
+    if (!isNative()) return;
+    await ensurePomodoroChannels();
+    const perm = await checkNotificationPermission();
+    if (perm !== 'granted') return;
+
+    await cancelPomodoroAlerts();
+
+    const now = Date.now();
+    const warningAt = endAtEpochMs - 10_000;
+    const ids: number[] = [];
+
+    const baseKey = `pomodoro:${kind}:${endAtEpochMs}`;
+
+    const notifications: any[] = [];
+    if (warningAt > now + 1_000) {
+      const id = stableId(`${baseKey}:warning`);
+      ids.push(id);
+      notifications.push({
+        id,
+        title: kind === 'break' ? '⏳ Break ending soon' : '⏳ Focus ending soon',
+        body: kind === 'break' ? 'Get ready—focus starts in 10 seconds.' : 'Final 10 seconds—finish your last step.',
+        schedule: { at: new Date(warningAt) },
+        channelId: 'habitency_pomodoro_alerts',
+      });
+    }
+
+    if (endAtEpochMs > now + 1_000) {
+      const id = stableId(`${baseKey}:done`);
+      ids.push(id);
+      notifications.push({
+        id,
+        title: kind === 'break' ? '🍅 Break Over!' : '☕ Time for a Break!',
+        body: kind === 'break'
+          ? 'Great rest! Ready to focus again?'
+          : `You completed a ${workMinutes}-minute focus session! Take ${breakMinutes} minutes to recharge.`,
+        schedule: { at: new Date(endAtEpochMs) },
+        channelId: 'habitency_pomodoro_alerts',
+      });
+    }
+
+    if (!notifications.length) return;
+
+    try {
+      await LocalNotifications.schedule({ notifications });
+      pomodoroNotifIdsRef.current = ids;
+    } catch {
+      // ignore
+    }
+  };
+
+  const startForegroundCountdown = async (endAtEpochMs: number) => {
+    if (!isNative()) return;
+    try {
+      await PomodoroForeground.start({
+        endAtEpochMs,
+        title: isBreak ? '☕ Break Timer' : '🍅 Focus Timer',
+        body: isBreak ? 'Break running' : 'Focus running',
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const stopForegroundCountdown = async () => {
+    if (!isNative()) return;
+    try {
+      await PomodoroForeground.stop();
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     if (!isRunning && !isBreak) {
@@ -31,18 +142,25 @@ const PomodoroTimerWithPopup = ({ onPomodoroStateChange }: PomodoroTimerWithPopu
 
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
+      if (!endAtEpochMsRef.current) {
+        endAtEpochMsRef.current = Date.now() + timeLeft * 1000;
+      }
+
+      const endAt = endAtEpochMsRef.current;
+
+      void startForegroundCountdown(endAt);
+      void schedulePomodoroAlerts(endAt, isBreak ? 'break' : 'focus');
+
       intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          const newTime = prev - 1;
-          
-          if (soundEnabled && newTime > 0 && newTime % 60 === 0 && newTime !== lastTickRef.current) {
-            lastTickRef.current = newTime;
-            playTick();
-            triggerHaptic(30);
-          }
-          
-          return newTime;
-        });
+        const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+
+        if (soundEnabled && remaining > 0 && remaining % 60 === 0 && remaining !== lastTickRef.current) {
+          lastTickRef.current = remaining;
+          playTick();
+          triggerHaptic(30);
+        }
+
+        setTimeLeft(remaining);
       }, 1000);
     } else if (timeLeft === 0) {
       if (soundEnabled) {
@@ -54,6 +172,10 @@ const PomodoroTimerWithPopup = ({ onPomodoroStateChange }: PomodoroTimerWithPopu
         triggerHaptic([100, 50, 100, 50, 100]);
       }
       
+      endAtEpochMsRef.current = null;
+      void stopForegroundCountdown();
+      void cancelPomodoroAlerts();
+
       if (isBreak) {
         setTimeLeft(workMinutes * 60);
         setIsBreak(false);
@@ -66,17 +188,19 @@ const PomodoroTimerWithPopup = ({ onPomodoroStateChange }: PomodoroTimerWithPopu
       
       try {
         const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
+        const title = isBreak ? '🍅 Break Over!' : '☕ Time for a Break!';
+        const body = isBreak
+          ? 'Great rest! Ready to focus again? Quick note: start the next session while momentum is high.'
+          : `You completed a ${workMinutes}-minute focus session! Take ${breakMinutes} minutes to recharge. Quick note: rest is part of the plan.`;
+
         if (notificationsSupported && window.Notification.permission === 'granted') {
-          new window.Notification(
-            isBreak ? '🍅 Break Over!' : '☕ Time for a Break!',
-            {
-              body: isBreak
-                ? 'Great rest! Ready to focus again?'
-                : `You completed a ${workMinutes}-minute focus session! Take ${breakMinutes} minutes to recharge.`,
-              icon: '/pwa-192x192.png',
-              badge: '/pwa-192x192.png',
-            }
-          );
+          new window.Notification(title, {
+            body,
+            icon: '/pwa-192x192.png',
+            badge: '/pwa-192x192.png',
+          });
+        } else {
+          void sendNotificationNow(title, body);
         }
       } catch {
         // Ignore notification errors (e.g., unsupported platforms).
@@ -102,7 +226,18 @@ const PomodoroTimerWithPopup = ({ onPomodoroStateChange }: PomodoroTimerWithPopu
       setShowExpandPrompt(true);
     }
     
-    setIsRunning(!isRunning);
+    if (isRunning) {
+      // Pausing
+      endAtEpochMsRef.current = null;
+      void stopForegroundCountdown();
+      void cancelPomodoroAlerts();
+      setIsRunning(false);
+      return;
+    }
+
+    // Starting/resuming: set end timestamp based on current remaining time.
+    endAtEpochMsRef.current = Date.now() + timeLeft * 1000;
+    setIsRunning(true);
   };
 
   // Notify parent when Pomodoro state changes (running + work mode = active focus)
@@ -118,6 +253,11 @@ const PomodoroTimerWithPopup = ({ onPomodoroStateChange }: PomodoroTimerWithPopu
       setShowPopup(true);
     }
   };
+
+  // Ensure native channels exist early.
+  useEffect(() => {
+    void ensurePomodoroChannels();
+  }, []);
 
   const resetTimer = () => {
     setIsRunning(false);
