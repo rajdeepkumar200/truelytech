@@ -1,3 +1,48 @@
+// ...existing code...
+// Add this helper component at the bottom of the file (or in a suitable location)
+import { useRef } from 'react';
+
+function AndroidApkDownload({ apkUrl }: { apkUrl: string }) {
+  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+  const anchorRef = useRef<HTMLAnchorElement>(null);
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!apkUrl) return;
+    // Start download
+    if (anchorRef.current) {
+      anchorRef.current.click();
+    }
+    // Wait a bit, then try to open the APK (may be blocked by browser)
+    setTimeout(() => {
+      window.location.href = apkUrl;
+    }, 2000);
+    // Show instructions
+    alert('If the install prompt does not appear, open the downloaded APK from your downloads folder to install. You may need to allow installing apps from unknown sources.');
+  };
+  if (!isAndroid) {
+    return (
+      <Button variant="outline" className="w-full" asChild>
+        <a href={apkUrl || '#'} download>
+          <Download className="w-5 h-5 mr-2" />
+          Download APK
+        </a>
+      </Button>
+    );
+  }
+  return (
+    <>
+      <Button variant="outline" className="w-full" onClick={handleDownload}>
+        <Download className="w-5 h-5 mr-2" />
+        Download APK
+      </Button>
+      {/* Hidden anchor for download */}
+      <a ref={anchorRef} href={apkUrl || '#'} download style={{ display: 'none' }} />
+      <p className="text-xs text-muted-foreground">
+        Note: If the install prompt does not appear, open the downloaded APK from your downloads folder to install. You may need to allow installing apps from unknown sources in your settings.
+      </p>
+    </>
+  );
+}
 import { useState, useEffect } from 'react';
 import { Download, Share, Plus, Smartphone, CheckCircle, Monitor, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -120,19 +165,7 @@ const Install = () => {
               <p className="text-sm text-muted-foreground">
                 Get the native Android experience directly. No Play Store required.
               </p>
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                asChild
-              >
-                <a href={apkUrl || '#'}>
-                  <Download className="w-5 h-5 mr-2" />
-                  Download APK
-                </a>
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Note: You may need to allow installing apps from unknown sources in your settings.
-              </p>
+              <AndroidApkDownload apkUrl={apkUrl} />
             </div>
 
             {isIOS && (

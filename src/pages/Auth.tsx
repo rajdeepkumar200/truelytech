@@ -1,3 +1,29 @@
+
+// Helper component must be top-level, not inside JSX
+function AndroidApkDownloadButton() {
+  const [apkUrl, setApkUrl] = useState('');
+  useEffect(() => {
+    const updateUrl = new URL(`${import.meta.env.BASE_URL}app-update.json`, window.location.origin);
+    updateUrl.searchParams.set('ts', String(Date.now()));
+    fetch(updateUrl.toString(), { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.apkUrl) {
+          setApkUrl(data.apkUrl);
+        }
+      })
+      .catch(err => console.error('Failed to fetch update info:', err));
+  }, []);
+  if (!apkUrl) return null;
+  return (
+    <Button asChild variant="outline" className="w-full gap-2 h-11">
+      <a href={apkUrl} download>
+        <Download className="w-5 h-5" />
+        Download Android APK
+      </a>
+    </Button>
+  );
+}
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -585,14 +611,7 @@ const Auth = () => {
         </div>
 
         {/* Android APK download (public, no separate page) */}
-        {isAndroid && (
-          <Button asChild variant="outline" className="w-full gap-2 h-11">
-            <a href="/habitency.apk" download>
-              <Download className="w-5 h-5" />
-              Download Android APK
-            </a>
-          </Button>
-        )}
+        {isAndroid && <AndroidApkDownloadButton />}
 
         {/* Google Sign In - only show on initial screens */}
         {(mode === 'otp-request' || mode === 'login' || mode === 'signup') && (

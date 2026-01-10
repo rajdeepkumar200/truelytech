@@ -1,5 +1,5 @@
 import { Settings, User, Eye, Bell, Download, LogOut, Moon, Sun } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -39,10 +39,26 @@ const SettingsDialog = ({
 }: SettingsDialogProps) => {
   const { user, signOut } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
-  
+  const [apkUrl, setApkUrl] = useState<string>('');
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
-  const apkHref = `/habitency.apk?v=${Date.now()}`;
-  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+  // Fallback for displayName if user_metadata is missing
+  const displayName = (user && (user as any).user_metadata?.full_name) ||
+    (user && (user as any).user_metadata?.name) ||
+    user?.email?.split('@')[0] || 'User';
+
+  useEffect(() => {
+    if (!isAndroid) return;
+    const updateUrl = new URL(`${import.meta.env.BASE_URL}app-update.json`, window.location.origin);
+    updateUrl.searchParams.set('ts', String(Date.now()));
+    fetch(updateUrl.toString(), { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.apkUrl) {
+          setApkUrl(data.apkUrl);
+        }
+      })
+      .catch(err => console.error('Failed to fetch update info:', err));
+  }, [isAndroid]);
   
   return (
     <>
@@ -108,9 +124,9 @@ const SettingsDialog = ({
           </DropdownMenuItem>
           
           {/* Download APK (Android only) */}
-          {isAndroid && (
+          {isAndroid && apkUrl && (
             <DropdownMenuItem asChild className="cursor-pointer">
-              <a href={apkHref} download>
+              <a href={apkUrl} download>
                 <Download className="mr-2 h-4 w-4" />
                 <span>Download APK</span>
               </a>

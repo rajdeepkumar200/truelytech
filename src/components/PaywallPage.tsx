@@ -1,44 +1,64 @@
-import { useMemo } from 'react';
+
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { useEntitlement } from '../hooks/useEntitlement';
 
-function getPaymentLinks() {
-  const inr = import.meta.env.VITE_PAYMENT_URL_INR as string | undefined;
-  const usd = import.meta.env.VITE_PAYMENT_URL_USD as string | undefined;
-  return { inr, usd };
-}
-
 export function PaywallPage() {
   const entitlement = useEntitlement();
-  const { inr, usd } = useMemo(() => getPaymentLinks(), []);
+
+  // Razorpay payment handler
+  const openRazorpay = () => {
+    const options = {
+      key: 'rzp_test_YourKeyHere', // Replace with your Razorpay key
+      amount: 10000, // 100 INR in paise
+      currency: 'INR',
+      name: 'TruelyTech',
+      description: 'Premium Subscription',
+      image: '/logo192.png',
+      handler: function (response: any) {
+        alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
+        // You can add further logic here (e.g., API call to verify payment)
+      },
+      prefill: {
+        name: '',
+        email: '',
+      },
+      theme: {
+        color: '#6366f1',
+      },
+    };
+    // @ts-ignore
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
+
+  useEffect(() => {
+    // Load Razorpay script if not already loaded
+    if (!window.Razorpay) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   return (
     <div className="min-h-[60vh] w-full flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-xl border bg-background p-6">
-        <h1 className="text-2xl font-bold">Premium Locked</h1>
-        <p className="mt-2 text-sm opacity-80">
+        <h1 className="text-2xl font-bold mb-2">Premium Locked</h1>
+        <p className="text-sm opacity-80">
           {entitlement.isInTrial
             ? `Your free trial has ${entitlement.trialDaysLeft} day${entitlement.trialDaysLeft === 1 ? '' : 's'} left.`
-            : 'Your 7-day free trial has ended.'}{' '}
-          Habits stay free. Unlock premium to use other features.
+            : 'Your 7-day free trial has ended.'}
         </p>
-
-        <div className="mt-4 flex flex-col gap-2">
-          {inr ? (
-            <Button asChild>
-              <a href={inr} target="_blank" rel="noreferrer">
-                Pay ₹100
-              </a>
-            </Button>
-          ) : null}
-          {usd ? (
-            <Button asChild variant="secondary">
-              <a href={usd} target="_blank" rel="noreferrer">
-                Pay $2
-              </a>
-            </Button>
-          ) : null}
+        <p className="text-sm mt-2 opacity-90">
+          Unlock premium to access advanced features like reminders, statistics, and more. Habits tracking stays free forever!
+        </p>
+        <div className="mt-6 flex flex-col gap-2">
+          <Button onClick={openRazorpay}>
+            Pay ₹100 with Razorpay
+          </Button>
           <Button asChild variant="ghost">
             <Link to="/">Back to Habits</Link>
           </Button>

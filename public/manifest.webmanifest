@@ -1,0 +1,27 @@
+{
+  "name": "Daily Habits",
+  "short_name": "Habits",
+  "description": "Beautiful daily habit tracker to build consistency and track your weekly progress.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#b8a09a",
+  "theme_color": "#b8a09a",
+  "icons": [
+    {
+      "src": "pwa-192x192.png?v=20260110",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-512x512.png?v=20260110",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "truelytech-logo.svg?v=20260110",
+      "sizes": "560x620",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
