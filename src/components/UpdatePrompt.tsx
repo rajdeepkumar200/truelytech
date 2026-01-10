@@ -144,26 +144,9 @@ export default function UpdatePrompt() {
     run();
   }, [updateBaseUrl]);
 
-  const onUpdate = async () => {
-    if (!apkUrl) return;
-    try {
-      setIsUpdating(true);
-      setErrorMessage(null);
-      await UpdateInstaller.downloadAndInstall({ url: apkUrl });
-      // If successful, show restart prompt
-      setOpen(false);
-      setShowRestartPrompt(true);
-    } catch (error) {
-      // Keep the dialog open and show the error so user knows what to fix.
-      const msg =
-        typeof error === 'string'
-          ? error
-          : (error as any)?.message || 'Update failed. Please try again.';
-      setErrorMessage(msg);
-      setOpen(true);
-    } finally {
-      setIsUpdating(false);
-    }
+  const onUpdate = () => {
+    // Redirect to /install page to trigger the new APK download/install flow
+    window.location.href = '/install';
   };
 
   const onRestart = () => {
