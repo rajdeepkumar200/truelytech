@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import UpdatePrompt from "./components/UpdatePrompt";
 import BrandFooter from "./components/BrandFooter";
+import SpeedInsights from "./components/SpeedInsights";
 import { RequirePremium } from "./components/RequirePremium";
 import { PaywallPage } from "./components/PaywallPage";
 import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
@@ -62,6 +63,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <UpdatePrompt />
+        <SpeedInsights />
         {!isFirebaseConfigured() ? (
           <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
             <div className="flex-1">
