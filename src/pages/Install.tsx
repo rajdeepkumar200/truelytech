@@ -13,7 +13,7 @@ function AndroidApkDownload({ apkUrl }: { apkUrl: string }) {
     setProgress(0);
     try {
       const res = await fetch(apkUrl);
-      if (!res.ok || !res.body) throw new Error('Failed to start download');
+      if (!res.ok || !res.body) throw new Error(`Failed to fetch APK. Server responded with ${res.status}`);
       const contentLength = Number(res.headers.get('content-length')) || 0;
       const reader = res.body.getReader();
       let received = 0;
@@ -42,7 +42,7 @@ function AndroidApkDownload({ apkUrl }: { apkUrl: string }) {
       }, 2000);
       setDownloading(false);
     } catch (err: any) {
-      setError(err?.message || 'Download failed');
+      setError(err?.message || 'Download failed. Please check your internet connection or try again later.');
       setDownloading(false);
     }
   };
@@ -58,7 +58,14 @@ function AndroidApkDownload({ apkUrl }: { apkUrl: string }) {
           <div className="bg-primary h-2 rounded" style={{ width: `${progress}%` }}></div>
         </div>
       )}
-      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+      {error && (
+        <div className="mt-2">
+          <p className="text-xs text-red-500">{error}</p>
+          <Button size="sm" variant="outline" className="mt-2" onClick={handleDownload} disabled={downloading || !apkUrl}>
+            Retry
+          </Button>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground mt-2">
         If the install prompt does not appear, open the APK from your downloads folder to install. You may need to allow installing apps from unknown sources in your settings.
       </p>

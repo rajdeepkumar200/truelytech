@@ -1,3 +1,17 @@
+  const handleToggleActiveDay = (habitId: string, dayIndex: number) => {
+    setHabits(prev =>
+      prev.map(habit =>
+        habit.id === habitId
+          ? {
+              ...habit,
+              activeDays: habit.activeDays.map((active, idx) =>
+                idx === dayIndex ? !active : active
+              ),
+            }
+          : habit
+      )
+    );
+  };
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -29,7 +43,7 @@ interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedHistory: { [isoDate: string]: boolean };
   activeDays: boolean[];
   category?: string;
   weeklyGoal?: number;
@@ -390,16 +404,16 @@ const Index = () => {
   }, [notificationPrefs, user, dataLoaded, saveSettings]);
 
 
-  const handleToggleDay = useCallback((habitId: string, dayIndex: number) => {
-    // Prevent toggling future days (in the current Mon-Sun array model)
-    if (dayIndex > getCurrentDayIndex()) return;
-
+  const handleToggleDay = useCallback((habitId: string, isoDate: string) => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
-        const newCompletedDays = [...habit.completedDays];
-        const wasCompleted = newCompletedDays[dayIndex];
-        newCompletedDays[dayIndex] = !wasCompleted;
-
+        const wasCompleted = !!habit.completedHistory?.[isoDate];
+        const newCompletedHistory = { ...habit.completedHistory };
+        if (wasCompleted) {
+          delete newCompletedHistory[isoDate];
+        } else {
+          newCompletedHistory[isoDate] = true;
+        }
         // Send notification on completion (guarded for mobile browsers that don't support Notifications)
         try {
           const canUseNotifications = typeof window !== 'undefined' && 'Notification' in window;
@@ -409,8 +423,7 @@ const Index = () => {
         } catch (e) {
           console.error('Notification error:', e);
         }
-
-        return { ...habit, completedDays: newCompletedDays };
+        return { ...habit, completedHistory: newCompletedHistory };
       }
       return habit;
     }));
@@ -430,25 +443,33 @@ const Index = () => {
   const handleDeleteHabit = (habitId: string) => {
     setHabits(prev => prev.filter(habit => habit.id !== habitId));
   };
-
   const handleDeleteMultipleHabits = (habitIds: string[]) => {
     setHabits(prev => prev.filter(habit => !habitIds.includes(habit.id)));
-  };
-
-  const handleReorderHabits = (reorderedHabits: Habit[]) => {
-    setHabits(reorderedHabits);
-  };
-
-  const handleUpdateActiveDays = (habitId: string, activeDays: boolean[]) => {
-    setHabits(prev => prev.map(habit => {
-      if (habit.id === habitId) {
-        return { ...habit, activeDays };
+    const migrateCompletedDaysToHistory = (habit: any): Habit => {
+      if (habit.completedHistory) return habit;
+      const completedDays = habit.completedDays || [];
+      const completedHistory: { [isoDate: string]: boolean } = {};
+      // Assume completedDays[0] is Monday of current week
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+      for (let i = 0; i < completedDays.length; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const iso = d.toISOString().slice(0, 10);
+        completedHistory[iso] = !!completedDays[i];
       }
-      return habit;
-    }));
-  };
+      return {
+        ...habit,
+        completedHistory,
+        activeDays: habit.activeDays || Array(7).fill(true),
+      };
+    };
 
-  const handleToggleActiveDay = (habitId: string, dayIndex: number) => {
+    const sanitizeHabitsForToday = (habits: any[]): Habit[] => {
+      return habits.map(migrateCompletedDaysToHistory);
+    };
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
         const newActiveDays = [...habit.activeDays];

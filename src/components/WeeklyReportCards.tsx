@@ -7,7 +7,7 @@ interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedHistory: { [isoDate: string]: boolean };
   activeDays: boolean[];
 }
 
@@ -77,7 +77,8 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
       habits.forEach(habit => {
         if (habit.activeDays[dayIndex]) {
           totalActive++;
-          const isComplete = habit.completedDays[dayIndex];
+          const isoDate = day.toISOString().slice(0, 10);
+          const isComplete = habit.completedHistory?.[isoDate] || false;
           if (isComplete) {
             totalCompleted++;
           }
@@ -134,21 +135,19 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
       habits.forEach(habit => {
         let habitActiveCount = 0;
         let habitCompletedCount = 0;
-        
         weekDays.forEach(day => {
           const dayOfWeek = getDay(day);
           const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-          
           if (habit.activeDays[dayIndex]) {
             habitActiveCount++;
             totalActive++;
-            if (habit.completedDays[dayIndex]) {
+            const isoDate = day.toISOString().slice(0, 10);
+            if (habit.completedHistory?.[isoDate]) {
               habitCompletedCount++;
               totalCompleted++;
             }
           }
         });
-        
         if (habitActiveCount > 0) {
           weekTasks.push({
             icon: habit.icon,
