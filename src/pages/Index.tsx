@@ -61,15 +61,16 @@ const getCurrentDayIndex = (): number => {
 
 // Data model note: `completedDays` is stored as a simple Mon-Sun array.
 // To avoid showing/keeping future days as completed, we always clear
-// completion flags for days after today.
+// Only clear future days in the current week, keep past weeks' completion flags
 const sanitizeHabitsForToday = (habits: Habit[]): Habit[] => {
   const currentDayIndex = getCurrentDayIndex();
   return habits.map((habit) => {
     const completedDays = (habit.completedDays?.length === 7 ? habit.completedDays : Array(7).fill(false)).slice();
+    // Only clear days after today in the current week
     for (let i = currentDayIndex + 1; i < 7; i++) {
       completedDays[i] = false;
     }
-
+    // Do NOT clear previous weeks' data
     return {
       ...habit,
       completedDays,

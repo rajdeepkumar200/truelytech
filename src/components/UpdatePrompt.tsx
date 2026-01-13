@@ -145,8 +145,25 @@ export default function UpdatePrompt() {
   }, [updateBaseUrl]);
 
   const onUpdate = () => {
-    // Redirect to /install page to trigger the new APK download/install flow
-    window.location.href = '/install';
+    // Try UpdateInstaller plugin on Android, fallback to /install if not implemented or fails
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && apkUrl) {
+      setIsUpdating(true);
+      UpdateInstaller.downloadAndInstall({ url: apkUrl })
+        .then(() => {
+          setIsUpdating(false);
+          setShowRestartPrompt(true);
+        })
+        .catch((err) => {
+          setIsUpdating(false);
+          setErrorMessage(err?.message || 'Update failed. Please try manual install.');
+          // Fallback: redirect to /install for manual download
+          setTimeout(() => {
+            window.location.href = '/install';
+          }, 2000);
+        });
+    } else {
+      window.location.href = '/install';
+    }
   };
 
   const onRestart = () => {

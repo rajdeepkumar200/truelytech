@@ -1,3 +1,9 @@
+// Add Razorpay type to window
+declare global {
+  interface Window {
+    Razorpay?: any;
+  }
+}
 
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -16,7 +22,7 @@ export function PaywallPage() {
       name: 'TruelyTech',
       description: 'Premium Subscription',
       image: '/logo192.png',
-      handler: function (response: any) {
+      handler: function (response: { razorpay_payment_id: string }) {
         alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
         // You can add further logic here (e.g., API call to verify payment)
       },
@@ -28,14 +34,14 @@ export function PaywallPage() {
         color: '#6366f1',
       },
     };
-    // @ts-ignore
+    // @ts-expect-error
     const rzp = new window.Razorpay(options);
     rzp.open();
   };
 
   useEffect(() => {
     // Load Razorpay script if not already loaded
-    if (!window.Razorpay) {
+    if (typeof window.Razorpay === 'undefined') {
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;

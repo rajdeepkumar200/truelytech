@@ -3,42 +3,64 @@
 import { useRef } from 'react';
 
 function AndroidApkDownload({ apkUrl }: { apkUrl: string }) {
-  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
-  const anchorRef = useRef<HTMLAnchorElement>(null);
-  const handleDownload = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!apkUrl) return;
-    // Start download
-    if (anchorRef.current) {
-      anchorRef.current.click();
+  const [progress, setProgress] = useState<number>(0);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    setError(null);
+    setProgress(0);
+    try {
+      const res = await fetch(apkUrl);
+      if (!res.ok || !res.body) throw new Error('Failed to start download');
+      const contentLength = Number(res.headers.get('content-length')) || 0;
+      const reader = res.body.getReader();
+      let received = 0;
+      const chunks = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (contentLength) {
+          setProgress(Math.min(99, Math.round((received / contentLength) * 100)));
+        }
+      }
+      setProgress(100);
+      // Create blob and trigger download
+      const blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'DailyHabits.apk';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 2000);
+      setDownloading(false);
+    } catch (err: any) {
+      setError(err?.message || 'Download failed');
+      setDownloading(false);
     }
-    // Wait a bit, then try to open the APK (may be blocked by browser)
-    setTimeout(() => {
-      window.location.href = apkUrl;
-    }, 2000);
-    // Show instructions
-    alert('If the install prompt does not appear, open the downloaded APK from your downloads folder to install. You may need to allow installing apps from unknown sources.');
   };
-  if (!isAndroid) {
-    return (
-      <Button variant="outline" className="w-full" asChild>
-        <a href={apkUrl || '#'} download>
-          <Download className="w-5 h-5 mr-2" />
-          Download APK
-        </a>
-      </Button>
-    );
-  }
+
   return (
     <>
-      <Button variant="outline" className="w-full" onClick={handleDownload}>
+      <Button variant="outline" className="w-full" onClick={handleDownload} disabled={downloading || !apkUrl}>
         <Download className="w-5 h-5 mr-2" />
-        Download APK
+        {downloading ? `Downloading... (${progress}%)` : 'Download APK'}
       </Button>
-      {/* Hidden anchor for download */}
-      <a ref={anchorRef} href={apkUrl || '#'} download style={{ display: 'none' }} />
-      <p className="text-xs text-muted-foreground">
-        Note: If the install prompt does not appear, open the downloaded APK from your downloads folder to install. You may need to allow installing apps from unknown sources in your settings.
+      {downloading && (
+        <div className="w-full bg-muted rounded mt-2 h-2">
+          <div className="bg-primary h-2 rounded" style={{ width: `${progress}%` }}></div>
+        </div>
+      )}
+      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+      <p className="text-xs text-muted-foreground mt-2">
+        If the install prompt does not appear, open the APK from your downloads folder to install. You may need to allow installing apps from unknown sources in your settings.
       </p>
     </>
   );
