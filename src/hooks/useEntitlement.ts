@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AuthUser } from '@/contexts/AuthContext';
 
 const FIRST_RUN_KEY = 'habitex_firstRunAt';
 const PAID_KEY = 'habitex_isPaid';
@@ -38,7 +39,7 @@ export function resetEntitlement(): void {
   localStorage.removeItem(FIRST_RUN_KEY);
 }
 
-export function useEntitlement(): EntitlementState {
+export function useEntitlement(user: AuthUser | null = null): EntitlementState {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -50,7 +51,13 @@ export function useEntitlement(): EntitlementState {
   return useMemo(() => {
     void tick;
     const firstRunAt = getOrInitFirstRunAt();
-    const isPaid = readIsPaid();
+
+    // Check if user is whitelisted (rajdeepkumar200@gmail.com gets free premium access)
+    const isWhitelisted = user?.email === 'rajdeepkumar200@gmail.com';
+
+    // User is considered paid if they have paid OR are whitelisted
+    const isPaid = readIsPaid() || isWhitelisted;
+
     const trialEndsAt = firstRunAt + TRIAL_DAYS * DAY_MS;
     const now = Date.now();
 
@@ -67,5 +74,5 @@ export function useEntitlement(): EntitlementState {
       isLocked,
       trialDaysLeft,
     };
-  }, [tick]);
+  }, [tick, user]);
 }

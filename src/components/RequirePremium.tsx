@@ -1,12 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useEntitlement } from '../hooks/useEntitlement';
+import { useAuth } from '../contexts/AuthContext';
 
 type Props = {
   children: React.ReactNode;
 };
 
 export function RequirePremium({ children }: Props) {
-  const entitlement = useEntitlement();
+  const { user } = useAuth();
+  const entitlement = useEntitlement(user);
   const location = useLocation();
 
   if (entitlement.isLocked) {

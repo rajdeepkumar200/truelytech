@@ -8,7 +8,7 @@ interface ProgressItem {
 interface DailyProgressSummaryProps {
   scheduleItems: ProgressItem[];
   reminders: ProgressItem[];
-  habits: { completedDays: boolean[] }[];
+  habits: { completedWeeks: Record<string, boolean[]> }[];
 }
 
 const DailyProgressSummary = ({ scheduleItems, reminders, habits }: DailyProgressSummaryProps) => {
@@ -19,8 +19,12 @@ const DailyProgressSummary = ({ scheduleItems, reminders, habits }: DailyProgres
   const totalReminders = reminders.length;
   
   // Get today's habit progress (0 = Monday, 6 = Sunday)
-  const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-  const completedHabits = habits.filter(h => h.completedDays[todayIndex]).length;
+  const today = new Date();
+  const todayIndex = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const weekKey = weekStart.toISOString().slice(0, 10);
+  const completedHabits = habits.filter(h => (h.completedWeeks?.[weekKey] ?? [])[todayIndex]).length;
   const totalHabits = habits.length;
   
   const totalCompleted = completedTasks + completedReminders + completedHabits;

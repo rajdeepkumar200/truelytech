@@ -14,6 +14,27 @@ A beautiful daily habit tracker to build consistency and track your weekly progr
 
 ## Getting Started
 
+### Environment Configuration
+
+Create a `.env` file in the root directory with the following variables:
+
+```bash
+# Razorpay Configuration (required for payments to work)
+VITE_RAZORPAY_KEY_ID=rzp_test_your_actual_key_here
+
+# Optional: External payment links used by PaywallDialog
+VITE_PAYMENT_URL_INR=https://your-payment-processor.com/pay/inr
+VITE_PAYMENT_URL_USD=https://your-payment-processor.com/pay/usd
+```
+
+To get your Razorpay key:
+1. Go to [Razorpay Dashboard](https://dashboard.razorpay.com/)
+2. Navigate to Settings → API Keys
+3. Copy your Test Key ID (starts with `rzp_test_`)
+4. Replace `rzp_test_your_actual_key_here` with your actual key
+
+## Getting Started
+
 ### Prerequisites
 
 - Node.js & npm installed

@@ -1,17 +1,4 @@
-  const handleToggleActiveDay = (habitId: string, dayIndex: number) => {
-    setHabits(prev =>
-      prev.map(habit =>
-        habit.id === habitId
-          ? {
-              ...habit,
-              activeDays: habit.activeDays.map((active, idx) =>
-                idx === dayIndex ? !active : active
-              ),
-            }
-          : habit
-      )
-    );
-  };
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -32,6 +19,7 @@ import MobileInstallPrompt from '@/components/MobileInstallPrompt';
 import ReminderAlert from '@/components/ReminderAlert';
 import { OnboardingTour } from '@/components/OnboardingTour';
 import { PaywallDialog } from '@/components/PaywallDialog';
+import { RequirePremium } from '@/components/RequirePremium';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
@@ -39,15 +27,17 @@ import { useEntitlement } from '@/hooks/useEntitlement';
 import { useNotifications, NotificationPreferences } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 
+
 interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedHistory: { [isoDate: string]: boolean };
+  completedWeeks: Record<string, boolean[]>; // e.g. { '2026-W02': [true, false, ...] }
   activeDays: boolean[];
   category?: string;
   weeklyGoal?: number;
   hidden?: boolean;
+  completedDate?: string; // ISO date string when habit was marked complete
 }
 
 interface ScheduleItem {
@@ -73,39 +63,35 @@ const getCurrentDayIndex = (): number => {
   return day === 0 ? 6 : day - 1;
 };
 
-// Data model note: `completedDays` is stored as a simple Mon-Sun array.
-// To avoid showing/keeping future days as completed, we always clear
-// Only clear future days in the current week, keep past weeks' completion flags
-const sanitizeHabitsForToday = (habits: Habit[]): Habit[] => {
-  const currentDayIndex = getCurrentDayIndex();
-  return habits.map((habit) => {
-    const completedDays = (habit.completedDays?.length === 7 ? habit.completedDays : Array(7).fill(false)).slice();
-    // Only clear days after today in the current week
-    for (let i = currentDayIndex + 1; i < 7; i++) {
-      completedDays[i] = false;
-    }
-    // Do NOT clear previous weeks' data
-    return {
-      ...habit,
-      completedDays,
-      activeDays: habit.activeDays || Array(7).fill(true),
-    };
-  });
-};
+// Get ISO week key (e.g. '2026-W02')
+function getCurrentWeekKey(date = new Date()): string {
+  const year = date.getFullYear();
+  // Get ISO week number
+  const tmp = new Date(date.getTime());
+  tmp.setHours(0, 0, 0, 0);
+  // Thursday in current week decides the year
+  tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+  const week1 = new Date(tmp.getFullYear(), 0, 4);
+  // Adjust to Thursday in week 1 and count number of weeks from week 1 to current
+  const weekNo = 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+  return `${year}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+// No longer needed: completedDays migration/cleanup
 
 const defaultHabits: Habit[] = [
-  { id: '1', name: 'clean desk', icon: '🧹', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '2', name: 'check into notion', icon: '💻', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '3', name: 'journal', icon: '📝', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '4', name: 'exercise', icon: '💪', completedDays: Array(7).fill(false), activeDays: [true, true, true, true, true, false, false] },
-  { id: '5', name: 'drink water', icon: '💧', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '6', name: 'meditate', icon: '🧘', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '7', name: 'listen to uplifting music', icon: '🎵', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '8', name: 'brush hair', icon: '💇', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '9', name: 'shower', icon: '🚿', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '10', name: 'skin care', icon: '😊', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '11', name: 'brush teeth', icon: '🦷', completedDays: Array(7).fill(false), activeDays: Array(7).fill(true) },
-  { id: '12', name: 'style hair', icon: '💇', completedDays: Array(7).fill(false), activeDays: [true, false, false, true, false, false, false] },
+  { id: '1', name: 'clean desk', icon: '🧹', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '2', name: 'check into notion', icon: '💻', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '3', name: 'journal', icon: '📝', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '4', name: 'exercise', icon: '💪', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: [true, true, true, true, true, false, false] },
+  { id: '5', name: 'drink water', icon: '💧', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '6', name: 'meditate', icon: '🧘', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '7', name: 'listen to uplifting music', icon: '🎵', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '8', name: 'brush hair', icon: '💇', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '9', name: 'shower', icon: '🚿', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '10', name: 'skin care', icon: '😊', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '11', name: 'brush teeth', icon: '🦷', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: Array(7).fill(true) },
+  { id: '12', name: 'style hair', icon: '💇', completedWeeks: { [getCurrentWeekKey()]: Array(7).fill(false) }, activeDays: [true, false, false, true, false, false, false] },
 ];
 
 const defaultSchedule: ScheduleItem[] = [
@@ -114,29 +100,75 @@ const defaultSchedule: ScheduleItem[] = [
   { id: '3', time: '11:00', task: 'prepare lunch', emoji: '🍳' },
 ];
 
-const Index = () => {
-  const navigate = useNavigate();
-  const entitlement = useEntitlement();
-  const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
-  const { 
-    fetchHabits, saveHabits, 
-    fetchSchedule, saveSchedule, 
-    fetchReminders, saveReminders, 
-    fetchSettings, saveSettings,
-    migrateLocalData 
-  } = useDataSync();
+import { addWeeks, subWeeks, format as formatDate, parseISO } from 'date-fns';
 
-  const [paywallOpen, setPaywallOpen] = useState(false);
-  
+const Index = () => {
   const [habits, setHabits] = useState<Habit[]>(() => {
     const saved = localStorage.getItem('habits-v3');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      return sanitizeHabitsForToday(parsed);
+      return JSON.parse(saved);
     }
     return defaultHabits;
   });
+  // Week selector state
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeekKey());
+
+  // Track last week key to detect week change
+  const [lastWeekKey, setLastWeekKey] = useState(getCurrentWeekKey());
+
+  // Persist previous week's data into completedWeeks on week change
+  useEffect(() => {
+    const currentWeekKey = getCurrentWeekKey();
+    if (lastWeekKey !== currentWeekKey) {
+      setHabits(prevHabits => prevHabits.map(habit => {
+        // Always preserve all previous completedWeeks
+        const updatedWeeks = { ...habit.completedWeeks };
+        // Ensure last week and current week keys exist
+        if (!updatedWeeks[lastWeekKey]) {
+          updatedWeeks[lastWeekKey] = Array(7).fill(false);
+        }
+        if (!updatedWeeks[currentWeekKey]) {
+          updatedWeeks[currentWeekKey] = Array(7).fill(false);
+        }
+        // Do not remove any week keys
+        return {
+          ...habit,
+          completedWeeks: updatedWeeks,
+        };
+      }));
+      setLastWeekKey(currentWeekKey);
+    }
+  }, [lastWeekKey]);
+
+  // Utility to get week label (e.g. 'Jan 5–11, 2026')
+  function getWeekLabel(weekKey: string): string {
+    // Parse weekKey: 'YYYY-Www'
+    const [year, w] = weekKey.split('-W');
+    const weekNum = parseInt(w, 10);
+    // Get Monday of that week
+    const jan4 = new Date(Number(year), 0, 4);
+    const monday = addWeeks(jan4, weekNum - 1);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return `${formatDate(monday, 'MMM d')}–${formatDate(sunday, 'd, yyyy')}`;
+  }
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const entitlement = useEntitlement(user);
+  const { toast } = useToast();
+  const {
+    fetchHabits, saveHabits,
+    fetchSchedule, saveSchedule,
+    fetchReminders, saveReminders,
+    fetchSettings, saveSettings,
+    migrateLocalData
+  } = useDataSync();
+
+  const [paywallOpen, setPaywallOpen] = useState(false);
+
+  // No longer needed: completedDays migration
+
 
   const [schedule, setSchedule] = useState<ScheduleItem[]>(() => {
     const saved = localStorage.getItem('schedule');
@@ -215,9 +247,9 @@ const Index = () => {
       const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window;
 
       // Eye blink - every 20 minutes (mandatory during Pomodoro focus)
-      const shouldShowEyeReminder = (isPomodoroFocusActive || notificationPrefs.eyeBlinkReminders) && 
-                                     minutes % 20 === 0 && seconds < 5;
-      
+      const shouldShowEyeReminder = (isPomodoroFocusActive || notificationPrefs.eyeBlinkReminders) &&
+        minutes % 20 === 0 && seconds < 5;
+
       if (shouldShowEyeReminder) {
         setReminderAlertType('eye');
         // Send notification if document is hidden (user not on screen)
@@ -235,9 +267,9 @@ const Index = () => {
 
       // Water intake - customizable interval (mandatory during Pomodoro focus, default 30 minutes)
       const waterInterval = notificationPrefs.waterIntakeInterval || 30;
-      const shouldShowWaterReminder = (isPomodoroFocusActive || notificationPrefs.waterIntakeReminders) && 
-                                       minutes % waterInterval === 0 && seconds < 5;
-      
+      const shouldShowWaterReminder = (isPomodoroFocusActive || notificationPrefs.waterIntakeReminders) &&
+        minutes % waterInterval === 0 && seconds < 5;
+
       if (shouldShowWaterReminder) {
         setReminderAlertType('water');
         // Send notification if document is hidden
@@ -255,7 +287,7 @@ const Index = () => {
     };
 
     reminderIntervalRef.current = setInterval(checkVisualReminders, 5000);
-    
+
     return () => {
       if (reminderIntervalRef.current) {
         clearInterval(reminderIntervalRef.current);
@@ -271,7 +303,7 @@ const Index = () => {
       localStorage.removeItem('schedule');
       localStorage.removeItem('reminders');
       localStorage.removeItem('notificationPrefs');
-      
+
       // Reset state to empty (will be populated from cloud)
       setHabits([]);
       setSchedule([]);
@@ -286,7 +318,7 @@ const Index = () => {
         eyeBlinkReminders: false,
         waterIntakeReminders: false,
       });
-      
+
       // Store current user ID
       localStorage.setItem('lastUserId', user.id);
       setLastUserId(user.id);
@@ -298,7 +330,7 @@ const Index = () => {
       localStorage.removeItem('reminders');
       localStorage.removeItem('notificationPrefs');
       localStorage.removeItem('lastUserId');
-      
+
       setHabits(defaultHabits);
       setSchedule(defaultSchedule);
       setReminders([]);
@@ -310,7 +342,7 @@ const Index = () => {
   // Sync data function
   const syncData = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       const [cloudHabits, cloudSchedule, cloudReminders, cloudSettings] = await Promise.all([
         fetchHabits(),
@@ -318,9 +350,9 @@ const Index = () => {
         fetchReminders(),
         fetchSettings()
       ]);
-      
+
       if (cloudHabits.length > 0) {
-        setHabits(sanitizeHabitsForToday(cloudHabits));
+        setHabits(cloudHabits);
       }
       if (cloudSchedule.length > 0) {
         setSchedule(cloudSchedule);
@@ -343,17 +375,17 @@ const Index = () => {
         try {
           // First try to migrate local data
           await migrateLocalData();
-          
+
           // Then fetch from cloud
           await syncData();
-          
+
           setDataLoaded(true);
         } catch (error) {
           console.error('Error loading cloud data:', error);
           setDataLoaded(true); // Mark as loaded to prevent infinite retries
         }
       };
-      
+
       loadCloudData();
     }
   }, [user, dataLoaded, authLoading, migrateLocalData, syncData]);
@@ -363,6 +395,7 @@ const Index = () => {
 
   // Save to local storage (for offline/non-logged in users)
   useEffect(() => {
+    // Always save the full completedWeeks history for all habits
     localStorage.setItem('habits-v3', JSON.stringify(habits));
     if (user && dataLoaded) {
       // Debounce save to prevent spamming
@@ -404,37 +437,37 @@ const Index = () => {
   }, [notificationPrefs, user, dataLoaded, saveSettings]);
 
 
-  const handleToggleDay = useCallback((habitId: string, isoDate: string) => {
+  // Unified handler: toggle completion for a habit on a given day/week
+  const handleToggleDay = useCallback((habitId: string, dayIndex: number, weekKey: string) => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
-        const wasCompleted = !!habit.completedHistory?.[isoDate];
-        const newCompletedHistory = { ...habit.completedHistory };
-        if (wasCompleted) {
-          delete newCompletedHistory[isoDate];
-        } else {
-          newCompletedHistory[isoDate] = true;
+        const updatedWeeks = { ...habit.completedWeeks };
+        if (!updatedWeeks[weekKey]) {
+          updatedWeeks[weekKey] = Array(7).fill(false);
         }
-        // Send notification on completion (guarded for mobile browsers that don't support Notifications)
+        updatedWeeks[weekKey][dayIndex] = !updatedWeeks[weekKey][dayIndex];
+        // Send notification on completion
         try {
           const canUseNotifications = typeof window !== 'undefined' && 'Notification' in window;
-          if (!wasCompleted && canUseNotifications && window.Notification.permission === 'granted') {
+          if (updatedWeeks[weekKey][dayIndex] && canUseNotifications && window.Notification.permission === 'granted') {
             notifyHabitComplete(habit.name, habit.icon);
           }
         } catch (e) {
           console.error('Notification error:', e);
         }
-        return { ...habit, completedHistory: newCompletedHistory };
+        return { ...habit, completedWeeks: updatedWeeks };
       }
       return habit;
     }));
   }, [notifyHabitComplete]);
 
   const handleAddHabit = (name: string, icon: string) => {
+    const weekKey = getCurrentWeekKey();
     const newHabit: Habit = {
       id: crypto.randomUUID(),
       name,
       icon,
-      completedDays: Array(7).fill(false),
+      completedWeeks: { [weekKey]: Array(7).fill(false) },
       activeDays: Array(7).fill(true),
     };
     setHabits(prev => [...prev, newHabit]);
@@ -445,39 +478,6 @@ const Index = () => {
   };
   const handleDeleteMultipleHabits = (habitIds: string[]) => {
     setHabits(prev => prev.filter(habit => !habitIds.includes(habit.id)));
-    const migrateCompletedDaysToHistory = (habit: any): Habit => {
-      if (habit.completedHistory) return habit;
-      const completedDays = habit.completedDays || [];
-      const completedHistory: { [isoDate: string]: boolean } = {};
-      // Assume completedDays[0] is Monday of current week
-      const today = new Date();
-      const dayOfWeek = today.getDay();
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
-      for (let i = 0; i < completedDays.length; i++) {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        const iso = d.toISOString().slice(0, 10);
-        completedHistory[iso] = !!completedDays[i];
-      }
-      return {
-        ...habit,
-        completedHistory,
-        activeDays: habit.activeDays || Array(7).fill(true),
-      };
-    };
-
-    const sanitizeHabitsForToday = (habits: any[]): Habit[] => {
-      return habits.map(migrateCompletedDaysToHistory);
-    };
-    setHabits(prev => prev.map(habit => {
-      if (habit.id === habitId) {
-        const newActiveDays = [...habit.activeDays];
-        newActiveDays[dayIndex] = !newActiveDays[dayIndex];
-        return { ...habit, activeDays: newActiveDays };
-      }
-      return habit;
-    }));
   };
 
   const handleToggleHabitVisibility = (habitId: string) => {
@@ -507,6 +507,28 @@ const Index = () => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
         return { ...habit, icon };
+      }
+      return habit;
+    }));
+  };
+
+  const handleMarkHabitComplete = (habitId: string) => {
+    const currentDayIndex = getCurrentDayIndex();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        // Deactivate all days starting from tomorrow
+        const updatedActiveDays = [...habit.activeDays];
+        for (let i = currentDayIndex + 1; i < 7; i++) {
+          updatedActiveDays[i] = false;
+        }
+
+        return {
+          ...habit,
+          activeDays: updatedActiveDays,
+          completedDate: today // Mark when this habit was completed
+        };
       }
       return habit;
     }));
@@ -548,18 +570,27 @@ const Index = () => {
   };
 
   const handleToggleScheduleComplete = (id: string) => {
-    setSchedule(prev => prev.map(item => 
+    setSchedule(prev => prev.map(item =>
       item.id === id ? { ...item, completed: !item.completed } : item
     ));
   };
 
   const handleToggleReminderComplete = (id: string) => {
-    setReminders(prev => prev.map(r => 
+    setReminders(prev => prev.map(r =>
       r.id === id ? { ...r, completed: !r.completed } : r
     ));
   };
 
-  const visibleHabits = habits.filter(h => showHiddenHabits || !h.hidden);
+  const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const visibleHabits = habits.filter(h => {
+    // Hide habits that are hidden (unless showing hidden habits)
+    if (!showHiddenHabits && h.hidden) return false;
+
+    // Hide habits completed before today (keep showing on completion day)
+    if (h.completedDate && h.completedDate < todayStr) return false;
+
+    return true;
+  });
 
   // Keep conditional rendering at the bottom so hook ordering is consistent.
   if (authLoading) {
@@ -585,17 +616,17 @@ const Index = () => {
         onOpenChange={setPaywallOpen}
         trialDaysLeft={entitlement.trialDaysLeft}
       />
-      
+
       <OnboardingTour start={motivationDismissed} />
       <NotificationPrompt />
       <MobileInstallPrompt />
-      <ReminderAlert 
-        type={reminderAlertType} 
-        onDismiss={() => setReminderAlertType(null)} 
+      <ReminderAlert
+        type={reminderAlertType}
+        onDismiss={() => setReminderAlertType(null)}
         soundEnabled={notificationPrefs.soundEnabled !== false}
         alarmTone={notificationPrefs.alarmTone || 'classic'}
       />
-      
+
       {/* Top Controls */}
       <div className="fixed top-0 right-0 z-50 pt-safe pr-safe p-4 flex items-center gap-2">
         <Button
@@ -613,7 +644,7 @@ const Index = () => {
         >
           <Book className="h-4 w-4" />
         </Button>
-        <SettingsDialog 
+        <SettingsDialog
           notificationPrefs={notificationPrefs}
           onUpdateNotificationPrefs={setNotificationPrefs}
           showHiddenHabits={showHiddenHabits}
@@ -627,7 +658,7 @@ const Index = () => {
           </div>
         )}
       </div>
-      
+
       {/* Title */}
       <header className="pt-4 pb-4 px-4 sm:px-6">
         <div className="flex flex-col items-center">
@@ -647,24 +678,64 @@ const Index = () => {
       {/* Main Content */}
       <main className="px-3 sm:px-4 md:px-6 pb-12">
         <div className="max-w-6xl mx-auto">
+          {/* Week Selector */}
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <Button size="icon" variant="ghost" onClick={() => setSelectedWeek(prev => {
+              // Go to previous week
+              const [year, w] = prev.split('-W');
+              const weekNum = parseInt(w, 10);
+              let newYear = parseInt(year, 10);
+              let newWeek = weekNum - 1;
+              if (newWeek < 1) {
+                newYear -= 1;
+                newWeek = 52;
+              }
+              return `${newYear}-W${String(newWeek).padStart(2, '0')}`;
+            })}>
+              &lt;
+            </Button>
+            <span className="font-semibold text-lg">{getWeekLabel(selectedWeek)}</span>
+            <Button size="icon" variant="ghost" onClick={() => setSelectedWeek(prev => {
+              // Go to next week
+              const [year, w] = prev.split('-W');
+              const weekNum = parseInt(w, 10);
+              let newYear = parseInt(year, 10);
+              let newWeek = weekNum + 1;
+              if (newWeek > 52) {
+                newYear += 1;
+                newWeek = 1;
+              }
+              return `${newYear}-W${String(newWeek).padStart(2, '0')}`;
+            })}>
+              &gt;
+            </Button>
+            {selectedWeek !== getCurrentWeekKey() && (
+              <Button size="sm" variant="outline" onClick={() => setSelectedWeek(getCurrentWeekKey())}>This Week</Button>
+            )}
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 lg:gap-8">
 
             {/* Mobile: Monthly Habit Calendar (main section) */}
             <div className="lg:hidden space-y-4 animate-fade-in">
-              <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
-                <MonthlyHabitCalendar
-                  habits={visibleHabits}
-                  onToggleDay={handleToggleDay}
-                  onDeleteHabit={handleDeleteHabit}
-                  onDeleteMultipleHabits={handleDeleteMultipleHabits}
-                  onToggleActiveDay={handleToggleActiveDay}
-                  onToggleVisibility={handleToggleHabitVisibility}
-                />
-                <div id="add-habit-mobile">
-                  <AddHabitRow onAdd={handleAddHabit} />
+              <RequirePremium>
+                <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
+                  <MonthlyHabitCalendar
+                    habits={visibleHabits}
+                    weekKey={selectedWeek}
+                    onToggleDay={handleToggleDay}
+                    onDeleteHabit={handleDeleteHabit}
+                    onDeleteMultipleHabits={handleDeleteMultipleHabits}
+                    onToggleActiveDay={(habitId, dayIndex) => handleToggleDay(habitId, dayIndex, selectedWeek)}
+                    onToggleVisibility={handleToggleHabitVisibility}
+                    onMarkComplete={handleMarkHabitComplete}
+                    readOnly={selectedWeek !== getCurrentWeekKey()}
+                  />
+                  <div id="add-habit-mobile">
+                    <AddHabitRow onAdd={handleAddHabit} />
+                  </div>
                 </div>
-              </div>
-              
+              </RequirePremium>
+
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
                 {entitlement.isLocked ? (
@@ -688,15 +759,7 @@ const Index = () => {
 
             {/* Mobile: Reminders */}
             <div className="lg:hidden">
-              {entitlement.isLocked ? (
-                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
-                  <div>
-                    <h3 className="font-semibold">Reminders</h3>
-                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
-                  </div>
-                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
-                </div>
-              ) : (
+              <RequirePremium>
                 <RemindersRedesigned
                   reminders={reminders}
                   onAdd={handleAddReminder}
@@ -715,37 +778,21 @@ const Index = () => {
                   onToggleSound={(enabled) => setNotificationPrefs(prev => ({ ...prev, soundEnabled: enabled }))}
                   onAlarmToneChange={(tone) => setNotificationPrefs(prev => ({ ...prev, alarmTone: tone }))}
                 />
-              )}
+              </RequirePremium>
             </div>
 
             {/* Mobile: Pomodoro Timer */}
             <div className="lg:hidden">
-              {entitlement.isLocked ? (
-                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
-                  <div>
-                    <h3 className="font-semibold">Pomodoro</h3>
-                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
-                  </div>
-                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
-                </div>
-              ) : (
+              <RequirePremium>
                 <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
-              )}
+              </RequirePremium>
             </div>
 
             {/* Mobile: Goals */}
             <div className="lg:hidden space-y-4">
-              {entitlement.isLocked ? (
-                <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm space-y-3">
-                  <div>
-                    <h3 className="font-semibold">Goals</h3>
-                    <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
-                  </div>
-                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
-                </div>
-              ) : (
+              <RequirePremium>
                 <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
-              )}
+              </RequirePremium>
             </div>
 
             {/* Desktop: Left Column */}
@@ -799,17 +846,19 @@ const Index = () => {
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
                 <MonthlyHabitCalendar
                   habits={visibleHabits}
+                  weekKey={getCurrentWeekKey()}
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
-                  onToggleActiveDay={handleToggleActiveDay}
+                  onToggleActiveDay={(habitId, dayIndex) => handleToggleDay(habitId, dayIndex, selectedWeek)}
                   onToggleVisibility={handleToggleHabitVisibility}
+                  onMarkComplete={handleMarkHabitComplete}
                 />
                 <div id="add-habit-desktop">
                   <AddHabitRow onAdd={handleAddHabit} />
                 </div>
               </div>
-              
+
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4">
                 {entitlement.isLocked ? (
@@ -838,7 +887,7 @@ const Index = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Mobile: Sign in prompt for non-logged users */}
         {/* {!user && !authLoading && (
           <div className="sm:hidden mt-6 p-4 bg-popover rounded-2xl border border-border/50">

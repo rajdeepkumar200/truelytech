@@ -3,11 +3,19 @@ import { format, startOfWeek, addDays, isToday, isBefore, startOfMonth, endOfMon
 import { cn } from '@/lib/utils';
 import { Calendar, BarChart3 } from 'lucide-react';
 
+// ...existing code...
 interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedHistory: { [isoDate: string]: boolean };
+  completedWeeks: Record<string, boolean[]>;
+  activeDays: boolean[];
+}
+interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
 }
 
@@ -60,25 +68,38 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const today = new Date();
 
+  // Helper to calculate ISO week key (YYYY-Www)
+  const getWeekKey = (date: Date): string => {
+    const year = date.getFullYear();
+    const tmp = new Date(date.getTime());
+    tmp.setHours(0, 0, 0, 0);
+    tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+    const week1 = new Date(tmp.getFullYear(), 0, 4);
+    const weekNo = 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+    return `${year}-W${String(weekNo).padStart(2, '0')}`;
+  };
+
   // Generate week days starting from Monday
   const weekDays = useMemo(() => {
     const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
-    
+
     return Array.from({ length: 7 }, (_, i) => {
       const day = addDays(weekStart, i);
       const dayOfWeek = day.getDay();
       const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      
+
       // Calculate progress for this day
       let totalActive = 0;
       let totalCompleted = 0;
       const tasksForDay: { icon: string; name: string; completed: boolean }[] = [];
-      
+
       habits.forEach(habit => {
         if (habit.activeDays[dayIndex]) {
           totalActive++;
-          const isoDate = day.toISOString().slice(0, 10);
-          const isComplete = habit.completedHistory?.[isoDate] || false;
+          // Find the week key for this date using ISO week format
+          const weekKey = getWeekKey(day);
+          const weekArr = habit.completedWeeks?.[weekKey] || [];
+          const isComplete = weekArr[dayIndex] || false;
           if (isComplete) {
             totalCompleted++;
           }
@@ -89,9 +110,9 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
           });
         }
       });
-      
+
       const progress = totalActive > 0 ? Math.round((totalCompleted / totalActive) * 100) : 0;
-      
+
       return {
         date: day,
         dayIndex,
@@ -110,39 +131,41 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
     const start = startOfMonth(today);
     const end = endOfMonth(today);
     const days = eachDayOfInterval({ start, end });
-    
+
     // Group days by week
     const weeks: Date[][] = [];
     let currentWeek: Date[] = [];
-    
+
     days.forEach((day, idx) => {
       currentWeek.push(day);
       const dayOfWeek = getDay(day);
-      
+
       // Sunday or last day of month - complete the week
       if (dayOfWeek === 0 || idx === days.length - 1) {
         weeks.push([...currentWeek]);
         currentWeek = [];
       }
     });
-    
+
     return weeks.map((weekDays, weekIdx) => {
       let totalActive = 0;
       let totalCompleted = 0;
       const weekTasks: { icon: string; name: string; completed: number; total: number }[] = [];
-      
+
       // Aggregate data for all days in this week
       habits.forEach(habit => {
         let habitActiveCount = 0;
         let habitCompletedCount = 0;
+        // Find the week key for this week using ISO week format
+        const weekKey = getWeekKey(weekDays[0]);
+        const weekArr = habit.completedWeeks?.[weekKey] || [];
         weekDays.forEach(day => {
           const dayOfWeek = getDay(day);
           const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
           if (habit.activeDays[dayIndex]) {
             habitActiveCount++;
             totalActive++;
-            const isoDate = day.toISOString().slice(0, 10);
-            if (habit.completedHistory?.[isoDate]) {
+            if (weekArr[dayIndex]) {
               habitCompletedCount++;
               totalCompleted++;
             }
@@ -157,11 +180,11 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
           });
         }
       });
-      
+
       const weekStart = weekDays[0];
       const weekEnd = weekDays[weekDays.length - 1];
       const containsToday = weekDays.some(day => isToday(day));
-      
+
       return {
         weekNumber: weekIdx + 1,
         weekStart,
@@ -219,7 +242,7 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
           </button>
         </div>
       </div>
-      
+
       {/* Cards - single row with horizontal scroll */}
       <div
         ref={scrollRef}
@@ -229,65 +252,65 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
         {viewMode === 'weekly' ? (
           // Weekly view - show individual days
           weekDays.map((day, idx) => (
-          <div
-            key={idx}
-            data-today={day.isToday}
-            className={cn(
-              "flex-shrink-0 w-[160px] rounded-xl border p-3 transition-all",
-              day.isToday 
-                ? "bg-habit-checkbox/10 border-habit-checkbox/30" 
-                : "bg-popover border-border/50"
-            )}
-          >
-            {/* Day header */}
-            <div className="text-center mb-3">
-              <p className={cn(
-                "text-sm font-semibold",
-                day.isToday ? "text-habit-checkbox" : "text-foreground"
-              )}>
-                {format(day.date, 'EEEE')}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {format(day.date, 'dd.MM.yyyy')}
-              </p>
-            </div>
-            
-            {/* Circular progress */}
-            <div className="flex justify-center mb-3">
-              <CircularProgress percentage={day.progress} size={70} />
-            </div>
-            
-            {/* Tasks list */}
-            <div className="space-y-1">
-              <p className="text-[10px] uppercase font-medium text-muted-foreground mb-1">Tasks</p>
-              <div className="max-h-[100px] overflow-y-auto space-y-1 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {day.tasks.slice(0, 5).map((task, taskIdx) => (
-                  <div 
-                    key={taskIdx}
-                    className={cn(
-                      "flex items-center gap-1.5 text-xs py-0.5",
-                      task.completed ? "text-muted-foreground line-through" : "text-foreground"
-                    )}
-                  >
-                    <span className="text-xs">{task.icon}</span>
-                    <span className="truncate">{task.name}</span>
-                    {task.completed && (
-                      <span className="ml-auto text-habit-checkbox">✓</span>
-                    )}
-                  </div>
-                ))}
-                {day.tasks.length > 5 && (
-                  <p className="text-[10px] text-muted-foreground">
-                    +{day.tasks.length - 5} more
-                  </p>
-                )}
-                {day.tasks.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">No habits scheduled</p>
-                )}
+            <div
+              key={idx}
+              data-today={day.isToday}
+              className={cn(
+                "flex-shrink-0 w-[160px] rounded-xl border p-3 transition-all",
+                day.isToday
+                  ? "bg-habit-checkbox/10 border-habit-checkbox/30"
+                  : "bg-popover border-border/50"
+              )}
+            >
+              {/* Day header */}
+              <div className="text-center mb-3">
+                <p className={cn(
+                  "text-sm font-semibold",
+                  day.isToday ? "text-habit-checkbox" : "text-foreground"
+                )}>
+                  {format(day.date, 'EEEE')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {format(day.date, 'dd.MM.yyyy')}
+                </p>
+              </div>
+
+              {/* Circular progress */}
+              <div className="flex justify-center mb-3">
+                <CircularProgress percentage={day.progress} size={70} />
+              </div>
+
+              {/* Tasks list */}
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase font-medium text-muted-foreground mb-1">Tasks</p>
+                <div className="max-h-[100px] overflow-y-auto space-y-1 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {day.tasks.slice(0, 5).map((task, taskIdx) => (
+                    <div
+                      key={taskIdx}
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs py-0.5",
+                        task.completed ? "text-muted-foreground line-through" : "text-foreground"
+                      )}
+                    >
+                      <span className="text-xs">{task.icon}</span>
+                      <span className="truncate">{task.name}</span>
+                      {task.completed && (
+                        <span className="ml-auto text-habit-checkbox">✓</span>
+                      )}
+                    </div>
+                  ))}
+                  {day.tasks.length > 5 && (
+                    <p className="text-[10px] text-muted-foreground">
+                      +{day.tasks.length - 5} more
+                    </p>
+                  )}
+                  {day.tasks.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No habits scheduled</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))
+          ))
         ) : (
           // Monthly view - show weeks
           monthWeeks.map((week, idx) => (
@@ -296,8 +319,8 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
               data-current={week.isCurrentWeek}
               className={cn(
                 "flex-shrink-0 w-[180px] rounded-xl border p-3 transition-all",
-                week.isCurrentWeek 
-                  ? "bg-habit-checkbox/10 border-habit-checkbox/30" 
+                week.isCurrentWeek
+                  ? "bg-habit-checkbox/10 border-habit-checkbox/30"
                   : "bg-popover border-border/50"
               )}
             >
@@ -313,18 +336,18 @@ const WeeklyReportCards = ({ habits }: WeeklyReportCardsProps) => {
                   {format(week.weekStart, 'dd MMM')} - {format(week.weekEnd, 'dd MMM')}
                 </p>
               </div>
-              
+
               {/* Circular progress */}
               <div className="flex justify-center mb-3">
                 <CircularProgress percentage={week.progress} size={70} />
               </div>
-              
+
               {/* Tasks list with counts */}
               <div className="space-y-1">
                 <p className="text-[10px] uppercase font-medium text-muted-foreground mb-1">Habits Progress</p>
                 <div className="max-h-[100px] overflow-y-auto space-y-1 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {week.tasks.slice(0, 5).map((task, taskIdx) => (
-                    <div 
+                    <div
                       key={taskIdx}
                       className="flex items-center gap-1.5 text-xs py-0.5"
                     >

@@ -8,7 +8,7 @@ interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
   category?: string;
   weeklyHistory?: { week: string; completionRate: number }[];
@@ -25,10 +25,16 @@ const HabitStatistics = ({ habits }: HabitStatisticsProps) => {
     let totalCompleted = 0;
     let totalActive = 0;
     let longestStreak = 0;
+    // Get current week key
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7)); // Monday as start
+    const weekKey = weekStart.toISOString().slice(0, 10);
 
     habits.forEach(habit => {
       const activeDays = habit.activeDays || Array(7).fill(true);
-      habit.completedDays.forEach((completed, i) => {
+      const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
+      completedArr.forEach((completed, i) => {
         if (activeDays[i]) {
           totalActive++;
           if (completed) totalCompleted++;
@@ -37,9 +43,9 @@ const HabitStatistics = ({ habits }: HabitStatisticsProps) => {
 
       // Calculate streak for this habit
       let streak = 0;
-      for (let i = habit.completedDays.length - 1; i >= 0; i--) {
+      for (let i = completedArr.length - 1; i >= 0; i--) {
         if (!activeDays[i]) continue;
-        if (habit.completedDays[i]) streak++;
+        if (completedArr[i]) streak++;
         else break;
       }
       if (streak > longestStreak) longestStreak = streak;
@@ -52,14 +58,20 @@ const HabitStatistics = ({ habits }: HabitStatisticsProps) => {
 
   const weeklyChartData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // Get current week key
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const weekKey = weekStart.toISOString().slice(0, 10);
     return days.map((day, index) => {
       let completed = 0;
       let active = 0;
       habits.forEach(habit => {
         const activeDays = habit.activeDays || Array(7).fill(true);
+        const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
         if (activeDays[index]) {
           active++;
-          if (habit.completedDays[index]) completed++;
+          if (completedArr[index]) completed++;
         }
       });
       const rate = active > 0 ? Math.round((completed / active) * 100) : 0;

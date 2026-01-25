@@ -13,11 +13,22 @@ import {
 } from 'firebase/firestore';
 import { getFirebaseDb } from '@/integrations/firebase/client';
 
+// ...existing code...
 interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
+  activeDays: boolean[];
+  category?: string;
+  weeklyGoal?: number;
+  hidden?: boolean;
+}
+interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
   category?: string;
   weeklyGoal?: number;
@@ -93,19 +104,14 @@ export const useDataSync = () => {
     if (!col) return [];
 
     const snap = await getDocs(query(col, orderBy('sortOrder', 'asc')));
-    return snap.docs.map((d) => {
-      const data = d.data() as any;
-      return {
-        id: d.id,
-        name: data.name,
-        icon: data.icon,
-        completedDays: (data.completedDays ?? []) as boolean[],
-        activeDays: (data.activeDays ?? []) as boolean[],
-        category: data.category ?? undefined,
-        weeklyGoal: data.weeklyGoal ?? undefined,
-        hidden: data.hidden ?? false,
-      };
-    });
+      const habits: Habit[] = [];
+      snap.docs.forEach((doc) => {
+        const data = doc.data();
+        let habit: any = { id: doc.id, ...data };
+        // Only use completedWeeks, ignore completedDays
+        habits.push(habit as Habit);
+      });
+      return habits;
   }, [user, habitsCollection]);
 
   // Save habits to database using upsert for proper sync
@@ -132,10 +138,17 @@ export const useDataSync = () => {
 
     // Upsert current (keep stable IDs)
     habits.forEach((h, index) => {
+      // Sanitize completedWeeks to ensure no undefined values
+      const sanitizedWeeks: Record<string, boolean[]> = {};
+      for (const [weekKey, arr] of Object.entries(h.completedWeeks ?? {})) {
+        sanitizedWeeks[weekKey] = Array(7)
+          .fill(false)
+          .map((_, i) => arr[i] === true);
+      }
       batch.set(doc(db, 'users', user.id, 'habits', h.id), {
         name: h.name,
         icon: h.icon,
-        completedDays: h.completedDays,
+        completedWeeks: sanitizedWeeks,
         activeDays: h.activeDays,
         category: h.category ?? null,
         weeklyGoal: h.weeklyGoal ?? null,

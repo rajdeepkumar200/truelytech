@@ -110,7 +110,7 @@ export const useNotifications = (
           planned.push({
             key: `habitency:reminder:at:${r.id}:${now.toDateString()}`,
             title: `${r.emoji} Time for: ${r.name}`,
-            body: formatCuratedNote('reminder', `It\'s time! ${getRandomMotivation()}`),
+            body: formatCuratedNote('reminder', `It's time! ${getRandomMotivation()}`),
             at,
           });
         }
@@ -135,7 +135,7 @@ export const useNotifications = (
           planned.push({
             key: `habitency:schedule:at:${item.id}:${now.toDateString()}`,
             title: `${emoji} Time for: ${item.task}`,
-            body: formatCuratedNote('schedule', `Let\'s do this! ${getRandomMotivation()}`),
+            body: formatCuratedNote('schedule', `Let's do this! ${getRandomMotivation()}`),
             at,
           });
         }

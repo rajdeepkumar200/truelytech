@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import NotificationSettings from './NotificationSettings';
 import ThemeToggle from './ThemeToggle';
+import ContactForm from './ContactForm';
 import { NotificationPreferences } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -39,6 +40,7 @@ const SettingsDialog = ({
 }: SettingsDialogProps) => {
   const { user, signOut } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showContact, setShowContact] = useState(false);
   const [apkUrl, setApkUrl] = useState<string>('');
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
   // Fallback for displayName if user_metadata is missing
@@ -122,6 +124,18 @@ const SettingsDialog = ({
             <Bell className="mr-2 h-4 w-4" />
             <span>Notifications</span>
           </DropdownMenuItem>
+
+          {/* Contact Us */}
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onSelect={(e) => {
+              e.preventDefault();
+              setShowContact(true);
+            }}
+          >
+            <User className="mr-2 h-4 w-4" />
+            <span>Contact Us</span>
+          </DropdownMenuItem>
           
           {/* Download APK (Android only) */}
           {isAndroid && apkUrl && (
@@ -166,6 +180,9 @@ const SettingsDialog = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Contact Us Dialog */}
+      <ContactForm open={showContact} onOpenChange={setShowContact} />
     </>
   );
 };

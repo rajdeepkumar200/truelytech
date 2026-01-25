@@ -4,15 +4,17 @@ import { cn } from '@/lib/utils';
 
 interface HabitRowProps {
   name: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
   todayIndex: number;
-  onToggleDay: (dayIndex: number) => void;
+  weekKey: string;
+  onToggleDay: (dayIndex: number, weekKey: string) => void;
   onDelete: () => void;
 }
 
 const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const HabitRow = ({ name, completedDays, todayIndex, onToggleDay, onDelete }: HabitRowProps) => {
+const HabitRow = ({ name, completedWeeks, weekKey, todayIndex, onToggleDay, onDelete }: HabitRowProps) => {
+  const completedDays = completedWeeks?.[weekKey] ?? Array(7).fill(false);
   const completedCount = completedDays.filter(Boolean).length;
   const progressPercent = (completedCount / 7) * 100;
 
@@ -49,7 +51,7 @@ const HabitRow = ({ name, completedDays, todayIndex, onToggleDay, onDelete }: Ha
             day={day}
             isComplete={completedDays[index]}
             isToday={index === todayIndex}
-            onClick={() => onToggleDay(index)}
+            onClick={() => onToggleDay(index, weekKey)}
           />
         ))}
       </div>

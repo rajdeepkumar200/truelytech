@@ -1,5 +1,9 @@
+// Helper for legacy code compatibility
+export function getCompletedDays(habit, weekKey) {
+  return habit.completedWeeks?.[weekKey] ?? Array(7).fill(false);
+}
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings, X, Eye, EyeOff } from 'lucide-react';
+import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings, X, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,7 +29,7 @@ interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
   category?: string;
   streak?: number;
@@ -35,11 +39,15 @@ interface Habit {
 
 interface MonthlyHabitCalendarProps {
   habits: Habit[];
-  onToggleDay: (habitId: string, dayIndex: number) => void;
+  // Pass the week key to operate on
+  weekKey: string;
+  onToggleDay: (habitId: string, dayIndex: number, weekKey: string) => void;
   onDeleteHabit: (habitId: string) => void;
   onDeleteMultipleHabits?: (habitIds: string[]) => void;
   onToggleActiveDay?: (habitId: string, dayIndex: number) => void;
   onToggleVisibility?: (habitId: string) => void;
+  onMarkComplete?: (habitId: string) => void;
+  readOnly?: boolean;
 }
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -50,11 +58,11 @@ const getCurrentDayIndex = (): number => {
   return day === 0 ? 6 : day - 1;
 };
 
-const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): number => {
+const calculateStreak = (completedArr: boolean[], activeDays: boolean[]): number => {
   let streak = 0;
-  for (let i = completedDays.length - 1; i >= 0; i--) {
+  for (let i = completedArr.length - 1; i >= 0; i--) {
     if (!activeDays[i]) continue;
-    if (completedDays[i]) {
+    if (completedArr[i]) {
       streak++;
     } else {
       break;
@@ -63,14 +71,21 @@ const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): numbe
   return streak;
 };
 
-const MonthlyHabitCalendar = ({ 
-  habits, 
-  onToggleDay, 
-  onDeleteHabit, 
+const MonthlyHabitCalendar = ({
+  habits,
+  weekKey,
+  onToggleDay,
+  onDeleteHabit,
   onDeleteMultipleHabits,
   onToggleActiveDay,
-  onToggleVisibility
+  onToggleVisibility,
+  onMarkComplete,
+  readOnly = false,
 }: MonthlyHabitCalendarProps) => {
+  // Helper: get completedArr for a habit for the selected week
+  function getCompletedArr(habit) {
+    return habit.completedWeeks?.[weekKey] ?? Array(7).fill(false);
+  }
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
@@ -86,20 +101,27 @@ const MonthlyHabitCalendar = ({
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
-  // Scroll to today on mount
+  // Scroll to show today at the left edge on mount
   useEffect(() => {
-    // Use a small timeout to ensure DOM is ready
     const timer = setTimeout(() => {
-      const todayElement = document.getElementById('today-column');
+      // Use querySelector within the scrollable container to avoid duplicate ID issues
+      // (mobile and desktop both render this component, causing duplicate IDs)
+      const todayElement = scrollRef.current?.querySelector('#today-column');
       if (todayElement && scrollRef.current) {
-        const elementLeft = todayElement.offsetLeft;
-        const containerWidth = scrollRef.current.clientWidth;
-        // Center the current day, but ensure it's clearly visible
-        // On mobile, we might want it slightly to the left of center if possible, 
-        // but centering is generally the safest bet for "in front" visibility
-        scrollRef.current.scrollLeft = elementLeft - containerWidth / 2 + todayElement.clientWidth / 2;
+        const scrollContainer = scrollRef.current;
+
+        // Get today's position within the scrollable content
+        const todayLeft = (todayElement as HTMLElement).offsetLeft;
+
+        // Each column is 32px wide. To show today at the left edge,
+        // we scroll to show 1-2 days before today (if available)
+        const columnWidth = 32;
+        const daysToShowBefore = 1; // Show 1 day before today for context
+        const targetScroll = Math.max(0, todayLeft - (columnWidth * daysToShowBefore));
+
+        scrollContainer.scrollLeft = targetScroll;
       }
-    }, 300); // Increased timeout slightly to ensure layout is stable
+    }, 300);
     return () => clearTimeout(timer);
   }, [monthDays]);
 
@@ -149,33 +171,34 @@ const MonthlyHabitCalendar = ({
   // Calculate daily progress for each day of the month
   const dailyProgress = useMemo(() => {
     const today = startOfDay(new Date());
-    
+
     return monthDays.map((day) => {
       const dayStart = startOfDay(day);
       const isFutureDay = isAfter(dayStart, today);
       const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
-      
+
       // Only show progress for current week (completedDays is a weekly array)
       // Past weeks show stale data from the weekly array, so hide it
       if (isFutureDay || !isCurrentWeek) {
         return 0;
       }
-      
+
       const dayOfWeek = getDay(day);
       const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      
+
       let totalActive = 0;
       let totalCompleted = 0;
-      
+
       habits.forEach(habit => {
+        const weekCompleted = getCompletedArr(habit);
         if (habit.activeDays[dayIndex]) {
           totalActive++;
-          if (habit.completedDays[dayIndex]) {
+          if (weekCompleted[dayIndex]) {
             totalCompleted++;
           }
         }
       });
-      
+
       return totalActive > 0 ? Math.round((totalCompleted / totalActive) * 100) : 0;
     });
   }, [habits, monthDays]);
@@ -216,10 +239,10 @@ const MonthlyHabitCalendar = ({
             </Button>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>Habits: <strong className="text-foreground">{habits.length}</strong></span>
-          <span>Completed: <strong className="text-accent">{habits.reduce((acc, h) => acc + h.completedDays.filter(Boolean).length, 0)}</strong></span>
+          <span>Completed: <strong className="text-accent">{habits.reduce((acc, h) => acc + (getCompletedDays(h, weekKey).filter(Boolean).length), 0)}</strong></span>
         </div>
       </div>
 
@@ -257,16 +280,16 @@ const MonthlyHabitCalendar = ({
           <div className="h-[52px] border-b border-border/30 flex items-end pb-1 px-2">
             <span className="text-xs font-medium text-muted-foreground uppercase">My Habits</span>
           </div>
-          
+
           {/* Habit rows */}
           {habits.map((habit) => {
             const activeDays = habit.activeDays || Array(7).fill(true);
-            const streak = calculateStreak(habit.completedDays, activeDays);
+            const streak = calculateStreak(getCompletedDays(habit, weekKey), activeDays);
             const isSelected = selectedHabits.has(habit.id);
 
             return (
-              <div 
-                key={habit.id} 
+              <div
+                key={habit.id}
                 className={cn(
                   "group flex items-center gap-1.5 h-[36px] px-2 border-b border-border/20",
                   isSelected && "bg-destructive/5"
@@ -283,6 +306,11 @@ const MonthlyHabitCalendar = ({
                 )}
                 <span className="text-sm flex-shrink-0">{habit.icon}</span>
                 <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
+                {habit.completedDate === new Date().toISOString().split('T')[0] && (
+                  <span className="ml-1 flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20" title="Marked as completed">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                  </span>
+                )}
                 {streak > 0 && (
                   <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
                     <Flame className="w-2.5 h-2.5 text-orange-500" />
@@ -333,6 +361,16 @@ const MonthlyHabitCalendar = ({
                           </button>
                           <button
                             onClick={() => {
+                              onMarkComplete?.(habit.id);
+                              setSettingsHabitId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 rounded transition-colors"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Mark as Completed
+                          </button>
+                          <button
+                            onClick={() => {
                               setSettingsHabitId(null);
                               setDeleteConfirmId(habit.id);
                             }}
@@ -349,7 +387,7 @@ const MonthlyHabitCalendar = ({
               </div>
             );
           })}
-          
+
           {/* Progress label */}
           <div className="h-[28px] flex items-center px-2">
             <span className="text-[10px] font-medium text-muted-foreground uppercase">Progress</span>
@@ -358,153 +396,186 @@ const MonthlyHabitCalendar = ({
 
         {/* Scrollable Right Column: Days */}
         <div className="flex-1 min-w-0 relative group/scroll">
+          {/* Mouse drag-to-scroll logic */}
           <div
-            className="overflow-x-auto scrollbar-none max-w-full"
+            className="overflow-x-auto scrollbar-none max-w-full cursor-grab active:cursor-grabbing"
             ref={scrollRef}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            onMouseDown={e => {
+              const el = scrollRef.current;
+              if (!el) return;
+              let startX = e.pageX - el.offsetLeft;
+              let scrollLeft = el.scrollLeft;
+              let isDown = true;
+              const onMouseMove = (ev) => {
+                if (!isDown) return;
+                const x = ev.pageX - el.offsetLeft;
+                const walk = x - startX;
+                el.scrollLeft = scrollLeft - walk;
+              };
+              const onMouseUp = () => {
+                isDown = false;
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+              };
+              window.addEventListener('mousemove', onMouseMove);
+              window.addEventListener('mouseup', onMouseUp);
+            }}
           >
             <div className="min-w-max">
-            {/* Day headers with week grouping */}
-            <div className="flex border-b border-border/30 h-[52px]">
-              {monthDays.map((day, idx) => {
-                const dayOfWeek = getDay(day);
-                const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                const isCurrentDay = isToday(day);
-                const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-                const isWeekStart = dayOfWeek === 1; // Monday
+              {/* Day headers with week grouping */}
+              <div className="flex border-b border-border/30 h-[52px]">
+                {monthDays.map((day, idx) => {
+                  const dayOfWeek = getDay(day);
+                  const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                  const isCurrentDay = isToday(day);
+                  const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+                  const isWeekStart = dayOfWeek === 1; // Monday
+
+                  return (
+                    <div
+                      key={idx}
+                      id={isCurrentDay ? 'today-column' : undefined}
+                      className={cn(
+                        "flex flex-col items-center justify-end pb-1 w-[32px] flex-shrink-0",
+                        isWeekStart && idx > 0 && "border-l border-border/40",
+                        isCurrentDay && "bg-accent/10 rounded-t-lg"
+                      )}
+                    >
+                      <span className={cn(
+                        "text-[10px] uppercase",
+                        isCurrentDay ? "text-accent font-bold" : "text-muted-foreground"
+                      )}>
+                        {dayNames[dayOfWeek]}
+                      </span>
+                      <span className={cn(
+                        "text-sm font-medium",
+                        isCurrentDay ? "text-accent" : "text-foreground"
+                      )}>
+                        {format(day, 'd')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Habit completion grid */}
+              {habits.map((habit) => {
+                const activeDays = habit.activeDays || Array(7).fill(true);
 
                 return (
-                  <div
-                    key={idx}
-                    id={isCurrentDay ? 'today-column' : undefined}
-                    className={cn(
-                      "flex flex-col items-center justify-end pb-1 w-[32px] flex-shrink-0",
-                      isWeekStart && idx > 0 && "border-l border-border/40",
-                      isCurrentDay && "bg-accent/10 rounded-t-lg"
-                    )}
-                  >
-                    <span className={cn(
-                      "text-[10px] uppercase",
-                      isCurrentDay ? "text-accent font-bold" : "text-muted-foreground"
-                    )}>
-                      {dayNames[dayOfWeek]}
-                    </span>
-                    <span className={cn(
-                      "text-sm font-medium",
-                      isCurrentDay ? "text-accent" : "text-foreground"
-                    )}>
-                      {format(day, 'd')}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                  <div key={habit.id} className="flex h-[36px] border-b border-border/20">
+                    {monthDays.map((day, idx) => {
+                      const dayOfWeek = getDay(day);
+                      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                      const isCurrentDay = isToday(day);
+                      const isActive = activeDays[dayIndex];
+                      const today = startOfDay(new Date());
+                      const dayStart = startOfDay(day);
+                      const isFutureDay = isAfter(dayStart, today);
+                      const isPastDay = isBefore(dayStart, today);
 
-            {/* Habit completion grid */}
-            {habits.map((habit) => {
-              const activeDays = habit.activeDays || Array(7).fill(true);
+                      // Calculate the week key for this day
+                      const year = day.getFullYear();
+                      const tmp = new Date(day.getTime());
+                      tmp.setHours(0, 0, 0, 0);
+                      tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+                      const week1 = new Date(tmp.getFullYear(), 0, 4);
+                      const weekNo = 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+                      const weekKeyForDay = `${year}-W${String(weekNo).padStart(2, '0')}`;
 
-              return (
-                <div key={habit.id} className="flex h-[36px] border-b border-border/20">
-                  {monthDays.map((day, idx) => {
-                    const dayOfWeek = getDay(day);
-                    const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                    const isCurrentDay = isToday(day);
-                    const isActive = activeDays[dayIndex];
-                    const today = startOfDay(new Date());
-                    const dayStart = startOfDay(day);
-                    const isFutureDay = isAfter(dayStart, today);
-                    const isPastDay = isBefore(dayStart, today);
-                    
-                    // Only show completion status for current week AND not future days
-                    const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
-                    const canShowCompletion = isCurrentWeek && !isFutureDay;
-                    const isComplete = canShowCompletion ? habit.completedDays[dayIndex] : false;
-                    const isWeekStart = dayOfWeek === 1;
+                      // Only show completion status for current week AND not future days
+                      const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
+                      const canShowCompletion = isCurrentWeek && !isFutureDay;
+                      // Use the correct week's array for this day
+                      const weekCompleted = habit.completedWeeks?.[weekKeyForDay] ?? Array(7).fill(false);
+                      const isComplete = weekCompleted[dayIndex];
+                      const isWeekStart = dayOfWeek === 1;
 
-                    return (
-                      <div
-                        key={idx}
-                        className={cn(
-                          "w-[32px] flex-shrink-0 flex items-center justify-center",
-                          isWeekStart && idx > 0 && "border-l border-border/40",
-                          isCurrentDay && "bg-accent/10"
-                        )}
-                      >
-                        {isActive ? (
-                          isCurrentDay ? (
-                            <div onClick={(e) => {
-                              e.stopPropagation();
-                              onToggleDay(habit.id, dayIndex);
-                            }}>
+                      return (
+                        <div
+                          key={idx}
+                          className={cn(
+                            "w-[32px] flex-shrink-0 flex items-center justify-center",
+                            isWeekStart && idx > 0 && "border-l border-border/40",
+                            isCurrentDay && "bg-accent/10"
+                          )}
+                        >
+                          {isActive ? (
+                            // Only allow editing for current week and today or future days in current week
+                            !readOnly && isSameWeek(day, new Date(), { weekStartsOn: 1 }) && !isFutureDay && isSameDay(day, today) ? (
+                              <div onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleDay(habit.id, dayIndex, weekKeyForDay);
+                              }}>
+                                <Checkbox
+                                  checked={isComplete}
+                                  onCheckedChange={() => { }} // Handled by parent div to prevent double events
+                                  className={cn(
+                                    "w-5 h-5 border-2 transition-all pointer-events-none",
+                                    isComplete
+                                      ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
+                                      : "border-accent ring-1 ring-accent/30"
+                                  )}
+                                />
+                              </div>
+                            ) : (
                               <Checkbox
                                 checked={isComplete}
-                                onCheckedChange={() => {}} // Handled by parent div to prevent double events
+                                disabled
                                 className={cn(
-                                  "w-5 h-5 border-2 transition-all pointer-events-none", // Disable pointer events on checkbox to let div handle click
+                                  "w-5 h-5 border-2 transition-all pointer-events-none",
                                   isComplete
                                     ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
-                                    : "border-accent ring-1 ring-accent/30"
+                                    : "border-border/30 bg-muted/10 opacity-50",
+                                  (readOnly || isFutureDay || !isSameWeek(day, new Date(), { weekStartsOn: 1 })) && "opacity-60"
                                 )}
                               />
-                            </div>
+                            )
                           ) : (
-                            <div
-                              className={cn(
-                                "w-5 h-5 rounded border flex items-center justify-center",
-                                isComplete
-                                  ? "bg-habit-checkbox border-habit-checkbox"
-                                  : "border-border/30 bg-muted/10 opacity-50"
-                              )}
-                              // onClick removed to prevent editing past/future days
-                            >
-                              {isComplete && <span className="text-[10px] text-white">✓</span>}
-                            </div>
-                          )
-                        ) : (
-                          <div className="w-5 h-5 rounded bg-muted/10" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-
-            {/* Daily Progress Row */}
-            <div className="flex h-[28px]">
-              {dailyProgress.map((progress, idx) => {
-                const day = monthDays[idx];
-                const dayOfWeek = getDay(day);
-                const isCurrentDay = isToday(day);
-                const isWeekStart = dayOfWeek === 1;
-                const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
-
-                return (
-                  <div
-                    key={idx}
-                    className={cn(
-                      "w-[32px] flex-shrink-0 flex items-center justify-center",
-                      isWeekStart && idx > 0 && "border-l border-border/40",
-                      isCurrentDay && "bg-accent/10 rounded-b-lg"
-                    )}
-                  >
-                    {isCurrentWeek && (
-                      <span className={cn(
-                        "text-[10px] font-medium",
-                        progress >= 80 ? "text-accent" :
-                        progress >= 50 ? "text-foreground" : "text-muted-foreground"
-                      )}>
-                        {progress}%
-                      </span>
-                    )}
+                            <div className="w-5 h-5 rounded bg-muted/10" />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
-            </div>
-            
-            {/* Consistency Graph */}
-            <ConsistencyGraph data={dailyProgress} days={monthDays} />
+
+              {/* Daily Progress Row */}
+              <div className="flex h-[28px]">
+                {dailyProgress.map((progress, idx) => {
+                  const day = monthDays[idx];
+                  const dayOfWeek = getDay(day);
+                  const isCurrentDay = isToday(day);
+                  const isWeekStart = dayOfWeek === 1;
+                  const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
+
+                  return (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "w-[32px] flex-shrink-0 flex items-center justify-center",
+                        isWeekStart && idx > 0 && "border-l border-border/40",
+                        isCurrentDay && "bg-accent/10 rounded-b-lg"
+                      )}
+                    >
+                      {isCurrentWeek && (
+                        <span className={cn(
+                          "text-[10px] font-medium",
+                          progress >= 80 ? "text-accent" :
+                            progress >= 50 ? "text-foreground" : "text-muted-foreground"
+                        )}>
+                          {progress}%
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Consistency Graph */}
+              <ConsistencyGraph data={dailyProgress} days={monthDays} />
             </div>
           </div>
         </div>

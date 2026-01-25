@@ -2,11 +2,21 @@ import { Target, TrendingUp } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
+// ...existing code...
 interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
+  activeDays: boolean[];
+  category?: string;
+  weeklyGoal?: number;
+}
+interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
   category?: string;
   weeklyGoal?: number;
@@ -35,7 +45,13 @@ const HabitGoals = ({ habits, onUpdateGoal }: HabitGoalsProps) => {
       <div className="space-y-3">
         {habitsWithGoals.map(habit => {
           const activeDays = habit.activeDays || Array(7).fill(true);
-          const completedCount = habit.completedDays.filter((c, i) => c && activeDays[i]).length;
+          // Get current week key
+          const today = new Date();
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7)); // Monday as start
+          const weekKey = weekStart.toISOString().slice(0, 10);
+          const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
+          const completedCount = completedArr.filter((c, i) => c && activeDays[i]).length;
           const goal = habit.weeklyGoal || 0;
           const progressPercent = goal > 0 ? Math.min((completedCount / goal) * 100, 100) : 0;
           const isAchieved = completedCount >= goal;

@@ -5,26 +5,51 @@ declare global {
   }
 }
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
-import { useEntitlement } from '../hooks/useEntitlement';
+import { useEntitlement, markAsPaid } from '../hooks/useEntitlement';
+import { useAuth } from '../contexts/AuthContext';
 
 export function PaywallPage() {
-  const entitlement = useEntitlement();
+  const { user } = useAuth();
+  const entitlement = useEntitlement(user);
+  const [isScriptLoading, setIsScriptLoading] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  // Get Razorpay key from environment variables
+  const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
   // Razorpay payment handler
   const openRazorpay = () => {
+    if (!scriptLoaded || !window.Razorpay) {
+      alert('Razorpay is not loaded yet. Please try again in a moment.');
+      return;
+    }
+
+    if (!razorpayKey) {
+      alert('Payment configuration is not set up. Please contact support.');
+      return;
+    }
+
     const options = {
-      key: 'rzp_test_YourKeyHere', // Replace with your Razorpay key
+      key: razorpayKey,
       amount: 10000, // 100 INR in paise
       currency: 'INR',
       name: 'TruelyTech',
       description: 'Premium Subscription',
-      image: '/logo192.png',
+      image: '/truelytech-logo.svg',
       handler: function (response: { razorpay_payment_id: string }) {
+        console.log('Payment successful:', response);
         alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-        // You can add further logic here (e.g., API call to verify payment)
+        // Mark user as paid to unlock premium features
+        markAsPaid();
+        // You can add further logic here (e.g., API call to verify payment on backend)
+      },
+      modal: {
+        ondismiss: function() {
+          console.log('Payment modal dismissed');
+        }
       },
       prefill: {
         name: '',
@@ -34,18 +59,39 @@ export function PaywallPage() {
         color: '#6366f1',
       },
     };
-    // @ts-expect-error
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.error('Error opening Razorpay:', error);
+      alert('Failed to open payment gateway. Please try again.');
+    }
   };
 
   useEffect(() => {
     // Load Razorpay script if not already loaded
     if (typeof window.Razorpay === 'undefined') {
+      setIsScriptLoading(true);
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
+
+      script.onload = () => {
+        console.log('Razorpay script loaded successfully');
+        setScriptLoaded(true);
+        setIsScriptLoading(false);
+      };
+
+      script.onerror = () => {
+        console.error('Failed to load Razorpay script');
+        setIsScriptLoading(false);
+        alert('Failed to load payment gateway. Please check your internet connection and try again.');
+      };
+
       document.body.appendChild(script);
+    } else {
+      setScriptLoaded(true);
     }
   }, []);
 
@@ -62,12 +108,27 @@ export function PaywallPage() {
           Unlock premium to access advanced features like reminders, statistics, and more. Habits tracking stays free forever!
         </p>
         <div className="mt-6 flex flex-col gap-2">
-          <Button onClick={openRazorpay}>
-            Pay ₹100 with Razorpay
+          <Button
+            onClick={openRazorpay}
+            className="mx-auto w-40"
+            size="lg"
+            variant="primary"
+            disabled={isScriptLoading || !razorpayKey}
+          >
+            {isScriptLoading ? 'Loading...' : 'Pay Now'}
           </Button>
-          <Button asChild variant="ghost">
-            <Link to="/">Back to Habits</Link>
-          </Button>
+
+          {!razorpayKey && (
+            <p className="text-xs text-center opacity-70 text-destructive">
+              Payment gateway not configured
+            </p>
+          )}
+          {/* Only show Back to Habits if user is not locked out */}
+          {entitlement.isInTrial || entitlement.isPaid ? (
+            <Button asChild variant="ghost">
+              <Link to="/">Back to Habits</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

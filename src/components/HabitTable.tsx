@@ -32,7 +32,7 @@ interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
   category?: string;
   streak?: number;
@@ -41,7 +41,7 @@ interface Habit {
 
 interface HabitTableProps {
   habits: Habit[];
-  onToggleDay: (habitId: string, dayIndex: number) => void;
+  onToggleDay: (habitId: string, dayIndex: number, weekKey: string) => void;
   onDeleteHabit: (habitId: string) => void;
   onDeleteMultipleHabits?: (habitIds: string[]) => void;
   onUpdateActiveDays: (habitId: string, activeDays: boolean[]) => void;
@@ -69,11 +69,11 @@ const getCurrentDayIndex = (): number => {
   return day === 0 ? 6 : day - 1;
 };
 
-const calculateStreak = (completedDays: boolean[], activeDays: boolean[]): number => {
+const calculateStreak = (completedArr: boolean[], activeDays: boolean[]): number => {
   let streak = 0;
-  for (let i = completedDays.length - 1; i >= 0; i--) {
+  for (let i = completedArr.length - 1; i >= 0; i--) {
     if (!activeDays[i]) continue;
-    if (completedDays[i]) {
+    if (completedArr[i]) {
       streak++;
     } else {
       break;
@@ -88,6 +88,16 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const currentDayIndex = getCurrentDayIndex();
+  const weekKey = (() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const tmp = new Date(now.getTime());
+    tmp.setHours(0, 0, 0, 0);
+    tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+    const week1 = new Date(tmp.getFullYear(), 0, 4);
+    const weekNo = 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+    return `${year}-W${String(weekNo).padStart(2, '0')}`;
+  })();
   const goalOptions = [0, 3, 4, 5, 6, 7];
   const isMobile = useIsMobile();
 
@@ -224,7 +234,8 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
             {/* Rows */}
             {habits.map((habit) => {
               const activeDays = habit.activeDays || Array(7).fill(true);
-              const streak = calculateStreak(habit.completedDays, activeDays);
+              const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
+              const streak = calculateStreak(completedArr, activeDays);
               const isSelected = selectedHabits.has(habit.id);
 
               return (
@@ -268,11 +279,11 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                   <div className="w-12 flex items-center justify-center touch-manipulation">
                     {activeDays[currentDayIndex] ? (
                       <Checkbox
-                        checked={habit.completedDays[currentDayIndex]}
-                        onCheckedChange={() => onToggleDay(habit.id, currentDayIndex)}
+                        checked={habit.completedWeeks?.[weekKey]?.[currentDayIndex] ?? false}
+                        onCheckedChange={() => onToggleDay(habit.id, currentDayIndex, weekKey)}
                         className={cn(
                           "w-6 h-6 border-2 transition-all touch-manipulation",
-                          habit.completedDays[currentDayIndex]
+                          habit.completedWeeks?.[weekKey]?.[currentDayIndex]
                             ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
                             : "border-accent ring-1 ring-accent/30"
                         )}
@@ -303,14 +314,15 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
             {/* Rows */}
             {habits.map((habit) => {
               const activeDays = habit.activeDays || Array(7).fill(true);
+              const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
               const activeDaysCount = activeDays.filter(Boolean).length;
-              const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
+              const completedCount = completedArr.filter((completed, i) => completed && activeDays[i]).length;
               const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
 
               return (
                 <div key={habit.id} className="flex items-center py-2 h-[44px] min-w-max touch-manipulation">
                   <div className="flex gap-4 px-3">
-                    {habit.completedDays.map((completed, dayIndex) => {
+                    {completedArr.map((completed, dayIndex) => {
                       if (dayIndex === currentDayIndex) return null;
                       const isFutureDay = dayIndex > currentDayIndex;
                       const isComplete = completed && !isFutureDay;
@@ -381,10 +393,11 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-0.5">
                 {habits.map((habit, index) => {
                   const activeDays = habit.activeDays || Array(7).fill(true);
+                  const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
                   const activeDaysCount = activeDays.filter(Boolean).length;
-                  const completedCount = habit.completedDays.filter((completed, i) => completed && activeDays[i]).length;
+                  const completedCount = completedArr.filter((completed, i) => completed && activeDays[i]).length;
                   const progressPercent = activeDaysCount > 0 ? (completedCount / activeDaysCount) * 100 : 0;
-                  const streak = calculateStreak(habit.completedDays, activeDays);
+                  const streak = calculateStreak(completedArr, activeDays);
                   const isSelected = selectedHabits.has(habit.id);
 
                   return (
@@ -533,7 +546,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                           </div>
 
                           {/* Day Checkboxes */}
-                          {habit.completedDays.map((completed, dayIndex) => {
+                          {completedArr.map((completed, dayIndex) => {
                             const isCurrentDay = dayIndex === currentDayIndex;
                             const isFutureDay = dayIndex > currentDayIndex;
                             const isComplete = completed && !isFutureDay;
@@ -544,7 +557,7 @@ const HabitTable = ({ habits, onToggleDay, onDeleteHabit, onDeleteMultipleHabits
                                   isCurrentDay ? (
                                     <Checkbox
                                       checked={isComplete}
-                                      onCheckedChange={() => onToggleDay(habit.id, dayIndex)}
+                                      onCheckedChange={() => onToggleDay(habit.id, dayIndex, weekKey)}
                                       className={cn(
                                         "w-5 h-5 border-2 transition-all",
                                         isComplete 

@@ -9,17 +9,26 @@ interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
   hidden?: boolean;
 }
 
 interface DailyHabitViewProps {
   habits: Habit[];
-  onToggleDay: (habitId: string, dayIndex: number) => void;
+  onToggleDay: (habitId: string, dayIndex: number, weekKey: string) => void;
 }
 
 const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
+    const getCurrentWeekKey = (date = new Date()) => {
+      const year = date.getFullYear();
+      const tmp = new Date(date.getTime());
+      tmp.setHours(0, 0, 0, 0);
+      tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+      const week1 = new Date(tmp.getFullYear(), 0, 4);
+      const weekNo = 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+      return `${year}-W${String(weekNo).padStart(2, '0')}`;
+    };
   const [selectedDate, setSelectedDate] = useState(new Date());
   
   // Reset to today if the component remounts or on initial load
@@ -76,13 +85,11 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
 
         {habits.map(habit => {
           if (habit.hidden) return null;
-
           const isActiveDay = habit.activeDays[dayIndex];
           const isFutureDay = isAfter(startOfDay(selectedDate), startOfDay(new Date()));
-          const isCompleted = isCurrentWeek && !isFutureDay && habit.completedDays[dayIndex];
-
-          if (!isActiveDay && isCurrentWeek) return null; // Don't show if not active today
-
+          const weekKey = getCurrentWeekKey(selectedDate);
+          const isCompleted = isCurrentWeek && !isFutureDay && habit.completedWeeks?.[weekKey]?.[dayIndex];
+          if (!isActiveDay && isCurrentWeek) return null;
           return (
             <div 
               key={habit.id}
@@ -95,7 +102,7 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
               )}
               onClick={() => {
                 if (isCurrentWeek && !isFutureDay) {
-                  onToggleDay(habit.id, dayIndex);
+                  onToggleDay(habit.id, dayIndex, weekKey);
                 }
               }}
             >

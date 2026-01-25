@@ -7,7 +7,7 @@ interface Habit {
   id: string;
   name: string;
   icon: string;
-  completedDays: boolean[];
+  completedWeeks: Record<string, boolean[]>;
   activeDays: boolean[];
 }
 
@@ -61,6 +61,7 @@ const ReportCards = ({ habits }: ReportCardsProps) => {
   const weekDays = useMemo(() => {
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     
+    const weekKey = weekStart.toISOString().slice(0, 10);
     return Array.from({ length: 7 }, (_, i) => {
       const day = addDays(weekStart, i);
       const dayOfWeek = day.getDay();
@@ -73,7 +74,8 @@ const ReportCards = ({ habits }: ReportCardsProps) => {
       habits.forEach(habit => {
         if (habit.activeDays[dayIndex]) {
           totalActive++;
-          const isComplete = habit.completedDays[dayIndex];
+          const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
+          const isComplete = completedArr[dayIndex];
           if (isComplete) totalCompleted++;
           tasksForDay.push({ icon: habit.icon, name: habit.name, completed: isComplete });
         }
@@ -99,6 +101,8 @@ const ReportCards = ({ habits }: ReportCardsProps) => {
     const days = eachDayOfInterval({ start, end });
     
     return days.map(day => {
+      const weekStart = startOfWeek(day, { weekStartsOn: 1 });
+      const weekKey = weekStart.toISOString().slice(0, 10);
       const dayOfWeek = getDay(day);
       const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       
@@ -108,7 +112,8 @@ const ReportCards = ({ habits }: ReportCardsProps) => {
       habits.forEach(habit => {
         if (habit.activeDays[dayIndex]) {
           totalActive++;
-          if (habit.completedDays[dayIndex]) totalCompleted++;
+          const completedArr = habit.completedWeeks?.[weekKey] || Array(7).fill(false);
+          if (completedArr[dayIndex]) totalCompleted++;
         }
       });
       
