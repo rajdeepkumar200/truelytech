@@ -52,6 +52,16 @@ export default function ContactForm({ open, onOpenChange }: ContactFormProps) {
             <Textarea name="message" required value={form.message} onChange={handleChange} placeholder="Tell us how we can help you..." className="min-h-[100px]" />
           </div>
           <Button type="submit" className="w-full">Send Enquiry</Button>
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            For Terms & Conditions and Privacy Policy, visit{' '}
+            <a
+              href="https://truelytechtechnologies.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline">
+              truelytechtechnologies.vercel.app
+            </a>
+          </p>
         </form>
       </DialogContent>
     </Dialog>
