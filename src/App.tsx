@@ -66,7 +66,6 @@ const App = () => (
         <Sonner />
         <UpdatePrompt />
         <DevTrialReset />
-        <WelcomeDialog />
         {!isFirebaseConfigured() ? (
           <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
             <div className="flex-1">
@@ -76,6 +75,7 @@ const App = () => (
           </div>
         ) : (
           <HashRouter>
+            <WelcomeDialog />
             <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
               <TrialBanner />
               <div className="flex-1">
