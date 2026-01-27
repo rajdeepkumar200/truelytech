@@ -13,6 +13,7 @@ import UpdatePrompt from "./components/UpdatePrompt";
 import BrandFooter from "./components/BrandFooter";
 import { RequirePremium } from "./components/RequirePremium";
 import { PaywallPage } from "./components/PaywallPage";
+import { DevTrialReset } from "./components/DevTrialReset";
 import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <UpdatePrompt />
+        <DevTrialReset />
         {!isFirebaseConfigured() ? (
           <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
             <div className="flex-1">

@@ -16,9 +16,45 @@ export function PaywallPage() {
   const entitlement = useEntitlement(user);
   const [isScriptLoading, setIsScriptLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Get Razorpay key from environment variables
   const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+  // Verify payment on backend
+  const verifyPayment = async (paymentData: {
+    razorpay_payment_id: string;
+    razorpay_order_id?: string;
+    razorpay_signature: string;
+  }) => {
+    try {
+      setIsVerifying(true);
+
+      const response = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('Payment verified successfully:', result.payment_id);
+        markAsPaid();
+        alert('Payment verified! Premium features unlocked. 🎉');
+      } else {
+        console.error('Payment verification failed:', result.error);
+        alert('Payment verification failed. Please contact support with Payment ID: ' + paymentData.razorpay_payment_id);
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      alert('Error verifying payment. Please contact support.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   // Razorpay payment handler
   const openRazorpay = () => {
@@ -34,20 +70,22 @@ export function PaywallPage() {
 
     const options = {
       key: razorpayKey,
-      amount: 10000, // 100 INR in paise
+      amount: 25000, // 250 INR in paise
       currency: 'INR',
       name: 'TruelyTech',
       description: 'Premium Subscription',
       image: '/truelytech-logo.svg',
-      handler: function (response: { razorpay_payment_id: string }) {
-        console.log('Payment successful:', response);
-        alert('Payment successful! Payment ID: ' + response.razorpay_payment_id);
-        // Mark user as paid to unlock premium features
-        markAsPaid();
-        // You can add further logic here (e.g., API call to verify payment on backend)
+      handler: async function (response: {
+        razorpay_payment_id: string;
+        razorpay_order_id?: string;
+        razorpay_signature: string;
+      }) {
+        console.log('Payment response received:', response);
+        // Verify payment on backend before unlocking features
+        await verifyPayment(response);
       },
       modal: {
-        ondismiss: function() {
+        ondismiss: function () {
           console.log('Payment modal dismissed');
         }
       },
@@ -112,10 +150,10 @@ export function PaywallPage() {
             onClick={openRazorpay}
             className="mx-auto w-40"
             size="lg"
-            variant="primary"
-            disabled={isScriptLoading || !razorpayKey}
+            variant="default"
+            disabled={isScriptLoading || !razorpayKey || isVerifying}
           >
-            {isScriptLoading ? 'Loading...' : 'Pay Now'}
+            {isVerifying ? 'Verifying...' : isScriptLoading ? 'Loading...' : 'Pay Now'}
           </Button>
 
           {!razorpayKey && (

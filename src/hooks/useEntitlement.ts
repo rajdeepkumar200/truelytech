@@ -58,7 +58,26 @@ export function useEntitlement(user: AuthUser | null = null): EntitlementState {
     // User is considered paid if they have paid OR are whitelisted
     const isPaid = readIsPaid() || isWhitelisted;
 
-    const trialEndsAt = firstRunAt + TRIAL_DAYS * DAY_MS;
+    // 🔧 DEV ONLY: Force trial to end for testing (only works in development mode)
+    const devForceTrialEnd = import.meta.env.DEV &&
+      import.meta.env.VITE_DEV_FORCE_TRIAL_END === 'true';
+
+    // Debug logging in dev mode
+    if (import.meta.env.DEV) {
+      console.log('🔧 Trial Debug:', {
+        forceEnd: devForceTrialEnd,
+        env: import.meta.env.VITE_DEV_FORCE_TRIAL_END,
+        isPaid,
+        whitelisted: isWhitelisted,
+        email: user?.email,
+      });
+    }
+
+    const trialEndsAt = devForceTrialEnd
+      ? firstRunAt // If dev flag is set, trial ended immediately
+      : firstRunAt + TRIAL_DAYS * DAY_MS; // Normal 7-day trial
+
+
     const now = Date.now();
 
     const isInTrial = now < trialEndsAt;
