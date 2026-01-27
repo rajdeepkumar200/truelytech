@@ -6,17 +6,35 @@ declare global {
 }
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { useEntitlement, markAsPaid } from '../hooks/useEntitlement';
 import { useAuth } from '../contexts/AuthContext';
+import { Settings, LogOut, Mail } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from './ui/dropdown-menu';
 
 export function PaywallPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const entitlement = useEntitlement(user);
   const [isScriptLoading, setIsScriptLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const handleContact = () => {
+    window.location.href = 'mailto:support@truelytech.com';
+  };
 
   // Get Razorpay key from environment variables
   const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
@@ -135,7 +153,33 @@ export function PaywallPage() {
 
   return (
     <div className="min-h-[60vh] w-full flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-xl border bg-background p-6">
+      <div className="w-full max-w-md rounded-xl border bg-background p-6 relative">
+        {/* Settings Menu */}
+        <div className="absolute top-4 right-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {user && (
+                <>
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuItem onClick={handleContact}>
+                <Mail className="mr-2 h-4 w-4" />
+                Contact Support
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <h1 className="text-2xl font-bold mb-2">Premium Locked</h1>
         <p className="text-sm opacity-80">
           {entitlement.isInTrial
