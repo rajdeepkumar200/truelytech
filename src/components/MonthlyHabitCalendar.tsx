@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import ConsistencyGraph from './ConsistencyGraph';
+import { HabitRowWrapper } from './HabitRowWrapper';
 
 interface Habit {
   id: string;
@@ -282,109 +283,111 @@ const MonthlyHabitCalendar = ({
           </div>
 
           {/* Habit rows */}
-          {habits.map((habit) => {
+          {habits.map((habit, habitIndex) => {
             const activeDays = habit.activeDays || Array(7).fill(true);
             const streak = calculateStreak(getCompletedDays(habit, weekKey), activeDays);
             const isSelected = selectedHabits.has(habit.id);
 
             return (
-              <div
-                key={habit.id}
-                className={cn(
-                  "group flex items-center gap-1.5 h-[36px] px-2 border-b border-border/20",
-                  isSelected && "bg-destructive/5"
-                )}
-              >
-                {selectedHabits.size > 0 && (
-                  <button onClick={() => toggleSelectHabit(habit.id)} className="flex-shrink-0">
-                    {isSelected ? (
-                      <CheckSquare className="w-3.5 h-3.5 text-destructive" />
-                    ) : (
-                      <Square className="w-3.5 h-3.5 text-muted-foreground" />
-                    )}
-                  </button>
-                )}
-                <span className="text-sm flex-shrink-0">{habit.icon}</span>
-                <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
-                {habit.completedDate === new Date().toISOString().split('T')[0] && (
-                  <span className="ml-1 flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20" title="Marked as completed">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                  </span>
-                )}
-                {streak > 0 && (
-                  <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
-                    <Flame className="w-2.5 h-2.5 text-orange-500" />
-                    <span className="text-[9px] font-medium text-orange-500">{streak}</span>
-                  </div>
-                )}
-                {selectedHabits.size === 0 && (
-                  <Popover open={settingsHabitId === habit.id} onOpenChange={(open) => setSettingsHabitId(open ? habit.id : null)}>
-                    <PopoverTrigger asChild>
-                      <button className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted/50 rounded flex-shrink-0">
-                        <Settings className="w-3 h-3 text-muted-foreground" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-52 p-3 bg-popover border-border" align="start">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-foreground">Active Days</span>
-                          <button onClick={() => setSettingsHabitId(null)} className="p-0.5 hover:bg-muted rounded">
-                            <X className="w-3 h-3 text-muted-foreground" />
-                          </button>
-                        </div>
-                        <div className="flex gap-1">
-                          {DAYS_OF_WEEK.map((day, idx) => (
-                            <button
-                              key={day}
-                              onClick={() => onToggleActiveDay?.(habit.id, idx)}
-                              className={cn(
-                                "w-7 h-7 rounded-full text-[10px] font-medium transition-all",
-                                activeDays[idx]
-                                  ? "bg-accent text-accent-foreground"
-                                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                              )}
-                            >
-                              {day[0]}
+              <HabitRowWrapper key={habit.id} habitIndex={habitIndex} habitName={habit.name}>
+                <div
+                  key={habit.id}
+                  className={cn(
+                    "group flex items-center gap-1.5 h-[36px] px-2 border-b border-border/20",
+                    isSelected && "bg-destructive/5"
+                  )}
+                >
+                  {selectedHabits.size > 0 && (
+                    <button onClick={() => toggleSelectHabit(habit.id)} className="flex-shrink-0">
+                      {isSelected ? (
+                        <CheckSquare className="w-3.5 h-3.5 text-destructive" />
+                      ) : (
+                        <Square className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
+                  <span className="text-sm flex-shrink-0">{habit.icon}</span>
+                  <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
+                  {habit.completedDate === new Date().toISOString().split('T')[0] && (
+                    <span className="ml-1 flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20" title="Marked as completed">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                    </span>
+                  )}
+                  {streak > 0 && (
+                    <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
+                      <Flame className="w-2.5 h-2.5 text-orange-500" />
+                      <span className="text-[9px] font-medium text-orange-500">{streak}</span>
+                    </div>
+                  )}
+                  {selectedHabits.size === 0 && (
+                    <Popover open={settingsHabitId === habit.id} onOpenChange={(open) => setSettingsHabitId(open ? habit.id : null)}>
+                      <PopoverTrigger asChild>
+                        <button className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted/50 rounded flex-shrink-0">
+                          <Settings className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-52 p-3 bg-popover border-border" align="start">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-foreground">Active Days</span>
+                            <button onClick={() => setSettingsHabitId(null)} className="p-0.5 hover:bg-muted rounded">
+                              <X className="w-3 h-3 text-muted-foreground" />
                             </button>
-                          ))}
+                          </div>
+                          <div className="flex gap-1">
+                            {DAYS_OF_WEEK.map((day, idx) => (
+                              <button
+                                key={day}
+                                onClick={() => onToggleActiveDay?.(habit.id, idx)}
+                                className={cn(
+                                  "w-7 h-7 rounded-full text-[10px] font-medium transition-all",
+                                  activeDays[idx]
+                                    ? "bg-accent text-accent-foreground"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                )}
+                              >
+                                {day[0]}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="pt-2 border-t border-border space-y-1">
+                            <button
+                              onClick={() => {
+                                onToggleVisibility?.(habit.id);
+                                setSettingsHabitId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                            >
+                              {habit.hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                              {habit.hidden ? "Unhide Habit" : "Hide Habit"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                onMarkComplete?.(habit.id);
+                                setSettingsHabitId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 rounded transition-colors"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Mark as Completed
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSettingsHabitId(null);
+                                setDeleteConfirmId(habit.id);
+                              }}
+                              className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10 rounded transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Delete habit
+                            </button>
+                          </div>
                         </div>
-                        <div className="pt-2 border-t border-border space-y-1">
-                          <button
-                            onClick={() => {
-                              onToggleVisibility?.(habit.id);
-                              setSettingsHabitId(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                          >
-                            {habit.hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                            {habit.hidden ? "Unhide Habit" : "Hide Habit"}
-                          </button>
-                          <button
-                            onClick={() => {
-                              onMarkComplete?.(habit.id);
-                              setSettingsHabitId(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 rounded transition-colors"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Mark as Completed
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSettingsHabitId(null);
-                              setDeleteConfirmId(habit.id);
-                            }}
-                            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10 rounded transition-colors"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            Delete habit
-                          </button>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </HabitRowWrapper>
             );
           })}
 
@@ -460,85 +463,87 @@ const MonthlyHabitCalendar = ({
               </div>
 
               {/* Habit completion grid */}
-              {habits.map((habit) => {
+              {habits.map((habit, habitIndex) => {
                 const activeDays = habit.activeDays || Array(7).fill(true);
 
                 return (
-                  <div key={habit.id} className="flex h-[36px] border-b border-border/20">
-                    {monthDays.map((day, idx) => {
-                      const dayOfWeek = getDay(day);
-                      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                      const isCurrentDay = isToday(day);
-                      const isActive = activeDays[dayIndex];
-                      const today = startOfDay(new Date());
-                      const dayStart = startOfDay(day);
-                      const isFutureDay = isAfter(dayStart, today);
-                      const isPastDay = isBefore(dayStart, today);
+                  <HabitRowWrapper key={habit.id} habitIndex={habitIndex} habitName={habit.name}>
+                    <div key={habit.id} className="flex h-[36px] border-b border-border/20">
+                      {monthDays.map((day, idx) => {
+                        const dayOfWeek = getDay(day);
+                        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                        const isCurrentDay = isToday(day);
+                        const isActive = activeDays[dayIndex];
+                        const today = startOfDay(new Date());
+                        const dayStart = startOfDay(day);
+                        const isFutureDay = isAfter(dayStart, today);
+                        const isPastDay = isBefore(dayStart, today);
 
-                      // Calculate the week key for this day
-                      const year = day.getFullYear();
-                      const tmp = new Date(day.getTime());
-                      tmp.setHours(0, 0, 0, 0);
-                      tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
-                      const week1 = new Date(tmp.getFullYear(), 0, 4);
-                      const weekNo = 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
-                      const weekKeyForDay = `${year}-W${String(weekNo).padStart(2, '0')}`;
+                        // Calculate the week key for this day
+                        const year = day.getFullYear();
+                        const tmp = new Date(day.getTime());
+                        tmp.setHours(0, 0, 0, 0);
+                        tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+                        const week1 = new Date(tmp.getFullYear(), 0, 4);
+                        const weekNo = 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+                        const weekKeyForDay = `${year}-W${String(weekNo).padStart(2, '0')}`;
 
-                      // Only show completion status for current week AND not future days
-                      const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
-                      const canShowCompletion = isCurrentWeek && !isFutureDay;
-                      // Use the correct week's array for this day
-                      const weekCompleted = habit.completedWeeks?.[weekKeyForDay] ?? Array(7).fill(false);
-                      const isComplete = weekCompleted[dayIndex];
-                      const isWeekStart = dayOfWeek === 1;
+                        // Only show completion status for current week AND not future days
+                        const isCurrentWeek = isSameWeek(day, new Date(), { weekStartsOn: 1 });
+                        const canShowCompletion = isCurrentWeek && !isFutureDay;
+                        // Use the correct week's array for this day
+                        const weekCompleted = habit.completedWeeks?.[weekKeyForDay] ?? Array(7).fill(false);
+                        const isComplete = weekCompleted[dayIndex];
+                        const isWeekStart = dayOfWeek === 1;
 
-                      return (
-                        <div
-                          key={idx}
-                          className={cn(
-                            "w-[32px] flex-shrink-0 flex items-center justify-center",
-                            isWeekStart && idx > 0 && "border-l border-border/40",
-                            isCurrentDay && "bg-accent/10"
-                          )}
-                        >
-                          {isActive ? (
-                            // Only allow editing for current week and today or future days in current week
-                            !readOnly && isSameWeek(day, new Date(), { weekStartsOn: 1 }) && !isFutureDay && isSameDay(day, today) ? (
-                              <div onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleDay(habit.id, dayIndex, weekKeyForDay);
-                              }}>
+                        return (
+                          <div
+                            key={idx}
+                            className={cn(
+                              "w-[32px] flex-shrink-0 flex items-center justify-center",
+                              isWeekStart && idx > 0 && "border-l border-border/40",
+                              isCurrentDay && "bg-accent/10"
+                            )}
+                          >
+                            {isActive ? (
+                              // Only allow editing for current week and today or future days in current week
+                              !readOnly && isSameWeek(day, new Date(), { weekStartsOn: 1 }) && !isFutureDay && isSameDay(day, today) ? (
+                                <div onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleDay(habit.id, dayIndex, weekKeyForDay);
+                                }}>
+                                  <Checkbox
+                                    checked={isComplete}
+                                    onCheckedChange={() => { }} // Handled by parent div to prevent double events
+                                    className={cn(
+                                      "w-5 h-5 border-2 transition-all pointer-events-none",
+                                      isComplete
+                                        ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
+                                        : "border-accent ring-1 ring-accent/30"
+                                    )}
+                                  />
+                                </div>
+                              ) : (
                                 <Checkbox
                                   checked={isComplete}
-                                  onCheckedChange={() => { }} // Handled by parent div to prevent double events
+                                  disabled
                                   className={cn(
                                     "w-5 h-5 border-2 transition-all pointer-events-none",
                                     isComplete
                                       ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
-                                      : "border-accent ring-1 ring-accent/30"
+                                      : "border-border/30 bg-muted/10 opacity-50",
+                                    (readOnly || isFutureDay || !isSameWeek(day, new Date(), { weekStartsOn: 1 })) && "opacity-60"
                                   )}
                                 />
-                              </div>
+                              )
                             ) : (
-                              <Checkbox
-                                checked={isComplete}
-                                disabled
-                                className={cn(
-                                  "w-5 h-5 border-2 transition-all pointer-events-none",
-                                  isComplete
-                                    ? "bg-habit-checkbox border-habit-checkbox data-[state=checked]:bg-habit-checkbox data-[state=checked]:border-habit-checkbox"
-                                    : "border-border/30 bg-muted/10 opacity-50",
-                                  (readOnly || isFutureDay || !isSameWeek(day, new Date(), { weekStartsOn: 1 })) && "opacity-60"
-                                )}
-                              />
-                            )
-                          ) : (
-                            <div className="w-5 h-5 rounded bg-muted/10" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                              <div className="w-5 h-5 rounded bg-muted/10" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </HabitRowWrapper>
                 );
               })}
 
