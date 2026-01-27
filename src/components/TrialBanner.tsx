@@ -38,10 +38,10 @@ export function TrialBanner() {
     return (
         <div className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border-b border-purple-500/20">
             <div className="container mx-auto px-4 py-2">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-purple-500" />
-                        <span className="text-sm font-medium">
+                <div className="flex items-center justify-between gap-4 flex-wrap pr-24 sm:pr-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Sparkles className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">
                             {isLastDay ? (
                                 <>
                                     <Clock className="inline h-3 w-3 mr-1" />
@@ -58,7 +58,7 @@ export function TrialBanner() {
                             )}
                         </span>
                     </div>
-                    <Button asChild size="sm" variant="default" className="bg-purple-600 hover:bg-purple-700">
+                    <Button asChild size="sm" variant="default" className="bg-purple-600 hover:bg-purple-700 flex-shrink-0">
                         <Link to="/paywall">
                             Pay Now - ₹250
                         </Link>
