@@ -15,6 +15,7 @@ import { RequirePremium } from "./components/RequirePremium";
 import { PaywallPage } from "./components/PaywallPage";
 import { DevTrialReset } from "./components/DevTrialReset";
 import { TrialBanner } from "./components/TrialBanner";
+import { WelcomeDialog } from "./components/WelcomeDialog";
 import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
         <Sonner />
         <UpdatePrompt />
         <DevTrialReset />
+        <WelcomeDialog />
         {!isFirebaseConfigured() ? (
           <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
             <div className="flex-1">
