@@ -154,6 +154,9 @@ const Index = () => {
     return `${formatDate(monday, 'MMM d')}–${formatDate(sunday, 'd, yyyy')}`;
   }
   const navigate = useNavigate();
+
+  console.log("Index.tsx loaded - Link import check passed");
+
   const { user, loading: authLoading } = useAuth();
   const entitlement = useEntitlement(user);
   const { toast } = useToast();
