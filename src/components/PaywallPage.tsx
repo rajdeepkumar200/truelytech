@@ -206,11 +206,9 @@ export function PaywallPage() {
             </p>
           )}
           {/* Only show Back to Habits if user is not locked out */}
-          {entitlement.isInTrial || entitlement.isPaid ? (
-            <Button asChild variant="ghost">
-              <Link to="/">Back to Habits</Link>
-            </Button>
-          ) : null}
+          <Button asChild variant="ghost">
+            <Link to="/">Back to Habits</Link>
+          </Button>
         </div>
       </div>
     </div>
