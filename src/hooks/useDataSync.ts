@@ -96,6 +96,13 @@ export const useDataSync = () => {
     return collection(db, 'users', user.id, 'reminders');
   }, [user]);
 
+  const journalCollection = useCallback(() => {
+    if (!user) return null;
+    const db = getDb();
+    if (!db) return null;
+    return collection(db, 'users', user.id, 'journal_entries');
+  }, [user]);
+
   // Fetch habits from database
   const fetchHabits = useCallback(async (): Promise<Habit[]> => {
     if (!user) return [];
@@ -104,14 +111,14 @@ export const useDataSync = () => {
     if (!col) return [];
 
     const snap = await getDocs(query(col, orderBy('sortOrder', 'asc')));
-      const habits: Habit[] = [];
-      snap.docs.forEach((doc) => {
-        const data = doc.data();
-        let habit: any = { id: doc.id, ...data };
-        // Only use completedWeeks, ignore completedDays
-        habits.push(habit as Habit);
-      });
-      return habits;
+    const habits: Habit[] = [];
+    snap.docs.forEach((doc) => {
+      const data = doc.data();
+      let habit: any = { id: doc.id, ...data };
+      // Only use completedWeeks, ignore completedDays
+      habits.push(habit as Habit);
+    });
+    return habits;
   }, [user, habitsCollection]);
 
   // Save habits to database using upsert for proper sync
@@ -271,6 +278,51 @@ export const useDataSync = () => {
     await batch.commit();
   }, [user, remindersCollection]);
 
+  // Fetch journal entries
+  const fetchJournal = useCallback(async (): Promise<Record<string, string>> => {
+    if (!user) return {};
+
+    const col = journalCollection();
+    if (!col) return {};
+
+    const snap = await getDocs(col);
+    const entries: Record<string, string> = {};
+    snap.docs.forEach((doc) => {
+      const data = doc.data();
+      entries[doc.id] = data.content;
+    });
+    return entries;
+  }, [user, journalCollection]);
+
+  // Save journal entries
+  const saveJournal = useCallback(async (entries: Record<string, string>) => {
+    if (!user) return;
+    const db = getDb();
+    if (!db) return;
+
+    const batch = writeBatch(db);
+
+    // We only update changed entries ideally, but for now we'll upsert all active ones
+    // Or better: `Journal.tsx` calls this with *all* entries.
+    // To be efficient, we should maybe only save the *current* entry in the UI?
+    // But existing pattern is bulk save. We'll stick to bulk save for now but batch it.
+
+    // Optimization: Only write entries that changed? 
+    // For safety/simplicity given the user's "never lose data" request, let's just write all keys
+    // effectively validating usage.
+
+    Object.entries(entries).forEach(([dateKey, content]) => {
+      if (content.trim()) {
+        batch.set(doc(db, 'users', user.id, 'journal_entries', dateKey), {
+          content,
+          updatedAt: Date.now()
+        });
+      }
+    });
+
+    await batch.commit();
+  }, [user]);
+
   // Fetch settings
   const fetchSettings = useCallback(async (): Promise<NotificationPreferences | null> => {
     if (!user) return null;
@@ -309,6 +361,8 @@ export const useDataSync = () => {
     saveReminders,
     fetchSettings,
     saveSettings,
+    fetchJournal,
+    saveJournal,
     migrateLocalData,
   };
 };

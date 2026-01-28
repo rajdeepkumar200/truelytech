@@ -6,14 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save } from "lucide-react";
+
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDataSync } from "@/hooks/useDataSync";
 
 const Journal = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { fetchJournal, saveJournal } = useDataSync();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [entry, setEntry] = useState("");
   const [entries, setEntries] = useState<Record<string, string>>({});
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     const savedEntries = localStorage.getItem("journal-entries");
@@ -21,6 +27,30 @@ const Journal = () => {
       setEntries(JSON.parse(savedEntries));
     }
   }, []);
+
+  // Sync with cloud
+  useEffect(() => {
+    if (user && !dataLoaded) {
+      const loadCloudData = async () => {
+        try {
+          const cloudEntries = await fetchJournal();
+          setEntries(prev => {
+            const merged = { ...prev };
+            // Merge cloud entries (prefer cloud content usually, but preserve local if cloud is empty)
+            Object.entries(cloudEntries).forEach(([d, c]) => {
+              if (c) merged[d] = c;
+            });
+            localStorage.setItem("journal-entries", JSON.stringify(merged));
+            return merged;
+          });
+          setDataLoaded(true);
+        } catch (e) {
+          console.error("Failed to sync journal:", e);
+        }
+      };
+      loadCloudData();
+    }
+  }, [user, dataLoaded, fetchJournal]);
 
   useEffect(() => {
     if (date) {
@@ -31,13 +61,16 @@ const Journal = () => {
 
   const handleSave = () => {
     if (!date) return;
-    
+
     const dateKey = format(date, "yyyy-MM-dd");
     const newEntries = { ...entries, [dateKey]: entry };
-    
+
     setEntries(newEntries);
     localStorage.setItem("journal-entries", JSON.stringify(newEntries));
-    
+
+    // Save to cloud
+    saveJournal(newEntries);
+
     toast({
       title: "Entry saved",
       description: "Your journal entry has been saved successfully.",

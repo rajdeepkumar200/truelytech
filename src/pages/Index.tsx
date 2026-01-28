@@ -303,6 +303,7 @@ const Index = () => {
       localStorage.removeItem('schedule');
       localStorage.removeItem('reminders');
       localStorage.removeItem('notificationPrefs');
+      localStorage.removeItem('journal-entries');
 
       // Reset state to empty (will be populated from cloud)
       setHabits([]);
@@ -329,6 +330,7 @@ const Index = () => {
       localStorage.removeItem('schedule');
       localStorage.removeItem('reminders');
       localStorage.removeItem('notificationPrefs');
+      localStorage.removeItem('journal-entries');
       localStorage.removeItem('lastUserId');
 
       setHabits(defaultHabits);
