@@ -45,7 +45,15 @@ export function useEntitlement(user: AuthUser | null = null): EntitlementState {
   useEffect(() => {
     // Keep trial countdown reasonably fresh (once per minute).
     const id = window.setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => window.clearInterval(id);
+
+    // Listen for sync updates
+    const handleUpdate = () => setTick((t) => t + 1);
+    window.addEventListener('entitlement-updated', handleUpdate);
+
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('entitlement-updated', handleUpdate);
+    };
   }, []);
 
   return useMemo(() => {

@@ -352,6 +352,30 @@ export const useDataSync = () => {
     // Each user's data is strictly isolated in the cloud
   }, []);
 
+  // Fetch trial start date
+  const fetchTrialStart = useCallback(async (): Promise<number | null> => {
+    if (!user) return null;
+    const db = getDb();
+    if (!db) return null;
+    const settingsRef = doc(db, 'users', user.id, 'settings', 'trialStart');
+    const snap = await getDoc(settingsRef);
+    if (!snap.exists()) return null;
+    return snap.data().firstRunAt;
+  }, [user]);
+
+  // Save trial start date
+  const saveTrialStart = useCallback(async (firstRunAt: number) => {
+    if (!user) return;
+    const db = getDb();
+    if (!db) return;
+    const settingsRef = doc(db, 'users', user.id, 'settings', 'trialStart');
+    // Only set if not already set (immutable)
+    const snap = await getDoc(settingsRef);
+    if (!snap.exists()) {
+      await setDoc(settingsRef, { firstRunAt });
+    }
+  }, [user]);
+
   return {
     fetchHabits,
     saveHabits,
@@ -363,6 +387,8 @@ export const useDataSync = () => {
     saveSettings,
     fetchJournal,
     saveJournal,
+    fetchTrialStart,
+    saveTrialStart,
     migrateLocalData,
   };
 };

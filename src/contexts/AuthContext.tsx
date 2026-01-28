@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
-      
+
       // Force account selection prompt
       provider.setCustomParameters({
         prompt: 'select_account'
@@ -96,8 +96,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await signInWithPopup(auth, provider);
       }
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google Sign-In error:', error);
+      if (error.code === 'auth/unauthorized-domain') {
+        console.error('DOMAIN ERROR: You must add this domain to Firebase Console > Authentication > Settings > Authorized Domains:', window.location.origin);
+        alert(`Calculated Origin: ${window.location.origin}\n\nPlease add this domain to Firebase Console Authorized Domains.`);
+      }
       return { error: error as Error };
     }
   };
@@ -165,12 +169,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      loading, 
-      signInWithGoogle, 
-      signInWithEmail, 
+    <AuthContext.Provider value={{
+      user,
+      session,
+      loading,
+      signInWithGoogle,
+      signInWithEmail,
       signUpWithEmail,
       signInWithOtp,
       verifyOtp,

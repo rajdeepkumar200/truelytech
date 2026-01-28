@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { Settings, User, Eye, Bell, Download, LogOut, Moon, Sun } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -32,11 +33,11 @@ interface SettingsDialogProps {
   onToggleHiddenHabits: () => void;
 }
 
-const SettingsDialog = ({ 
-  notificationPrefs, 
+const SettingsDialog = ({
+  notificationPrefs,
   onUpdateNotificationPrefs,
   showHiddenHabits,
-  onToggleHiddenHabits 
+  onToggleHiddenHabits
 }: SettingsDialogProps) => {
   const { user, signOut } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -61,7 +62,7 @@ const SettingsDialog = ({
       })
       .catch(err => console.error('Failed to fetch update info:', err));
   }, [isAndroid]);
-  
+
   return (
     <>
       <DropdownMenu>
@@ -88,9 +89,9 @@ const SettingsDialog = ({
               <DropdownMenuSeparator />
             </>
           )}
-          
+
           {/* Show Hidden Habits */}
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer"
             onSelect={(e) => {
               e.preventDefault();
@@ -100,9 +101,9 @@ const SettingsDialog = ({
             <Eye className="mr-2 h-4 w-4" />
             <span>{showHiddenHabits ? 'Hide' : 'Show'} Hidden Habits</span>
           </DropdownMenuItem>
-          
+
           {/* Theme Toggle */}
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer"
             onSelect={(e) => e.preventDefault()}
           >
@@ -112,9 +113,9 @@ const SettingsDialog = ({
               <ThemeToggle />
             </div>
           </DropdownMenuItem>
-          
+
           {/* Notifications */}
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer"
             onSelect={(e) => {
               e.preventDefault();
@@ -136,9 +137,9 @@ const SettingsDialog = ({
             <User className="mr-2 h-4 w-4" />
             <span>Contact Us</span>
           </DropdownMenuItem>
-          
-          {/* Download APK (Android only) */}
-          {isAndroid && apkUrl && (
+
+          {/* Download APK (Android browser only - hidden in native app) */}
+          {isAndroid && !Capacitor.isNativePlatform() && apkUrl && (
             <DropdownMenuItem asChild className="cursor-pointer">
               <a href={apkUrl} download>
                 <Download className="mr-2 h-4 w-4" />
@@ -146,13 +147,13 @@ const SettingsDialog = ({
               </a>
             </DropdownMenuItem>
           )}
-          
+
           {/* Sign Out */}
           {user && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={signOut} 
+              <DropdownMenuItem
+                onClick={signOut}
                 className="text-destructive cursor-pointer"
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -162,7 +163,7 @@ const SettingsDialog = ({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      
+
       {/* Notifications Dialog */}
       <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">

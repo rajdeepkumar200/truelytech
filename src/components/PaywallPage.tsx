@@ -206,8 +206,8 @@ export function PaywallPage() {
             </p>
           )}
           {/* Only show Back to Habits if user is not locked out */}
-          <Button asChild variant="ghost">
-            <Link to="/">Back to Habits</Link>
+          <Button onClick={() => navigate('/')} variant="ghost">
+            Back to Habits
           </Button>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useEntitlement } from '../hooks/useEntitlement';
 import { useAuth } from '../contexts/AuthContext';
 import { Lock } from 'lucide-react';
@@ -15,6 +15,7 @@ export function RequirePremium({ children }: Props) {
   const { user } = useAuth();
   const entitlement = useEntitlement(user);
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (entitlement.isLocked) {
     return (
@@ -25,9 +26,8 @@ export function RequirePremium({ children }: Props) {
         </div>
 
         {/* Lock overlay */}
-        <Link
-          to="/paywall"
-          state={{ from: location.pathname }}
+        <div
+          onClick={() => navigate('/paywall', { state: { from: location.pathname } })}
           className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm cursor-pointer hover:bg-background/70 transition-colors rounded-lg group z-10"
         >
           <Lock className="h-12 w-12 text-purple-500 mb-3 group-hover:scale-110 transition-transform" />
@@ -40,7 +40,7 @@ export function RequirePremium({ children }: Props) {
           <div className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
             Unlock Now
           </div>
-        </Link>
+        </div>
       </div>
     );
   }

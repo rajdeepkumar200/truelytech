@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlement } from '@/hooks/useEntitlement';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { useEffect, useState } from 'react';
@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 export function TrialBanner() {
     const { user } = useAuth();
     const entitlement = useEntitlement(user);
+    const navigate = useNavigate();
     const [, setTick] = useState(0);
 
     // Update every minute to keep countdown fresh
@@ -58,10 +59,8 @@ export function TrialBanner() {
                             )}
                         </span>
                     </div>
-                    <Button asChild size="sm" variant="default" className="bg-purple-600 hover:bg-purple-700 flex-shrink-0">
-                        <Link to="/paywall">
-                            Pay Now - ₹250
-                        </Link>
+                    <Button onClick={() => navigate('/paywall')} size="sm" variant="default" className="bg-purple-600 hover:bg-purple-700 flex-shrink-0">
+                        Pay Now - ₹250
                     </Button>
                 </div>
             </div>

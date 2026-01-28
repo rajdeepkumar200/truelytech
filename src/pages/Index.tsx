@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Navigate, useNavigate, Link } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Book } from 'lucide-react';
 import ClockWidget from '@/components/ClockWidget';
@@ -298,10 +298,12 @@ const Index = () => {
     };
   }, [authLoading, user, notificationPrefs.eyeBlinkReminders, notificationPrefs.waterIntakeReminders, notificationPrefs.waterIntakeInterval, isPomodoroFocusActive]);
 
-  // Reset data when user changes (login/logout/switch accounts) - clear shared local storage
+  // Reset data when user changes (switch accounts)
+  // BUT: If logging in for the first time (local -> authenticated), KEEP local data so it can be synced.
   useEffect(() => {
-    if (user?.id && user.id !== lastUserId) {
-      // User changed - clear local storage to prevent data leakage between accounts
+    // Case 1: Switching from one logged-in account to another
+    if (user?.id && lastUserId && user.id !== lastUserId) {
+      console.log('Switching accounts - clearing local storage');
       localStorage.removeItem('habits-v3');
       localStorage.removeItem('schedule');
       localStorage.removeItem('reminders');
@@ -322,13 +324,11 @@ const Index = () => {
         eyeBlinkReminders: false,
         waterIntakeReminders: false,
       });
-
-      // Store current user ID
-      localStorage.setItem('lastUserId', user.id);
-      setLastUserId(user.id);
       setDataLoaded(false);
-    } else if (!user && lastUserId) {
-      // User logged out - clear everything
+    }
+    // Case 2: Logging out
+    else if (!user && lastUserId) {
+      console.log('Logging out - clearing local storage');
       localStorage.removeItem('habits-v3');
       localStorage.removeItem('schedule');
       localStorage.removeItem('reminders');
@@ -342,6 +342,14 @@ const Index = () => {
       setLastUserId(null);
       setDataLoaded(false);
     }
+
+    // Case 3: First login (offline -> authenticated)
+    // We DO NOT clear storage here. We let syncData() handle the merge/upload.
+
+    if (user?.id) {
+      setLastUserId(user.id);
+      localStorage.setItem('lastUserId', user.id);
+    }
   }, [user, lastUserId]);
 
   // Sync data function
@@ -349,13 +357,49 @@ const Index = () => {
     if (!user) return;
 
     try {
-      const [cloudHabits, cloudSchedule, cloudReminders, cloudSettings] = await Promise.all([
-        fetchHabits(),
-        fetchSchedule(),
-        fetchReminders(),
-        fetchSettings()
+      const sync = {
+        fetchHabits,
+        fetchSchedule,
+        fetchReminders,
+        fetchSettings,
+        fetchJournal,
+        fetchTrialStart,
+        saveTrialStart
+      };
+
+      const [
+        cloudHabits,
+        cloudSchedule,
+        cloudReminders,
+        cloudSettings,
+        cloudJournal,
+        cloudTrialStart
+      ] = await Promise.all([
+        sync.fetchHabits(),
+        sync.fetchSchedule(),
+        sync.fetchReminders(),
+        sync.fetchSettings(),
+        sync.fetchJournal(),
+        sync.fetchTrialStart()
       ]);
 
+      // Sync Trial Start Date (Server Source of Truth)
+      if (cloudTrialStart) {
+        // Server has a date, use it
+        const localStart = Number(localStorage.getItem('habitex_firstRunAt'));
+        if (localStart !== cloudTrialStart) {
+          localStorage.setItem('habitex_firstRunAt', String(cloudTrialStart));
+          window.dispatchEvent(new Event('entitlement-updated'));
+          console.log('Synced trial start from cloud:', new Date(cloudTrialStart).toISOString());
+        }
+      } else {
+        // No server date, push local date (New User)
+        const localStart = Number(localStorage.getItem('habitex_firstRunAt'));
+        if (localStart > 0) {
+          await sync.saveTrialStart(localStart);
+          console.log('Saved local trial start to cloud');
+        }
+      }
       if (cloudHabits.length > 0) {
         setHabits(prevHabits => {
           // Merge cloud habits with local habits to preserve history
@@ -791,9 +835,7 @@ const Index = () => {
                       <h3 className="font-semibold">Weekly Report</h3>
                       <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                     </div>
-                    <Button asChild>
-                      <Link to="/paywall">Unlock</Link>
-                    </Button>
+                    <Button onClick={() => navigate('/paywall')}>Unlock</Button>
                   </div>
                 ) : (
                   <WeeklyReportCards habits={visibleHabits} />
@@ -855,9 +897,7 @@ const Index = () => {
                     <h3 className="font-semibold">Reminders</h3>
                     <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                   </div>
-                  <Button asChild>
-                    <Link to="/paywall">Unlock</Link>
-                  </Button>
+                  <Button onClick={() => navigate('/paywall')}>Unlock</Button>
                 </div>
               ) : (
                 <RemindersRedesigned
@@ -885,9 +925,7 @@ const Index = () => {
                     <h3 className="font-semibold">Pomodoro</h3>
                     <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                   </div>
-                  <Button asChild>
-                    <Link to="/paywall">Unlock</Link>
-                  </Button>
+                  <Button onClick={() => navigate('/paywall')}>Unlock</Button>
                 </div>
               ) : (
                 <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
@@ -920,9 +958,7 @@ const Index = () => {
                       <h3 className="font-semibold">Weekly Report</h3>
                       <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                     </div>
-                    <Button asChild>
-                      <Link to="/paywall">Unlock</Link>
-                    </Button>
+                    <Button onClick={() => navigate('/paywall')}>Unlock</Button>
                   </div>
                 ) : (
                   <WeeklyReportCards habits={visibleHabits} />
@@ -934,9 +970,7 @@ const Index = () => {
                     <h3 className="font-semibold">Goals</h3>
                     <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                   </div>
-                  <Button asChild>
-                    <Link to="/paywall">Unlock</Link>
-                  </Button>
+                  <Button onClick={() => navigate('/paywall')}>Unlock</Button>
                 </div>
               ) : (
                 <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
