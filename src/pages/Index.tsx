@@ -352,7 +352,51 @@ const Index = () => {
       ]);
 
       if (cloudHabits.length > 0) {
-        setHabits(cloudHabits);
+        setHabits(prevHabits => {
+          // Merge cloud habits with local habits to preserve history
+          // 1. Create a map of cloud habits for easy lookup
+          const cloudMap = new Map(cloudHabits.map(h => [h.id, h]));
+
+          // 2. Start with cloud habits as the base (server is source of truth for checking existence)
+          // But if we have local habits that are NOT in cloud yet (e.g. created offline)?
+          // Sync logic usually assumes cloud is master. But for safety, we'll keep local ones if they are new.
+
+          // Actually, simpler approach:
+          // If a habit exists in both, merge completedWeeks.
+          // If only in cloud, take it.
+          // If only local... if it's a valid ID, keep it? 
+          // For now let's trust cloud list but merge data for existing ones.
+
+          return cloudHabits.map(cloudHabit => {
+            const localHabit = prevHabits.find(h => h.id === cloudHabit.id);
+            if (!localHabit) return cloudHabit;
+
+            // Merge completedWeeks
+            const mergedWeeks = { ...cloudHabit.completedWeeks };
+
+            // If local has weeks that cloud doesn't, add them (preserves history lost in cloud)
+            // If local has weeks that cloud HAS, we generally trust cloud? 
+            // Or we union the true values? Union is safest for "never lose data".
+            if (localHabit.completedWeeks) {
+              Object.entries(localHabit.completedWeeks).forEach(([weekKey, localDays]) => {
+                if (!mergedWeeks[weekKey]) {
+                  // Week missing in cloud, keep local
+                  mergedWeeks[weekKey] = localDays;
+                } else {
+                  // Week exists in both, perform union of completions
+                  mergedWeeks[weekKey] = mergedWeeks[weekKey].map((val, idx) =>
+                    val || (localDays[idx] === true)
+                  );
+                }
+              });
+            }
+
+            return {
+              ...cloudHabit,
+              completedWeeks: mergedWeeks
+            };
+          });
+        });
       }
       if (cloudSchedule.length > 0) {
         setSchedule(cloudSchedule);
