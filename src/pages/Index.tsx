@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Book } from 'lucide-react';
 import ClockWidget from '@/components/ClockWidget';
