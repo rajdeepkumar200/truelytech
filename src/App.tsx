@@ -15,6 +15,7 @@ import { RequirePremium } from "./components/RequirePremium";
 import { PaywallPage } from "./components/PaywallPage";
 import { DevTrialReset } from "./components/DevTrialReset";
 import { TrialBanner } from "./components/TrialBanner";
+import { AppUpdater } from "./components/AppUpdater";
 import { WelcomeDialog, TrialEndedDialog } from "./components/WelcomeDialog";
 import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
 
@@ -66,6 +67,7 @@ const App = () => (
         <Sonner />
         <UpdatePrompt />
         <DevTrialReset />
+        <AppUpdater />
         {!isFirebaseConfigured() ? (
           <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
             <div className="flex-1">
