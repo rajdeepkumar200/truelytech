@@ -611,21 +611,41 @@ const Index = () => {
 
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
-        // Deactivate all days starting from tomorrow
-        const updatedActiveDays = [...habit.activeDays];
-        for (let i = currentDayIndex + 1; i < 7; i++) {
-          updatedActiveDays[i] = false;
-        }
+        // Toggle logic: If already completed, unmark it.
+        // We check if completedDate is set (any date, or specifically today? Let's allow unmarking any).
+        // Actually, strictly speaking, if they marked it 'mistakenly', it's likely recent.
+        // But allowing undo at any time is safer.
 
-        return {
-          ...habit,
-          activeDays: updatedActiveDays,
-          completedDate: today // Mark when this habit was completed
-        };
+        if (habit.completedDate) {
+          // UNMARK: Restore active days (default to true for remaining days)
+          const updatedActiveDays = [...habit.activeDays];
+          for (let i = currentDayIndex + 1; i < 7; i++) {
+            updatedActiveDays[i] = true;
+          }
+          const { completedDate, ...rest } = habit; // Remove completedDate
+          return {
+            ...rest,
+            activeDays: updatedActiveDays,
+          };
+        } else {
+          // MARK COMPLETE
+          // Deactivate all days starting from tomorrow
+          const updatedActiveDays = [...habit.activeDays];
+          for (let i = currentDayIndex + 1; i < 7; i++) {
+            updatedActiveDays[i] = false;
+          }
+
+          return {
+            ...habit,
+            activeDays: updatedActiveDays,
+            completedDate: today // Mark when this habit was completed
+          };
+        }
       }
       return habit;
     }));
   };
+
 
   const handleAddScheduleItem = (time: string, task: string, emoji: string) => {
     const newItem: ScheduleItem = {

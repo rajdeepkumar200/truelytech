@@ -369,7 +369,7 @@ const MonthlyHabitCalendar = ({
                               className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 rounded transition-colors"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              Mark as Completed
+                              {habit.completedDate ? "Mark as Incomplete" : "Mark as Completed"}
                             </button>
                             <button
                               onClick={() => {
