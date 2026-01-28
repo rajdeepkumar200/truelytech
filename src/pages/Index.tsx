@@ -763,24 +763,22 @@ const Index = () => {
 
             {/* Mobile: Monthly Habit Calendar (main section) */}
             <div className="lg:hidden space-y-4 animate-fade-in">
-              <RequirePremium>
-                <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
-                  <MonthlyHabitCalendar
-                    habits={visibleHabits}
-                    weekKey={selectedWeek}
-                    onToggleDay={handleToggleDay}
-                    onDeleteHabit={handleDeleteHabit}
-                    onDeleteMultipleHabits={handleDeleteMultipleHabits}
-                    onToggleActiveDay={(habitId, dayIndex) => handleToggleDay(habitId, dayIndex, selectedWeek)}
-                    onToggleVisibility={handleToggleHabitVisibility}
-                    onMarkComplete={handleMarkHabitComplete}
-                    readOnly={selectedWeek !== getCurrentWeekKey()}
-                  />
-                  <div id="add-habit-mobile">
-                    <AddHabitRow onAdd={handleAddHabit} />
-                  </div>
+              <div className="bg-popover rounded-2xl border border-border/50 p-2 sm:p-4 shadow-sm">
+                <MonthlyHabitCalendar
+                  habits={visibleHabits}
+                  weekKey={selectedWeek}
+                  onToggleDay={handleToggleDay}
+                  onDeleteHabit={handleDeleteHabit}
+                  onDeleteMultipleHabits={handleDeleteMultipleHabits}
+                  onToggleActiveDay={(habitId, dayIndex) => handleToggleDay(habitId, dayIndex, selectedWeek)}
+                  onToggleVisibility={handleToggleHabitVisibility}
+                  onMarkComplete={handleMarkHabitComplete}
+                  readOnly={selectedWeek !== getCurrentWeekKey()}
+                />
+                <div id="add-habit-mobile">
+                  <AddHabitRow onAdd={handleAddHabit} />
                 </div>
-              </RequirePremium>
+              </div>
 
               {/* Report Cards */}
               <div className="bg-popover rounded-2xl border border-border/50 p-4 shadow-sm">
@@ -790,7 +788,9 @@ const Index = () => {
                       <h3 className="font-semibold">Weekly Report</h3>
                       <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                     </div>
-                    <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                    <Button asChild>
+                      <Link to="/paywall">Unlock</Link>
+                    </Button>
                   </div>
                 ) : (
                   <WeeklyReportCards habits={visibleHabits} />
@@ -852,7 +852,9 @@ const Index = () => {
                     <h3 className="font-semibold">Reminders</h3>
                     <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                   </div>
-                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                  <Button asChild>
+                    <Link to="/paywall">Unlock</Link>
+                  </Button>
                 </div>
               ) : (
                 <RemindersRedesigned
@@ -880,7 +882,9 @@ const Index = () => {
                     <h3 className="font-semibold">Pomodoro</h3>
                     <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                   </div>
-                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                  <Button asChild>
+                    <Link to="/paywall">Unlock</Link>
+                  </Button>
                 </div>
               ) : (
                 <PomodoroTimerWithPopup onPomodoroStateChange={handlePomodoroStateChange} />
@@ -913,7 +917,9 @@ const Index = () => {
                       <h3 className="font-semibold">Weekly Report</h3>
                       <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                     </div>
-                    <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                    <Button asChild>
+                      <Link to="/paywall">Unlock</Link>
+                    </Button>
                   </div>
                 ) : (
                   <WeeklyReportCards habits={visibleHabits} />
@@ -925,7 +931,9 @@ const Index = () => {
                     <h3 className="font-semibold">Goals</h3>
                     <p className="text-sm opacity-80">Locked after the 7-day trial.</p>
                   </div>
-                  <Button onClick={() => setPaywallOpen(true)}>Unlock</Button>
+                  <Button asChild>
+                    <Link to="/paywall">Unlock</Link>
+                  </Button>
                 </div>
               ) : (
                 <HabitGoals habits={visibleHabits} onUpdateGoal={handleUpdateGoal} />
