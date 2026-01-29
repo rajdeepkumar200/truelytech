@@ -34,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { ArrowLeft, Mail, Lock, Download } from 'lucide-react';
 import { getFirebaseAuth } from '@/integrations/firebase/client';
+import { Capacitor } from '@capacitor/core';
 import { confirmPasswordReset, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 
 const emailSchema = z.string().trim().email({ message: "Invalid email address" }).max(255);
@@ -195,17 +196,17 @@ const Auth = () => {
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
-    
+
     const emailResult = emailSchema.safeParse(email);
     if (!emailResult.success) {
       newErrors.email = emailResult.error.errors[0].message;
     }
-    
+
     const passwordResult = passwordSchema.safeParse(password);
     if (!passwordResult.success) {
       newErrors.password = passwordResult.error.errors[0].message;
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -258,9 +259,9 @@ const Auth = () => {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
+
     setLoading(true);
-    
+
     try {
       if (mode === 'login') {
         const { error } = await signInWithEmail(email, password);
@@ -610,8 +611,13 @@ const Auth = () => {
           </p>
         </div>
 
+        {/* Debug Info - Remove before final release */}
+        <div className="p-2 bg-yellow-100 text-xs text-yellow-800 mb-2 rounded">
+          v{import.meta.env.VITE_APP_VERSION || '3.0.0'} | Native: {String(Capacitor.isNativePlatform())} | Android: {String(isAndroid)}
+        </div>
+
         {/* Android APK download (public, no separate page) */}
-        {isAndroid && <AndroidApkDownloadButton />}
+        {isAndroid && !Capacitor.isNativePlatform() && <AndroidApkDownloadButton />}
 
         {/* Google Sign In - only show on initial screens */}
         {(mode === 'otp-request' || mode === 'login' || mode === 'signup') && (
