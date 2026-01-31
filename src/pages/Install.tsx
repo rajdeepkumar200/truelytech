@@ -127,6 +127,41 @@ const Install = () => {
               </div>
             )}
 
+            {/* Android Instructions - Show when no install prompt available */}
+            {!isIOS && isMobile && !deferredPrompt && (
+              <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6">
+                <p className="text-sm text-foreground font-medium">To install on Android:</p>
+                <div className="space-y-4 text-left">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-accent">1</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-foreground">Tap the</span>
+                      <Menu className="w-5 h-5 text-accent" />
+                      <span className="text-sm text-foreground">menu (⋮) in the top right</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-accent">2</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-foreground">Select</span>
+                      <Download className="w-4 h-4 text-accent" />
+                      <span className="text-sm text-foreground">"Install app" or "Add to Home screen"</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-accent">3</span>
+                    </div>
+                    <span className="text-sm text-foreground">Tap "Install" to confirm</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {!isMobile && !deferredPrompt && (
               <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6">
                 <p className="text-sm text-foreground font-medium">To install on Windows/macOS:</p>
