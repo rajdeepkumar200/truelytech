@@ -29,10 +29,18 @@ const Install = () => {
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     setIsMobile(mobile);
 
+    // Check if prompt was already captured globally
+    if ((window as any).deferredInstallPrompt) {
+      setDeferredPrompt((window as any).deferredInstallPrompt);
+    }
+
     // Listen for install prompt
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(promptEvent);
+      // Store globally so it persists across navigation
+      (window as any).deferredInstallPrompt = promptEvent;
     };
 
     window.addEventListener('beforeinstallprompt', handler);
@@ -52,6 +60,8 @@ const Install = () => {
       setIsInstalled(true);
     }
     setDeferredPrompt(null);
+    // Clear global reference
+    delete (window as any).deferredInstallPrompt;
   };
 
   return (
