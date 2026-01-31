@@ -782,7 +782,7 @@ const Index = () => {
         <div className="flex flex-col items-center">
           <div className="text-center group">
             <h1 className="font-display text-3xl sm:text-4xl md:text-5xl bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent tracking-tight transition-all duration-500 hover:scale-105">
-              Daily Habits
+              Habitency | Daily Habits
             </h1>
             <p className="text-muted-foreground text-xs sm:text-sm mt-1 transition-all duration-300 group-hover:text-accent">Build better routines, one day at a time ✨</p>
           </div>
