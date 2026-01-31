@@ -1,6 +1,6 @@
 {
-  "name": "Daily Habits",
-  "short_name": "Habits",
+  "name": "Habitency",
+  "short_name": "Habitency",
   "description": "Beautiful daily habit tracker to build consistency and track your weekly progress.",
   "start_url": ".",
   "display": "standalone",

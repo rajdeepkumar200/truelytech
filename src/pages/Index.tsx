@@ -165,6 +165,8 @@ const Index = () => {
     fetchSchedule, saveSchedule,
     fetchReminders, saveReminders,
     fetchSettings, saveSettings,
+    fetchJournal, saveJournal,
+    fetchTrialStart, saveTrialStart,
     migrateLocalData
   } = useDataSync();
 
@@ -382,6 +384,9 @@ const Index = () => {
         sync.fetchJournal(),
         sync.fetchTrialStart()
       ]);
+
+      // Mark that we've attempted sync (used by useEntitlement to prevent premature trial init)
+      sessionStorage.setItem('sync_attempted', '1');
 
       // Sync Trial Start Date (Server Source of Truth)
       if (cloudTrialStart) {

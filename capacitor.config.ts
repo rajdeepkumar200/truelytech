@@ -9,7 +9,13 @@ const config: CapacitorConfig = {
   server: {
     ...(serverUrl ? { url: serverUrl } : {}),
     androidScheme: 'http',
-    cleartextTrafficPermitted: true
+    cleartext: true
+  },
+  plugins: {
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      clientId: '536614179434-rnpenriej85hsq22inquikr3ekgubnh6.apps.googleusercontent.com',
+    }
   }
 };
 

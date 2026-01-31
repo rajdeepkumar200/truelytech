@@ -18,9 +18,28 @@ export type EntitlementState = {
 
 function getOrInitFirstRunAt(): number {
   const existing = Number(localStorage.getItem(FIRST_RUN_KEY) ?? '0');
-  if (Number.isFinite(existing) && existing > 0) return existing;
+  if (Number.isFinite(existing) && existing > 0) {
+    return existing;
+  }
+
+  // Don't initialize immediately - wait for Firebase sync first
+  // This prevents creating a new trial date when logging in on a new device
+  // The sync logic in Index.tsx will set this from Firebase if it exists
   const now = Date.now();
+
+  // Only set if we're truly a new user (no user logged in yet)
+  // Otherwise, wait for sync to complete
+  const hasAttemptedSync = sessionStorage.getItem('sync_attempted');
+  if (!hasAttemptedSync) {
+    // First load - don't initialize yet, return current time for calculation
+    // but don't save it
+    console.log('⏳ Waiting for Firebase sync before initializing trial date');
+    return now;
+  }
+
+  // Sync has been attempted, safe to initialize
   localStorage.setItem(FIRST_RUN_KEY, String(now));
+  console.log('✅ Initialized new trial date:', new Date(now).toISOString());
   return now;
 }
 
@@ -93,6 +112,19 @@ export function useEntitlement(user: AuthUser | null = null): EntitlementState {
 
     const msLeft = Math.max(0, trialEndsAt - now);
     const trialDaysLeft = isPaid ? 0 : Math.max(0, Math.ceil(msLeft / DAY_MS));
+
+    // Debug logging (works in production too)
+    console.log('🔐 Entitlement Check:', {
+      email: user?.email,
+      whitelisted: isWhitelisted,
+      isPaid,
+      firstRunAt: new Date(firstRunAt).toISOString(),
+      trialEndsAt: new Date(trialEndsAt).toISOString(),
+      now: new Date(now).toISOString(),
+      isInTrial,
+      isLocked,
+      trialDaysLeft,
+    });
 
     return {
       firstRunAt,

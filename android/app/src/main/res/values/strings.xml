@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Habitency</string>
     <string name="title_activity_main">Habitency</string>
-    <string name="package_name">com.truelytech.habits</string>
-    <string name="custom_url_scheme">com.truelytech.habits</string>
+    <string name="package_name">com.truelytech.habitency</string>
+    <string name="custom_url_scheme">com.truelytech.habitency</string>
+    <string name="server_client_id">536614179434-rnpenriej85hsq22inquikr3ekgubnh6.apps.googleusercontent.com</string>
 </resources>

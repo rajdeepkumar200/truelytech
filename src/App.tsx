@@ -9,15 +9,17 @@ import Journal from "./pages/Journal";
 import Install from "./pages/Install";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import UpdatePrompt from "./components/UpdatePrompt";
+
 import BrandFooter from "./components/BrandFooter";
 import { RequirePremium } from "./components/RequirePremium";
 import { PaywallPage } from "./components/PaywallPage";
 import { DevTrialReset } from "./components/DevTrialReset";
 import { TrialBanner } from "./components/TrialBanner";
-import { AppUpdater } from "./components/AppUpdater";
+
 import { WelcomeDialog, TrialEndedDialog } from "./components/WelcomeDialog";
 import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
+import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 
 const queryClient = new QueryClient();
 
@@ -59,53 +61,71 @@ const FirebaseConfigError = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <UpdatePrompt />
-        <DevTrialReset />
-        <AppUpdater />
-        {!isFirebaseConfigured() ? (
-          <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
-            <div className="flex-1">
-              <FirebaseConfigError />
-            </div>
-            <BrandFooter />
-          </div>
-        ) : (
-          <HashRouter>
-            <WelcomeDialog />
-            <TrialEndedDialog />
+const App = () => {
+  // Initialize Google Auth plugin on app startup (Android only)
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      import('@codetrix-studio/capacitor-google-auth')
+        .then(({ GoogleAuth }) => {
+          GoogleAuth.initialize({
+            clientId: '536614179434-rnpenriej85hsq22inquikr3ekgubnh6.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: true,
+          });
+          console.log('GoogleAuth initialized successfully');
+        })
+        .catch((error) => {
+          console.error('Failed to initialize GoogleAuth:', error);
+        });
+    }
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <DevTrialReset />
+          {!isFirebaseConfigured() ? (
             <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
-              <TrialBanner />
               <div className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/paywall" element={<PaywallPage />} />
-                  <Route
-                    path="/journal"
-                    element={
-                      <RequirePremium>
-                        <Journal />
-                      </RequirePremium>
-                    }
-                  />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/install" element={<Install />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <FirebaseConfigError />
               </div>
               <BrandFooter />
             </div>
-          </HashRouter>
-        )}
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+          ) : (
+            <HashRouter>
+              <WelcomeDialog />
+              <TrialEndedDialog />
+              <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
+                <TrialBanner />
+                <div className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/paywall" element={<PaywallPage />} />
+                    <Route
+                      path="/journal"
+                      element={
+                        <RequirePremium>
+                          <Journal />
+                        </RequirePremium>
+                      }
+                    />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/install" element={<Install />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
+                <BrandFooter />
+              </div>
+            </HashRouter>
+          )}
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

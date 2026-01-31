@@ -6,9 +6,11 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  signInWithCredential,
   getRedirectResult,
   sendSignInLinkToEmail,
   sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
   signOut as firebaseSignOut,
   User as FirebaseUser,
 } from 'firebase/auth';
@@ -58,9 +60,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const auth = getFirebaseAuth();
 
+      // Handle redirect result from Google Sign-In (Android)
+      getRedirectResult(auth)
+        .then((result) => {
+          if (result) {
+            console.log('Redirect sign-in successful:', result.user);
+          }
+        })
+        .catch((error) => {
+          console.error('Redirect sign-in error:', error);
+        });
+
       // Listener for auth state changes
-      const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
         setFirebaseUser(nextUser);
+
+        // Sync trial date immediately when user logs in
+        if (nextUser) {
+          try {
+            const { getFirebaseDb } = await import('@/integrations/firebase/client');
+            const { doc, getDoc } = await import('firebase/firestore');
+            const db = getFirebaseDb();
+            const settingsRef = doc(db, 'users', nextUser.uid, 'settings', 'trialStart');
+            const snap = await getDoc(settingsRef);
+
+            if (snap.exists()) {
+              const cloudTrialStart = snap.data().firstRunAt;
+              const localStart = Number(localStorage.getItem('habitex_firstRunAt'));
+
+              if (localStart !== cloudTrialStart) {
+                localStorage.setItem('habitex_firstRunAt', String(cloudTrialStart));
+                window.dispatchEvent(new Event('entitlement-updated'));
+                console.log('🔄 Synced trial date on login:', new Date(cloudTrialStart).toISOString());
+              }
+            }
+          } catch (syncError) {
+            console.error('Failed to sync trial date:', syncError);
+          }
+        }
+
         setLoading(false);
       });
       return () => unsubscribe();
@@ -81,13 +119,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         prompt: 'select_account'
       });
 
-      // On Android/Capacitor, we use signInWithPopup.
-      // signInWithRedirect causes issues with localhost routing in external browsers.
-      // Ensure your domain/IP is whitelisted in Firebase Console.
-      await signInWithPopup(auth, provider);
+      // Use native plugin for Android (initialized in App.tsx)
+      if (Capacitor.isNativePlatform()) {
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        const googleUser = await GoogleAuth.signIn();
+        const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+        await signInWithCredential(auth, credential);
+      } else {
+        // Use browser popup for web
+        await signInWithPopup(auth, provider);
+      }
       return { error: null };
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
+      if (Capacitor.isNativePlatform()) {
+        alert('Google Sign-In Error: ' + (error?.message || JSON.stringify(error)));
+      }
       if (error.code === 'auth/unauthorized-domain') {
         console.error('DOMAIN ERROR: You must add this domain to Firebase Console > Authentication > Settings > Authorized Domains:', window.location.origin);
         alert(`Calculated Origin: ${window.location.origin}\n\nPlease add this domain to Firebase Console Authorized Domains.`);
@@ -101,7 +148,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const auth = getFirebaseAuth();
       await signInWithEmailAndPassword(auth, email, password);
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
+      if (Capacitor.isNativePlatform()) {
+        alert('Email Sign-In Error: ' + JSON.stringify(error?.message || error));
+      }
       return { error: error as Error };
     }
   };

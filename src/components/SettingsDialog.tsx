@@ -25,6 +25,7 @@ import ThemeToggle from './ThemeToggle';
 import ContactForm from './ContactForm';
 import { NotificationPreferences } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface SettingsDialogProps {
   notificationPrefs: NotificationPreferences;
@@ -40,28 +41,17 @@ const SettingsDialog = ({
   onToggleHiddenHabits
 }: SettingsDialogProps) => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showContact, setShowContact] = useState(false);
-  const [apkUrl, setApkUrl] = useState<string>('');
-  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
   // Fallback for displayName if user_metadata is missing
   const displayName = (user && (user as any).user_metadata?.full_name) ||
     (user && (user as any).user_metadata?.name) ||
     user?.email?.split('@')[0] || 'User';
 
-  useEffect(() => {
-    if (!isAndroid) return;
-    const updateUrl = new URL(`${import.meta.env.BASE_URL}app-update.json`, window.location.origin);
-    updateUrl.searchParams.set('ts', String(Date.now()));
-    fetch(updateUrl.toString(), { cache: 'no-store' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.apkUrl) {
-          setApkUrl(data.apkUrl);
-        }
-      })
-      .catch(err => console.error('Failed to fetch update info:', err));
-  }, [isAndroid]);
+  const handleInstallApp = () => {
+    navigate('/install');
+  };
 
   return (
     <>
@@ -138,13 +128,11 @@ const SettingsDialog = ({
             <span>Contact Us</span>
           </DropdownMenuItem>
 
-          {/* Download APK (Android browser only - hidden in native app) */}
-          {isAndroid && !Capacitor.isNativePlatform() && apkUrl && (
-            <DropdownMenuItem asChild className="cursor-pointer">
-              <a href={apkUrl} download>
-                <Download className="mr-2 h-4 w-4" />
-                <span>Download APK</span>
-              </a>
+          {/* Install App (browser only - hidden in native app) */}
+          {!Capacitor.isNativePlatform() && (
+            <DropdownMenuItem onClick={handleInstallApp} className="cursor-pointer">
+              <Download className="mr-2 h-4 w-4" />
+              <span>Install App</span>
             </DropdownMenuItem>
           )}
 

@@ -14,7 +14,8 @@ import com.truelytech.habitency.plugins.PomodoroForegroundPlugin;
 public class MainActivity extends BridgeActivity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-		// Ensure the app content is laid out below system bars (status bar / notch area)
+		// Ensure the app content is laid out below system bars (status bar / notch
+		// area)
 		WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 		// Avoid drawing into the display cutout (notch) area.
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -24,9 +25,10 @@ public class MainActivity extends BridgeActivity {
 		}
 
 		super.onCreate(savedInstanceState);
+
 		registerPlugin(UpdateInstallerPlugin.class);
 		registerPlugin(PomodoroForegroundPlugin.class);
-		
+
 		// Keep WebView in memory and prevent it from being destroyed
 		if (this.bridge != null && this.bridge.getWebView() != null) {
 			WebView webView = this.bridge.getWebView();
@@ -35,7 +37,7 @@ public class MainActivity extends BridgeActivity {
 			webView.setWebContentsDebuggingEnabled(true);
 		}
 	}
-	
+
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
@@ -44,7 +46,7 @@ public class MainActivity extends BridgeActivity {
 			this.bridge.getWebView().saveState(outState);
 		}
 	}
-	
+
 	@Override
 	public void onRestoreInstanceState(Bundle savedInstanceState) {
 		super.onRestoreInstanceState(savedInstanceState);
@@ -53,7 +55,7 @@ public class MainActivity extends BridgeActivity {
 			this.bridge.getWebView().restoreState(savedInstanceState);
 		}
 	}
-	
+
 	@Override
 	public void onPause() {
 		super.onPause();

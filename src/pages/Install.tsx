@@ -1,77 +1,3 @@
-// ...existing code...
-// Add this helper component at the bottom of the file (or in a suitable location)
-import { useRef } from 'react';
-
-function AndroidApkDownload({ apkUrl }: { apkUrl: string }) {
-  const [progress, setProgress] = useState<number>(0);
-  const [downloading, setDownloading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleDownload = async () => {
-    setDownloading(true);
-    setError(null);
-    setProgress(0);
-    try {
-      const res = await fetch(apkUrl);
-      if (!res.ok || !res.body) throw new Error(`Failed to fetch APK. Server responded with ${res.status}`);
-      const contentLength = Number(res.headers.get('content-length')) || 0;
-      const reader = res.body.getReader();
-      let received = 0;
-      const chunks = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        received += value.length;
-        if (contentLength) {
-          setProgress(Math.min(99, Math.round((received / contentLength) * 100)));
-        }
-      }
-      setProgress(100);
-      // Create blob and trigger download
-      const blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'DailyHabits.apk';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 2000);
-      setDownloading(false);
-    } catch (err: any) {
-      setError(err?.message || 'Download failed. Please check your internet connection or try again later.');
-      setDownloading(false);
-    }
-  };
-
-  return (
-    <>
-      <Button variant="outline" className="w-full" onClick={handleDownload} disabled={downloading || !apkUrl}>
-        <Download className="w-5 h-5 mr-2" />
-        {downloading ? `Downloading... (${progress}%)` : 'Download APK'}
-      </Button>
-      {downloading && (
-        <div className="w-full bg-muted rounded mt-2 h-2">
-          <div className="bg-primary h-2 rounded" style={{ width: `${progress}%` }}></div>
-        </div>
-      )}
-      {error && (
-        <div className="mt-2">
-          <p className="text-xs text-red-500">{error}</p>
-          <Button size="sm" variant="outline" className="mt-2" onClick={handleDownload} disabled={downloading || !apkUrl}>
-            Retry
-          </Button>
-        </div>
-      )}
-      <p className="text-xs text-muted-foreground mt-2">
-        If the install prompt does not appear, open the APK from your downloads folder to install. You may need to allow installing apps from unknown sources in your settings.
-      </p>
-    </>
-  );
-}
 import { useState, useEffect } from 'react';
 import { Download, Share, Plus, Smartphone, CheckCircle, Monitor, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -89,27 +15,7 @@ const Install = () => {
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
-  // Default to empty until we fetch the real URL.
-  const [apkUrl, setApkUrl] = useState<string>('');
-
   useEffect(() => {
-    // Fetch the latest APK URL from app-update.json with cache busting
-    // Build an absolute URL so routes like /install don't turn this into /install/app-update.json.
-    // Works for:
-    // - BASE_URL = '/' (Vercel typical)
-    // - BASE_URL = './' (relative builds)
-    // - BASE_URL = '/subpath/' (subpath deploys)
-    const updateUrl = new URL(`${import.meta.env.BASE_URL}app-update.json`, window.location.origin);
-    updateUrl.searchParams.set('ts', String(Date.now()));
-    fetch(updateUrl.toString(), { cache: 'no-store' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.apkUrl) {
-          setApkUrl(data.apkUrl);
-        }
-      })
-      .catch(err => console.error('Failed to fetch update info:', err));
-
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
@@ -141,7 +47,7 @@ const Install = () => {
 
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     if (outcome === 'accepted') {
       setIsInstalled(true);
     }
@@ -187,16 +93,6 @@ const Install = () => {
                 Install App
               </Button>
             )}
-
-            {/* Android APK Download */}
-            <div className="bg-popover rounded-2xl border border-border/50 p-6 space-y-4">
-              <h3 className="font-semibold text-foreground">Download Android App</h3>
-              <p className="text-sm text-muted-foreground">
-                Get the native Android experience directly. No Play Store required.
-              </p>
-              <AndroidApkDownload apkUrl={apkUrl} />
-            </div>
-
             {isIOS && (
               <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6">
                 <p className="text-sm text-foreground font-medium">To install on iOS:</p>
@@ -287,8 +183,8 @@ const Install = () => {
         </div>
 
         {/* Skip link */}
-        <button 
-          onClick={() => navigate('/')} 
+        <button
+          onClick={() => navigate('/')}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           Continue in browser →

@@ -611,16 +611,13 @@ const Auth = () => {
           </p>
         </div>
 
-        {/* Debug Info - Remove before final release */}
-        <div className="p-2 bg-yellow-100 text-xs text-yellow-800 mb-2 rounded">
-          v{import.meta.env.VITE_APP_VERSION || '3.0.0'} | Native: {String(Capacitor.isNativePlatform())} | Android: {String(isAndroid)}
-        </div>
+
 
         {/* Android APK download (public, no separate page) */}
         {isAndroid && !Capacitor.isNativePlatform() && <AndroidApkDownloadButton />}
 
-        {/* Google Sign In - only show on initial screens */}
-        {(mode === 'otp-request' || mode === 'login' || mode === 'signup') && (
+        {/* Google Sign In - only show on initial screens (hidden on Android due to WebView limitations) */}
+        {!Capacitor.isNativePlatform() && (mode === 'otp-request' || mode === 'login' || mode === 'signup') && (
           <>
             <Button
               onClick={handleGoogleSignIn}
