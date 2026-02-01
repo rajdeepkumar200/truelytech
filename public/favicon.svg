@@ -1,13 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-  <!-- Bullseye -->
-  <circle cx="32" cy="32" r="28" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="6" />
-  <circle cx="32" cy="32" r="18" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="6" />
-  <circle cx="32" cy="32" r="8" fill="#FFFFFF" stroke="#1F4E8C" stroke-width="6" />
-  <circle cx="32" cy="32" r="4" fill="#E85B4F" />
-
-  <!-- Arrow (simple stylized) -->
-  <path d="M48 14 L34 28" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
-  <path d="M50 12 L56 18" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
-  <path d="M44 18 L50 24" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
-  <path d="M56 18 L50 24" stroke="#F28C28" stroke-width="6" stroke-linecap="round" />
+  <!-- Outer ring -->
+  <circle cx="32" cy="32" r="28" fill="#FFFFFF" stroke="#2C4A6F" stroke-width="6" />
+  <!-- Middle ring -->
+  <circle cx="32" cy="32" r="18" fill="#FFFFFF" stroke="#2C4A6F" stroke-width="6" />
+  <!-- Inner ring -->
+  <circle cx="32" cy="32" r="8" fill="#FFFFFF" stroke="#2C4A6F" stroke-width="6" />
+  <!-- Center dot -->
+  <circle cx="32" cy="32" r="4" fill="#E8734F" />
+  
+  <!-- Arrow -->
+  <g transform="rotate(-45 32 32)">
+    <line x1="32" y1="32" x2="32" y2="8" stroke="#E8734F" stroke-width="5" stroke-linecap="round" />
+    <!-- Arrow head -->
+    <path d="M 32 8 L 28 14 L 36 14 Z" fill="#E8734F" />
+  </g>
 </svg>
