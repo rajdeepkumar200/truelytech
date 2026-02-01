@@ -80,6 +80,22 @@ const App = () => {
     }
   }, []);
 
+  // Capture PWA install prompt globally
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      // Store the event globally so Install page can access it
+      (window as any).deferredInstallPrompt = e;
+      console.log('PWA install prompt captured');
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

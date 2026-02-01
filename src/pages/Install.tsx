@@ -13,6 +13,7 @@ const Install = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,18 +51,22 @@ const Install = () => {
     };
   }, []);
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
+  const handleInstallClick = async () => {
+    // If we have the native prompt, use it
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+      // Clear global reference
+      delete (window as any).deferredInstallPrompt;
+    } else {
+      // Otherwise, show instructions
+      setShowInstructions(true);
     }
-    setDeferredPrompt(null);
-    // Clear global reference
-    delete (window as any).deferredInstallPrompt;
   };
 
   return (
@@ -96,110 +101,109 @@ const Install = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* PWA Install Button */}
-            {deferredPrompt && (
-              <Button onClick={handleInstall} className="w-full" size="lg">
-                <Download className="w-5 h-5 mr-2" />
-                Install App
-              </Button>
-            )}
-            {isIOS && (
-              <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6">
-                <p className="text-sm text-foreground font-medium">To install on iOS:</p>
-                <div className="space-y-4 text-left">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">1</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-foreground">Tap the</span>
-                      <Share className="w-5 h-5 text-accent" />
-                      <span className="text-sm text-foreground">Share button</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">2</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-foreground">Scroll and tap</span>
-                      <Plus className="w-5 h-5 text-accent" />
-                      <span className="text-sm text-foreground">"Add to Home Screen"</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">3</span>
-                    </div>
-                    <span className="text-sm text-foreground">Tap "Add" to confirm</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Install Now Button - Always visible */}
+            <Button onClick={handleInstallClick} className="w-full" size="lg">
+              <Download className="w-5 h-5 mr-2" />
+              Install Now
+            </Button>
 
-            {/* Android Instructions - Show when no install prompt available */}
-            {!isIOS && isMobile && !deferredPrompt && (
-              <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6">
-                <p className="text-sm text-foreground font-medium">To install on Android:</p>
-                <div className="space-y-4 text-left">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">1</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-foreground">Tap the</span>
-                      <Menu className="w-5 h-5 text-accent" />
-                      <span className="text-sm text-foreground">menu (⋮) in the top right</span>
+            {/* Instructions - Show when button is clicked and no native prompt */}
+            {showInstructions && (
+              <>
+                {isIOS && (
+                  <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <p className="text-sm text-foreground font-medium">To install on iOS Safari:</p>
+                    <div className="space-y-4 text-left">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">1</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-foreground">Tap the</span>
+                          <Share className="w-5 h-5 text-accent" />
+                          <span className="text-sm text-foreground">Share button</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">2</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-foreground">Scroll and tap</span>
+                          <Plus className="w-5 h-5 text-accent" />
+                          <span className="text-sm text-foreground">"Add to Home Screen"</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">3</span>
+                        </div>
+                        <span className="text-sm text-foreground">Tap "Add" to confirm</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">2</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-foreground">Select</span>
-                      <Download className="w-4 h-4 text-accent" />
-                      <span className="text-sm text-foreground">"Install app" or "Add to Home screen"</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">3</span>
-                    </div>
-                    <span className="text-sm text-foreground">Tap "Install" to confirm</span>
-                  </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {!isMobile && !deferredPrompt && (
-              <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6">
-                <p className="text-sm text-foreground font-medium">To install on Windows/macOS:</p>
-                <div className="space-y-4 text-left">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">1</span>
+                {!isIOS && isMobile && (
+                  <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <p className="text-sm text-foreground font-medium">To install on Android:</p>
+                    <div className="space-y-4 text-left">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">1</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-foreground">Tap the</span>
+                          <Menu className="w-5 h-5 text-accent" />
+                          <span className="text-sm text-foreground">three dots menu (⋮)</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">2</span>
+                        </div>
+                        <span className="text-sm text-foreground">Select "Add to Home screen"</span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">3</span>
+                        </div>
+                        <span className="text-sm text-foreground">Tap "Add" to confirm</span>
+                      </div>
                     </div>
-                    <span className="text-sm text-foreground">Open in Chrome or Edge browser</span>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">2</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-foreground">Click the</span>
-                      <Menu className="w-5 h-5 text-accent" />
-                      <span className="text-sm text-foreground">menu (⋮) or install icon in address bar</span>
+                )}
+
+                {!isMobile && (
+                  <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <p className="text-sm text-foreground font-medium">To install on Desktop:</p>
+                    <div className="space-y-4 text-left">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">1</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-foreground">Click the</span>
+                          <Menu className="w-5 h-5 text-accent" />
+                          <span className="text-sm text-foreground">three dots menu (⋮)</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">2</span>
+                        </div>
+                        <span className="text-sm text-foreground">Look for "Install Daily Habits" or "Add to Home screen"</span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-accent">3</span>
+                        </div>
+                        <span className="text-sm text-foreground">Click "Install" to confirm</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-accent">3</span>
-                    </div>
-                    <span className="text-sm text-foreground">Select "Install Daily Habits" or "Install app"</span>
-                  </div>
-                </div>
-              </div>
+                )}
+              </>
             )}
           </div>
         )}
