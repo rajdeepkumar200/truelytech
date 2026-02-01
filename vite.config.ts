@@ -38,22 +38,23 @@ export default defineConfig(({ mode }) => ({
         background_color: "#FFFFFF",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/",
+        orientation: "portrait",
+        start_url: "./",
         icons: [
           {
-            src: `/pwa-192x192.png?v=${ICON_VERSION}`,
+            src: `pwa-192x192.png?v=${ICON_VERSION}`,
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: `/pwa-512x512.png?v=${ICON_VERSION}`,
+            src: `pwa-512x512.png?v=${ICON_VERSION}`,
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: `/pwa-512x512-maskable.png?v=${ICON_VERSION}`,
+            src: `pwa-512x512-maskable.png?v=${ICON_VERSION}`,
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
