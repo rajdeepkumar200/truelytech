@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
-const ICON_VERSION = "20260110";
+const ICON_VERSION = "20260201f";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -28,13 +28,14 @@ export default defineConfig(({ mode }) => ({
         "robots.txt",
         "pwa-192x192.png",
         "pwa-512x512.png",
+        "pwa-512x512-maskable.png",
       ],
       manifest: {
-        name: "Daily Habits",
-        short_name: "Habits",
-        description: "Track your daily habits and build consistency",
-        theme_color: "#b8a09a",
-        background_color: "#fafafa",
+        name: "Habitency",
+        short_name: "Habitency",
+        description: "Beautiful daily habit tracker to build consistency and track your weekly progress.",
+        theme_color: "#2C4A6F",
+        background_color: "#FFFFFF",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
@@ -43,14 +44,16 @@ export default defineConfig(({ mode }) => ({
             src: `/pwa-192x192.png?v=${ICON_VERSION}`,
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: `/pwa-512x512.png?v=${ICON_VERSION}`,
             sizes: "512x512",
             type: "image/png",
+            purpose: "any",
           },
           {
-            src: `/pwa-512x512.png?v=${ICON_VERSION}`,
+            src: `/pwa-512x512-maskable.png?v=${ICON_VERSION}`,
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
