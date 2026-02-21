@@ -1,11 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Download, Share, Plus, CheckCircle, Menu } from 'lucide-react';
+import { Download, Share, Plus, CheckCircle, Menu, Globe, MonitorSmartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+type BrowserType = 'chrome' | 'edge' | 'brave' | 'firefox' | 'samsung' | 'opera' | 'safari' | 'other';
+
+function detectBrowser(): BrowserType {
+  const ua = navigator.userAgent.toLowerCase();
+  // Order matters — more specific checks first
+  if ((navigator as any).brave) return 'brave';
+  if (ua.includes('samsungbrowser')) return 'samsung';
+  if (ua.includes('opr') || ua.includes('opera')) return 'opera';
+  if (ua.includes('edg/') || ua.includes('edga/') || ua.includes('edgios/')) return 'edge';
+  if (ua.includes('firefox') || ua.includes('fxios')) return 'firefox';
+  if (ua.includes('safari') && !ua.includes('chrome')) return 'safari';
+  if (ua.includes('chrome') || ua.includes('crios')) return 'chrome';
+  return 'other';
 }
 
 const Install = () => {
@@ -15,6 +30,7 @@ const Install = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [promptReady, setPromptReady] = useState(false);
+  const [browser, setBrowser] = useState<BrowserType>('other');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,13 +40,12 @@ const Install = () => {
       return;
     }
 
-    // Check if iOS
+    // Detect platform & browser
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(iOS);
-
-    // Check if mobile
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     setIsMobile(mobile);
+    setBrowser(detectBrowser());
 
     // If prompt was already captured globally, store it
     const storedPrompt = (window as any).deferredInstallPrompt as BeforeInstallPromptEvent | undefined;
@@ -39,27 +54,26 @@ const Install = () => {
       setPromptReady(true);
     }
 
-    // Listen for new install prompts (covers Brave, Samsung, etc.)
+    // Listen for new install prompts
     const handler = (e: Event) => {
-      e.preventDefault();
+      // Don't prevent default — let Chrome show its install UI too
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
       (window as any).deferredInstallPrompt = promptEvent;
       setPromptReady(true);
-      // Hide instructions if they were shown as fallback
       setShowInstructions(false);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    // For browsers that don't fire beforeinstallprompt, show instructions after a delay
+    // Fallback: show instructions if no prompt arrives
     const fallbackTimer = setTimeout(() => {
       if (!(window as any).deferredInstallPrompt && !iOS) {
         setShowInstructions(true);
       }
     }, 3000);
 
-    // For iOS, show instructions immediately
+    // iOS never fires beforeinstallprompt
     if (iOS) {
       setShowInstructions(true);
     }
@@ -84,17 +98,27 @@ const Install = () => {
         delete (window as any).deferredInstallPrompt;
       } catch (err) {
         console.warn('Install prompt failed:', err);
-        // prompt() already called once or not allowed — clear stale prompt and show instructions
         setDeferredPrompt(null);
         setPromptReady(false);
         delete (window as any).deferredInstallPrompt;
         setShowInstructions(true);
       }
     } else {
-      // No native prompt available — show manual instructions
       setShowInstructions(true);
     }
   };
+
+  // Browser-specific display name
+  const browserName = {
+    chrome: 'Google Chrome',
+    edge: 'Microsoft Edge',
+    brave: 'Brave',
+    firefox: 'Firefox',
+    samsung: 'Samsung Internet',
+    opera: 'Opera',
+    safari: 'Safari',
+    other: 'your browser',
+  }[browser];
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
@@ -126,106 +150,173 @@ const Install = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Install Now Button - Always visible */}
+            {/* Install Now Button */}
             <Button onClick={handleInstallClick} className="w-full" size="lg">
               <Download className="w-5 h-5 mr-2" />
               Install Now
             </Button>
 
-            {/* Instructions - Show when button is clicked and no native prompt */}
+            {/* Status indicator */}
+            {promptReady && !showInstructions && (
+              <p className="text-xs text-green-500 flex items-center justify-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                Ready to install — click the button above
+              </p>
+            )}
+
+            {/* Instructions */}
             {showInstructions && (
               <>
+                {/* iOS Safari */}
                 {isIOS && (
                   <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6 animate-in fade-in slide-in-from-top-4 duration-300">
                     <p className="text-sm text-foreground font-medium">To install on iOS Safari:</p>
                     <div className="space-y-4 text-left">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">1</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-foreground">Tap the</span>
-                          <Share className="w-5 h-5 text-accent" />
-                          <span className="text-sm text-foreground">Share button</span>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">2</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-foreground">Scroll and tap</span>
-                          <Plus className="w-5 h-5 text-accent" />
-                          <span className="text-sm text-foreground">"Add to Home Screen"</span>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">3</span>
-                        </div>
-                        <span className="text-sm text-foreground">Tap "Add" to confirm</span>
-                      </div>
+                      <StepItem step={1}>
+                        <span>Tap the</span>
+                        <Share className="w-5 h-5 text-accent inline mx-1" />
+                        <span>Share button at the bottom</span>
+                      </StepItem>
+                      <StepItem step={2}>
+                        <span>Scroll down and tap</span>
+                        <Plus className="w-5 h-5 text-accent inline mx-1" />
+                        <span><strong>"Add to Home Screen"</strong></span>
+                      </StepItem>
+                      <StepItem step={3}>
+                        <span>Tap <strong>"Add"</strong> to confirm</span>
+                      </StepItem>
                     </div>
                   </div>
                 )}
 
+                {/* Android browsers */}
                 {!isIOS && isMobile && (
                   <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <p className="text-sm text-foreground font-medium">To install on Android:</p>
+                    <div className="flex items-center gap-2 justify-center">
+                      <MonitorSmartphone className="w-4 h-4 text-accent" />
+                      <p className="text-sm text-foreground font-medium">Install on {browserName}:</p>
+                    </div>
                     <div className="space-y-4 text-left">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">1</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-foreground">Tap the</span>
-                          <Menu className="w-5 h-5 text-accent" />
-                          <span className="text-sm text-foreground">three dots menu (⋮)</span>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">2</span>
-                        </div>
-                        <span className="text-sm text-foreground">Select "Add to Home screen"</span>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">3</span>
-                        </div>
-                        <span className="text-sm text-foreground">Tap "Add" to confirm</span>
-                      </div>
+                      {browser === 'samsung' ? (
+                        <>
+                          <StepItem step={1}>
+                            <span>Tap the <strong>menu icon</strong> (☰) at the bottom</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Tap <strong>"Add page to"</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Select <strong>"Home screen"</strong></span>
+                          </StepItem>
+                        </>
+                      ) : browser === 'firefox' ? (
+                        <>
+                          <StepItem step={1}>
+                            <span>Tap the <strong>⋮ three dots</strong> menu</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Tap <strong>"Install"</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Tap <strong>"Add"</strong> to confirm</span>
+                          </StepItem>
+                        </>
+                      ) : (
+                        /* Chrome, Brave, Edge, Opera on Android */
+                        <>
+                          <StepItem step={1}>
+                            <span>Tap the <strong>⋮ three dots</strong> menu at the top-right</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Tap <strong>"Install"</strong> to confirm</span>
+                          </StepItem>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {!isMobile && (
+                {/* Desktop / Windows browsers */}
+                {!isMobile && !isIOS && (
                   <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <p className="text-sm text-foreground font-medium">To install on Desktop:</p>
-                    <div className="space-y-4 text-left">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">1</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-foreground">Click the</span>
-                          <Menu className="w-5 h-5 text-accent" />
-                          <span className="text-sm text-foreground">three dots menu (⋮)</span>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">2</span>
-                        </div>
-                        <span className="text-sm text-foreground">Look for "Install Habitency" or "Add to Home screen"</span>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-accent">3</span>
-                        </div>
-                        <span className="text-sm text-foreground">Click "Install" to confirm</span>
-                      </div>
+                    <div className="flex items-center gap-2 justify-center">
+                      <Globe className="w-4 h-4 text-accent" />
+                      <p className="text-sm text-foreground font-medium">Install on {browserName}:</p>
                     </div>
+                    <div className="space-y-4 text-left">
+                      {browser === 'chrome' ? (
+                        <>
+                          <StepItem step={1}>
+                            <span>Click the <strong>⋮ three dots</strong> menu at the top-right</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Click <strong>"Cast, save, and share"</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Click <strong>"Install page as app..."</strong></span>
+                          </StepItem>
+                          <StepItem step={4}>
+                            <span>Click <strong>"Install"</strong> in the popup to confirm</span>
+                          </StepItem>
+                        </>
+                      ) : browser === 'edge' ? (
+                        <>
+                          <StepItem step={1}>
+                            <span>Click the <strong>⋯ three dots</strong> menu at the top-right</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Click <strong>"Apps"</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Click <strong>"Install this site as an app"</strong></span>
+                          </StepItem>
+                          <StepItem step={4}>
+                            <span>Click <strong>"Install"</strong> to confirm</span>
+                          </StepItem>
+                        </>
+                      ) : browser === 'brave' ? (
+                        <>
+                          <StepItem step={1}>
+                            <span>Click the <strong>install icon</strong> (⊕) in the address bar</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Or click <strong>☰ menu</strong> → <strong>"Install Habitency..."</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Click <strong>"Install"</strong> to confirm</span>
+                          </StepItem>
+                        </>
+                      ) : browser === 'firefox' ? (
+                        <>
+                          <StepItem step={1}>
+                            <span>Firefox desktop doesn't fully support PWA install</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Try opening this page in <strong>Chrome</strong> or <strong>Edge</strong> instead</span>
+                          </StepItem>
+                        </>
+                      ) : (
+                        <>
+                          <StepItem step={1}>
+                            <span>Click the browser <strong>menu</strong> (⋮ or ⋯) at the top-right</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Look for <strong>"Install"</strong>, <strong>"Install app"</strong>, or <strong>"Add to Home screen"</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Click <strong>"Install"</strong> to confirm</span>
+                          </StepItem>
+                        </>
+                      )}
+                    </div>
+                    {browser !== 'firefox' && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        💡 You may also see an install icon (⊕) in the address bar
+                      </p>
+                    )}
                   </div>
                 )}
               </>
@@ -267,5 +358,19 @@ const Install = () => {
     </div>
   );
 };
+
+/** Reusable step indicator */
+function StepItem({ step, children }: { step: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+        <span className="text-sm font-bold text-accent">{step}</span>
+      </div>
+      <div className="flex items-center gap-1 flex-wrap text-sm text-foreground pt-1">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default Install;

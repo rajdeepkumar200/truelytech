@@ -84,8 +84,9 @@ const App = () => {
   // Capture PWA install prompt globally
   useEffect(() => {
     const handler = (e: Event) => {
-      e.preventDefault();
-      // Store the event globally so Install page can access it
+      // Don't call e.preventDefault() here — let the browser show its
+      // native install bar/button. We just store the event so the
+      // Install page can trigger it on button click.
       (window as any).deferredInstallPrompt = e;
       console.log('PWA install prompt captured');
     };
