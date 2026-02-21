@@ -280,14 +280,20 @@ const Install = () => {
                       ) : browser === 'brave' ? (
                         <>
                           <StepItem step={1}>
-                            <span>Click the <strong>install icon</strong> (⊕) in the address bar</span>
+                            <span>Click the <strong>⋮ three dots</strong> menu at the top-right</span>
                           </StepItem>
                           <StepItem step={2}>
-                            <span>Or click <strong>☰ menu</strong> → <strong>"Install Habitency..."</strong></span>
+                            <span>Hover over <strong>"More tools"</strong></span>
                           </StepItem>
                           <StepItem step={3}>
-                            <span>Click <strong>"Install"</strong> to confirm</span>
+                            <span>Click <strong>"Create shortcut..."</strong></span>
                           </StepItem>
+                          <StepItem step={4}>
+                            <span>Check <strong>"Open as window"</strong> and click <strong>"Create"</strong></span>
+                          </StepItem>
+                          <p className="text-xs text-muted-foreground mt-1 pl-11">
+                            💡 Or look for an install icon (⊕) in the address bar — if visible, click it directly
+                          </p>
                         </>
                       ) : browser === 'firefox' ? (
                         <>
