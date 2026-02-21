@@ -33,30 +33,33 @@ const Install = () => {
     setIsMobile(mobile);
 
     // If prompt was already captured globally, store it
-    if ((window as any).deferredInstallPrompt) {
-      setDeferredPrompt((window as any).deferredInstallPrompt as BeforeInstallPromptEvent);
+    const storedPrompt = (window as any).deferredInstallPrompt as BeforeInstallPromptEvent | undefined;
+    if (storedPrompt) {
+      setDeferredPrompt(storedPrompt);
       setPromptReady(true);
     }
 
-    // Listen for install prompt — just capture it, don't auto-trigger (requires user gesture)
+    // Listen for new install prompts (covers Brave, Samsung, etc.)
     const handler = (e: Event) => {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
       (window as any).deferredInstallPrompt = promptEvent;
       setPromptReady(true);
+      // Hide instructions if they were shown as fallback
+      setShowInstructions(false);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    // For browsers that don't fire beforeinstallprompt, show instructions after a short delay
+    // For browsers that don't fire beforeinstallprompt, show instructions after a delay
     const fallbackTimer = setTimeout(() => {
       if (!(window as any).deferredInstallPrompt && !iOS) {
         setShowInstructions(true);
       }
-    }, 2000);
+    }, 3000);
 
-    // For iOS, show instructions immediately since it doesn't support beforeinstallprompt
+    // For iOS, show instructions immediately
     if (iOS) {
       setShowInstructions(true);
     }
@@ -71,7 +74,7 @@ const Install = () => {
     const prompt = deferredPrompt || (window as any).deferredInstallPrompt as BeforeInstallPromptEvent | null;
     if (prompt) {
       try {
-        prompt.prompt();
+        await prompt.prompt();
         const { outcome } = await prompt.userChoice;
         if (outcome === 'accepted') {
           setIsInstalled(true);
@@ -79,8 +82,12 @@ const Install = () => {
         setDeferredPrompt(null);
         setPromptReady(false);
         delete (window as any).deferredInstallPrompt;
-      } catch {
-        // prompt() already called once — show manual instructions
+      } catch (err) {
+        console.warn('Install prompt failed:', err);
+        // prompt() already called once or not allowed — clear stale prompt and show instructions
+        setDeferredPrompt(null);
+        setPromptReady(false);
+        delete (window as any).deferredInstallPrompt;
         setShowInstructions(true);
       }
     } else {

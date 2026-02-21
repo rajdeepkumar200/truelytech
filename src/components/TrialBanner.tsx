@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlement } from '@/hooks/useEntitlement';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Clock, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { useEffect, useState } from 'react';
@@ -13,6 +13,7 @@ export function TrialBanner() {
     const { user } = useAuth();
     const entitlement = useEntitlement(user);
     const navigate = useNavigate();
+    const location = useLocation();
     const [, setTick] = useState(0);
 
     // Update every minute to keep countdown fresh
@@ -22,6 +23,11 @@ export function TrialBanner() {
         }, 60000); // Update every minute
         return () => clearInterval(interval);
     }, []);
+
+    // Hide on the install page
+    if (location.pathname === '/install') {
+        return null;
+    }
 
     // Don't show if not in trial or if paid
     if (!entitlement.isInTrial || entitlement.isPaid) {
