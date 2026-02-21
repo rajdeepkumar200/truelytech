@@ -17,6 +17,7 @@ import { DevTrialReset } from "./components/DevTrialReset";
 import { TrialBanner } from "./components/TrialBanner";
 
 import { WelcomeDialog, TrialEndedDialog } from "./components/WelcomeDialog";
+import { StartupPermissionPrompt } from "./components/StartupPermissionPrompt";
 import { getFirebaseConfig, isFirebaseConfigured } from "@/integrations/firebase/client";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
@@ -114,6 +115,7 @@ const App = () => {
             <HashRouter>
               <WelcomeDialog />
               <TrialEndedDialog />
+              <StartupPermissionPrompt />
               <div className="min-h-screen flex flex-col pt-safe pb-safe pl-safe pr-safe">
                 <TrialBanner />
                 <div className="flex-1">

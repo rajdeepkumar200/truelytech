@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { Settings, User, Eye, Bell, Download, LogOut, Moon, Sun } from 'lucide-react';
+import { Settings, User, Eye, Bell, Download, LogOut, Moon, Sun, Rocket, BatteryCharging } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -44,6 +44,7 @@ const SettingsDialog = ({
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showStartupGuide, setShowStartupGuide] = useState(false);
   // Fallback for displayName if user_metadata is missing
   const displayName = (user && (user as any).user_metadata?.full_name) ||
     (user && (user as any).user_metadata?.name) ||
@@ -128,6 +129,41 @@ const SettingsDialog = ({
             <span>Contact Us</span>
           </DropdownMenuItem>
 
+          {/* Android: Background Running */}
+          {Capacitor.isNativePlatform() && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                // Open battery optimization settings
+                try {
+                  import('@capacitor/app').then(({ App }) => {
+                    App.getInfo().then((info) => {
+                      (window as any).open?.(`intent://settings/apps/details?package=${info.id}#Intent;scheme=android-app;end`);
+                    });
+                  });
+                } catch {}
+              }}
+            >
+              <BatteryCharging className="mr-2 h-4 w-4" />
+              <span>Background Running</span>
+            </DropdownMenuItem>
+          )}
+
+          {/* Windows/Desktop: Auto-start Guide */}
+          {!Capacitor.isNativePlatform() && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                setShowStartupGuide(true);
+              }}
+            >
+              <Rocket className="mr-2 h-4 w-4" />
+              <span>Auto-start at Login</span>
+            </DropdownMenuItem>
+          )}
+
           {/* Install App (browser only - hidden in native app) */}
           {!Capacitor.isNativePlatform() && (
             <DropdownMenuItem onClick={handleInstallApp} className="cursor-pointer">
@@ -172,6 +208,37 @@ const SettingsDialog = ({
 
       {/* Contact Us Dialog */}
       <ContactForm open={showContact} onOpenChange={setShowContact} />
+
+      {/* Auto-start Guide Dialog */}
+      <Dialog open={showStartupGuide} onOpenChange={setShowStartupGuide}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Rocket className="w-5 h-5 text-purple-500" />
+              Launch at Startup
+            </DialogTitle>
+            <DialogDescription>
+              Start Habitency automatically when your computer boots up.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+              <p className="text-sm text-foreground font-medium mb-2">📋 Chrome / Edge / Brave:</p>
+              <ol className="text-sm text-muted-foreground space-y-1 list-decimal pl-4">
+                <li>Install Habitency as an app (if not already)</li>
+                <li>Right-click the app icon in your taskbar</li>
+                <li>Check <strong>"Start app when you sign in"</strong></li>
+              </ol>
+              <p className="text-xs text-muted-foreground mt-3">
+                💡 Chrome: Go to <strong>chrome://apps</strong> → right-click Habitency → enable startup
+              </p>
+            </div>
+            <Button className="w-full" onClick={() => setShowStartupGuide(false)}>
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
