@@ -19,6 +19,18 @@
         "Cache-Control": "no-store"
       }
     },
+    {
+      "src": "/sw\.js$",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/manifest\.webmanifest$",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    },
     { "src": "/install", "dest": "/install/index.html" },
     { "src": "/install/", "dest": "/install/index.html" },
     { "handle": "filesystem" },
