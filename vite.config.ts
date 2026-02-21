@@ -3,8 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
-const ICON_VERSION = "20260201f";
-
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   base: "./",
@@ -41,22 +39,22 @@ export default defineConfig(({ mode }) => ({
         start_url: "./",
         icons: [
           {
-            src: `pwa-192x192.png?v=${ICON_VERSION}`,
+            src: "pwa-192x192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: `pwa-512x512.png?v=${ICON_VERSION}`,
+            src: "pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: `pwa-512x512-maskable.png?v=${ICON_VERSION}`,
+            src: "pwa-512x512-maskable.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "maskable",
+            purpose: "any maskable",
           },
         ],
       },
