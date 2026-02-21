@@ -38,6 +38,8 @@ interface Habit {
   weeklyGoal?: number;
   hidden?: boolean;
   completedDate?: string; // ISO date string when habit was marked complete
+  isTemporary?: boolean; // true for one-off quick tasks
+  createdDate?: string; // ISO date string when task was created
 }
 
 interface ScheduleItem {
@@ -539,6 +541,9 @@ const Index = () => {
   const handleToggleDay = useCallback((habitId: string, dayIndex: number, weekKey: string) => {
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
+        // Don't allow toggling on inactive days
+        if (!habit.activeDays[dayIndex]) return habit;
+
         const updatedWeeks = { ...habit.completedWeeks };
         if (!updatedWeeks[weekKey]) {
           updatedWeeks[weekKey] = Array(7).fill(false);
@@ -569,6 +574,23 @@ const Index = () => {
       activeDays: Array(7).fill(true),
     };
     setHabits(prev => [...prev, newHabit]);
+  };
+
+  const handleAddTempTask = (name: string, icon: string) => {
+    const weekKey = getCurrentWeekKey();
+    const currentDayIndex = getCurrentDayIndex();
+    const todayOnly = Array(7).fill(false);
+    todayOnly[currentDayIndex] = true;
+    const newTask: Habit = {
+      id: crypto.randomUUID(),
+      name,
+      icon,
+      completedWeeks: { [weekKey]: Array(7).fill(false) },
+      activeDays: todayOnly,
+      isTemporary: true,
+      createdDate: new Date().toISOString().split('T')[0],
+    };
+    setHabits(prev => [...prev, newTask]);
   };
 
   const handleDeleteHabit = (habitId: string) => {
@@ -610,45 +632,78 @@ const Index = () => {
     }));
   };
 
+  const handleReorderHabits = (reorderedVisible: Habit[]) => {
+    setHabits(prev => {
+      // Build a map of new ordering from the reordered visible habits
+      const orderMap = new Map(reorderedVisible.map((h, i) => [h.id, i]));
+      // Replace visible habits in the full list while keeping hidden ones in place
+      const visibleIds = new Set(reorderedVisible.map(h => h.id));
+      const result: Habit[] = [];
+      let visibleIdx = 0;
+      for (const habit of prev) {
+        if (visibleIds.has(habit.id)) {
+          result.push(reorderedVisible[visibleIdx++]);
+        } else {
+          result.push(habit);
+        }
+      }
+      return result;
+    });
+  };
+
+  const handleToggleActiveDay = (habitId: string, dayIndex: number) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        const newActiveDays = [...habit.activeDays];
+        newActiveDays[dayIndex] = !newActiveDays[dayIndex];
+        return { ...habit, activeDays: newActiveDays };
+      }
+      return habit;
+    }));
+  };
+
+  const handleRenameHabit = (habitId: string, newName: string) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        return { ...habit, name: newName };
+      }
+      return habit;
+    }));
+  };
+
   const handleMarkHabitComplete = (habitId: string) => {
-    const currentDayIndex = getCurrentDayIndex();
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
     setHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
-        // Toggle logic: If already completed, unmark it.
-        // We check if completedDate is set (any date, or specifically today? Let's allow unmarking any).
-        // Actually, strictly speaking, if they marked it 'mistakenly', it's likely recent.
-        // But allowing undo at any time is safer.
-
         if (habit.completedDate) {
-          // UNMARK: Restore active days (default to true for remaining days)
-          const updatedActiveDays = [...habit.activeDays];
-          for (let i = currentDayIndex + 1; i < 7; i++) {
-            updatedActiveDays[i] = true;
-          }
-          const { completedDate, ...rest } = habit; // Remove completedDate
+          // UNMARK: Restore the habit - unhide and remove completedDate
+          const { completedDate, ...rest } = habit;
           return {
             ...rest,
-            activeDays: updatedActiveDays,
+            hidden: false,
           };
         } else {
-          // MARK COMPLETE
-          // Deactivate all days starting from tomorrow
-          const updatedActiveDays = [...habit.activeDays];
-          for (let i = currentDayIndex + 1; i < 7; i++) {
-            updatedActiveDays[i] = false;
-          }
-
+          // MARK COMPLETE: Hide the habit (discontinue it)
           return {
             ...habit,
-            activeDays: updatedActiveDays,
-            completedDate: today // Mark when this habit was completed
+            completedDate: today,
+            hidden: true,
           };
         }
       }
       return habit;
     }));
+
+    const habit = habits.find(h => h.id === habitId);
+    if (habit) {
+      toast({
+        title: habit.completedDate ? "Habit Restored" : "Habit Completed",
+        description: habit.completedDate
+          ? `"${habit.name}" has been restored and is active again.`
+          : `"${habit.name}" has been marked as completed and hidden. You can restore it from settings.`,
+      });
+    }
   };
 
 
@@ -706,6 +761,9 @@ const Index = () => {
 
     // Hide habits completed before today (keep showing on completion day)
     if (h.completedDate && h.completedDate < todayStr) return false;
+
+    // Hide temporary tasks from previous days
+    if (h.isTemporary && h.createdDate && h.createdDate < todayStr) return false;
 
     return true;
   });
@@ -842,9 +900,13 @@ const Index = () => {
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
-                  onToggleActiveDay={(habitId, dayIndex) => handleToggleDay(habitId, dayIndex, selectedWeek)}
+                  onToggleActiveDay={handleToggleActiveDay}
                   onToggleVisibility={handleToggleHabitVisibility}
                   onMarkComplete={handleMarkHabitComplete}
+                  onRenameHabit={handleRenameHabit}
+                  onReorderHabits={handleReorderHabits}
+                  onUpdateIcon={handleUpdateIcon}
+                  onAddTempTask={handleAddTempTask}
                   readOnly={selectedWeek !== getCurrentWeekKey()}
                 />
                 <div id="add-habit-mobile">
@@ -966,9 +1028,13 @@ const Index = () => {
                   onToggleDay={handleToggleDay}
                   onDeleteHabit={handleDeleteHabit}
                   onDeleteMultipleHabits={handleDeleteMultipleHabits}
-                  onToggleActiveDay={(habitId, dayIndex) => handleToggleDay(habitId, dayIndex, selectedWeek)}
+                  onToggleActiveDay={handleToggleActiveDay}
                   onToggleVisibility={handleToggleHabitVisibility}
                   onMarkComplete={handleMarkHabitComplete}
+                  onRenameHabit={handleRenameHabit}
+                  onReorderHabits={handleReorderHabits}
+                  onUpdateIcon={handleUpdateIcon}
+                  onAddTempTask={handleAddTempTask}
                 />
                 <div id="add-habit-desktop">
                   <AddHabitRow onAdd={handleAddHabit} />

@@ -3,10 +3,13 @@ export function getCompletedDays(habit, weekKey) {
   return habit.completedWeeks?.[weekKey] ?? Array(7).fill(false);
 }
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings, X, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Trash2, Flame, CheckSquare, Square, ChevronLeft, ChevronRight, Settings, X, Eye, EyeOff, CheckCircle2, Pencil, GripVertical, Zap } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import EmojiPicker from './EmojiPicker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, getDay, isSameWeek, isBefore, isAfter, startOfDay } from 'date-fns';
 import {
   AlertDialog,
@@ -36,6 +39,9 @@ interface Habit {
   streak?: number;
   weeklyGoal?: number;
   hidden?: boolean;
+  completedDate?: string;
+  isTemporary?: boolean;
+  createdDate?: string;
 }
 
 interface MonthlyHabitCalendarProps {
@@ -48,6 +54,10 @@ interface MonthlyHabitCalendarProps {
   onToggleActiveDay?: (habitId: string, dayIndex: number) => void;
   onToggleVisibility?: (habitId: string) => void;
   onMarkComplete?: (habitId: string) => void;
+  onRenameHabit?: (habitId: string, newName: string) => void;
+  onReorderHabits?: (habits: Habit[]) => void;
+  onUpdateIcon?: (habitId: string, icon: string) => void;
+  onAddTempTask?: (name: string, icon: string) => void;
   readOnly?: boolean;
 }
 
@@ -81,17 +91,37 @@ const MonthlyHabitCalendar = ({
   onToggleActiveDay,
   onToggleVisibility,
   onMarkComplete,
+  onRenameHabit,
+  onReorderHabits,
+  onUpdateIcon,
+  onAddTempTask,
   readOnly = false,
 }: MonthlyHabitCalendarProps) => {
   // Helper: get completedArr for a habit for the selected week
   function getCompletedArr(habit) {
     return habit.completedWeeks?.[weekKey] ?? Array(7).fill(false);
   }
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
+    const reordered = Array.from(habits);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    onReorderHabits?.(reordered);
+  };
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [completeConfirmId, setCompleteConfirmId] = useState<string | null>(null);
+  const [renamingHabitId, setRenamingHabitId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [settingsHabitId, setSettingsHabitId] = useState<string | null>(null);
+  const [showTempTaskInput, setShowTempTaskInput] = useState(false);
+  const [tempTaskName, setTempTaskName] = useState('');
+  const [tempTaskIcon, setTempTaskIcon] = useState('⚡');
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentDayIndex = getCurrentDayIndex();
 
@@ -283,74 +313,104 @@ const MonthlyHabitCalendar = ({
           </div>
 
           {/* Habit rows */}
-          {habits.map((habit, habitIndex) => {
-            const activeDays = habit.activeDays || Array(7).fill(true);
-            const streak = calculateStreak(getCompletedDays(habit, weekKey), activeDays);
-            const isSelected = selectedHabits.has(habit.id);
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="habit-names">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {habits.map((habit, habitIndex) => {
+                    const activeDays = habit.activeDays || Array(7).fill(true);
+                    const streak = calculateStreak(getCompletedDays(habit, weekKey), activeDays);
+                    const isSelected = selectedHabits.has(habit.id);
 
-            return (
-              <HabitRowWrapper key={habit.id} habitIndex={habitIndex} habitName={habit.name}>
-                <div
-                  key={habit.id}
-                  className={cn(
-                    "group flex items-center gap-1.5 h-[36px] px-2 border-b border-border/20",
-                    isSelected && "bg-destructive/5"
-                  )}
-                >
-                  {selectedHabits.size > 0 && (
-                    <button onClick={() => toggleSelectHabit(habit.id)} className="flex-shrink-0">
-                      {isSelected ? (
-                        <CheckSquare className="w-3.5 h-3.5 text-destructive" />
-                      ) : (
-                        <Square className="w-3.5 h-3.5 text-muted-foreground" />
-                      )}
-                    </button>
-                  )}
-                  <span className="text-sm flex-shrink-0">{habit.icon}</span>
-                  <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
-                  {habit.completedDate === new Date().toISOString().split('T')[0] && (
-                    <span className="ml-1 flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20" title="Marked as completed">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                    </span>
-                  )}
-                  {streak > 0 && (
-                    <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
-                      <Flame className="w-2.5 h-2.5 text-orange-500" />
-                      <span className="text-[9px] font-medium text-orange-500">{streak}</span>
-                    </div>
-                  )}
-                  {selectedHabits.size === 0 && (
-                    <Popover open={settingsHabitId === habit.id} onOpenChange={(open) => setSettingsHabitId(open ? habit.id : null)}>
-                      <PopoverTrigger asChild>
-                        <button className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted/50 rounded flex-shrink-0">
-                          <Settings className="w-3 h-3 text-muted-foreground" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-52 p-3 bg-popover border-border" align="start">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-foreground">Active Days</span>
-                            <button onClick={() => setSettingsHabitId(null)} className="p-0.5 hover:bg-muted rounded">
-                              <X className="w-3 h-3 text-muted-foreground" />
-                            </button>
-                          </div>
-                          <div className="flex gap-1">
-                            {DAYS_OF_WEEK.map((day, idx) => (
-                              <button
-                                key={day}
-                                onClick={() => onToggleActiveDay?.(habit.id, idx)}
+                    return (
+                      <Draggable key={habit.id} draggableId={habit.id} index={habitIndex}>
+                        {(provided, snapshot) => (
+                          <div ref={provided.innerRef} {...provided.draggableProps}>
+                            <HabitRowWrapper habitIndex={habitIndex} habitName={habit.name}>
+                              <div
                                 className={cn(
-                                  "w-7 h-7 rounded-full text-[10px] font-medium transition-all",
-                                  activeDays[idx]
-                                    ? "bg-accent text-accent-foreground"
-                                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                  "group flex items-center gap-1 h-[36px] px-1 border-b border-border/20",
+                                  isSelected && "bg-destructive/5",
+                                  snapshot.isDragging && "bg-muted/60 shadow-md rounded-lg z-50"
                                 )}
                               >
-                                {day[0]}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="pt-2 border-t border-border space-y-1">
+                                {/* Drag handle */}
+                                <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing flex-shrink-0 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity touch-manipulation">
+                                  <GripVertical className="w-3 h-3 text-muted-foreground/50" />
+                                </div>
+                                {selectedHabits.size > 0 && (
+                                  <button onClick={() => toggleSelectHabit(habit.id)} className="flex-shrink-0">
+                                    {isSelected ? (
+                                      <CheckSquare className="w-3.5 h-3.5 text-destructive" />
+                                    ) : (
+                                      <Square className="w-3.5 h-3.5 text-muted-foreground" />
+                                    )}
+                                  </button>
+                                )}
+                                <span className="text-sm flex-shrink-0">{habit.icon}</span>
+                                <span className="text-xs text-foreground truncate flex-1">{habit.name}</span>
+                                {habit.isTemporary && (
+                                  <span className="flex-shrink-0 inline-flex items-center gap-0.5 px-1 py-0.5 bg-amber-500/10 rounded-full" title="Quick task (today only)">
+                                    <Zap className="w-2.5 h-2.5 text-amber-500" />
+                                  </span>
+                                )}
+                                {habit.completedDate === new Date().toISOString().split('T')[0] && (
+                                  <span className="ml-1 flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20" title="Marked as completed">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                                  </span>
+                                )}
+                                {streak > 0 && (
+                                  <div className="flex items-center gap-0.5 px-1 py-0.5 bg-orange-500/10 rounded-full flex-shrink-0">
+                                    <Flame className="w-2.5 h-2.5 text-orange-500" />
+                                    <span className="text-[9px] font-medium text-orange-500">{streak}</span>
+                                  </div>
+                                )}
+                                {selectedHabits.size === 0 && (
+                                  <Popover open={settingsHabitId === habit.id} onOpenChange={(open) => setSettingsHabitId(open ? habit.id : null)}>
+                                    <PopoverTrigger asChild>
+                                      <button className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted/50 rounded flex-shrink-0">
+                                        <Settings className="w-3 h-3 text-muted-foreground" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-52 p-3 bg-popover border-border" align="start">
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-medium text-foreground">Active Days</span>
+                                          <button onClick={() => setSettingsHabitId(null)} className="p-0.5 hover:bg-muted rounded">
+                                            <X className="w-3 h-3 text-muted-foreground" />
+                                          </button>
+                                        </div>
+                                        <div className="flex gap-1">
+                                          {DAYS_OF_WEEK.map((day, idx) => (
+                                            <button
+                                              key={day}
+                                              onClick={() => onToggleActiveDay?.(habit.id, idx)}
+                                              className={cn(
+                                                "w-7 h-7 rounded-full text-[10px] font-medium transition-all",
+                                                activeDays[idx]
+                                                  ? "bg-accent text-accent-foreground"
+                                                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                              )}
+                                            >
+                                              {day[0]}
+                                            </button>
+                                          ))}
+                                        </div>
+
+                                        {/* Change Emoji */}
+                                        {onUpdateIcon && (
+                                          <div className="pt-2 border-t border-border">
+                                            <p className="text-xs font-medium text-foreground mb-1">Icon</p>
+                                            <EmojiPicker
+                                              value={habit.icon}
+                                              onChange={(emoji) => {
+                                                onUpdateIcon(habit.id, emoji);
+                                              }}
+                                            />
+                                          </div>
+                                        )}
+
+                                        <div className="pt-2 border-t border-border space-y-1">
                             <button
                               onClick={() => {
                                 onToggleVisibility?.(habit.id);
@@ -363,13 +423,30 @@ const MonthlyHabitCalendar = ({
                             </button>
                             <button
                               onClick={() => {
-                                onMarkComplete?.(habit.id);
                                 setSettingsHabitId(null);
+                                if (habit.completedDate) {
+                                  // If already completed, just restore directly
+                                  onMarkComplete?.(habit.id);
+                                } else {
+                                  // Show reconsideration prompt
+                                  setCompleteConfirmId(habit.id);
+                                }
                               }}
                               className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 rounded transition-colors"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               {habit.completedDate ? "Mark as Incomplete" : "Mark as Completed"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSettingsHabitId(null);
+                                setRenamingHabitId(habit.id);
+                                setRenameValue(habit.name);
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Rename Habit
                             </button>
                             <button
                               onClick={() => {
@@ -386,10 +463,81 @@ const MonthlyHabitCalendar = ({
                       </PopoverContent>
                     </Popover>
                   )}
+                              </div>
+                            </HabitRowWrapper>
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
                 </div>
-              </HabitRowWrapper>
-            );
-          })}
+              )}
+            </Droppable>
+          </DragDropContext>
+
+          {/* Quick Add Temp Task */}
+          {onAddTempTask && !readOnly && (
+            <div className="border-b border-border/20 px-2">
+              {showTempTaskInput ? (
+                <form
+                  className="flex items-center gap-1.5 h-[36px]"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (tempTaskName.trim()) {
+                      onAddTempTask(tempTaskName.trim(), tempTaskIcon);
+                      setTempTaskName('');
+                      setTempTaskIcon('⚡');
+                      setShowTempTaskInput(false);
+                    }
+                  }}
+                >
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="w-6 h-6 flex items-center justify-center text-sm rounded bg-muted hover:bg-muted/80 flex-shrink-0">
+                        {tempTaskIcon}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-52 p-2" align="start">
+                      <div className="grid grid-cols-8 gap-1">
+                        {['⚡', '📋', '📞', '📦', '🛒', '✉️', '🔧', '🏥', '🎉', '👤', '🏠', '💰', '📄', '🚗', '🍽️', '🎁'].map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => setTempTaskIcon(emoji)}
+                            className="w-6 h-6 flex items-center justify-center text-sm hover:bg-muted rounded"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Input
+                    value={tempTaskName}
+                    onChange={(e) => setTempTaskName(e.target.value)}
+                    placeholder="Quick task for today..."
+                    className="h-6 text-xs flex-1 border-none bg-transparent px-1 focus-visible:ring-0"
+                    autoFocus
+                  />
+                  <Button type="submit" size="sm" variant="ghost" className="h-6 px-2 text-xs text-accent" disabled={!tempTaskName.trim()}>
+                    Add
+                  </Button>
+                  <button type="button" onClick={() => { setShowTempTaskInput(false); setTempTaskName(''); }} className="p-0.5 hover:bg-muted rounded">
+                    <X className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setShowTempTaskInput(true)}
+                  className="flex items-center gap-1.5 h-[32px] w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span className="text-sm font-bold leading-none">+</span>
+                  <span>Quick task for today</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Progress label */}
           <div className="h-[28px] flex items-center px-2">
@@ -547,6 +695,11 @@ const MonthlyHabitCalendar = ({
                 );
               })}
 
+              {/* Spacer for temp task add row (keeps columns aligned) */}
+              {onAddTempTask && !readOnly && (
+                <div className="h-[32px] border-b border-border/20" />
+              )}
+
               {/* Daily Progress Row */}
               <div className="flex h-[28px]">
                 {dailyProgress.map((progress, idx) => {
@@ -616,6 +769,73 @@ const MonthlyHabitCalendar = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mark Complete Reconsideration Dialog */}
+      <AlertDialog open={!!completeConfirmId} onOpenChange={() => setCompleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to complete this habit?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Marking this habit as completed will hide it from your daily view. You built great consistency — are you sure you no longer need it? You can always restore it later from settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Going</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (completeConfirmId) {
+                  onMarkComplete?.(completeConfirmId);
+                  setCompleteConfirmId(null);
+                }
+              }}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              Yes, Complete It
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rename Habit Dialog */}
+      <AlertDialog open={!!renamingHabitId} onOpenChange={() => setRenamingHabitId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename Habit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a new name for this habit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-1 py-2">
+            <Input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="New habit name"
+              className="w-full"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && renameValue.trim() && renamingHabitId) {
+                  onRenameHabit?.(renamingHabitId, renameValue.trim());
+                  setRenamingHabitId(null);
+                }
+              }}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (renamingHabitId && renameValue.trim()) {
+                  onRenameHabit?.(renamingHabitId, renameValue.trim());
+                  setRenamingHabitId(null);
+                }
+              }}
+              disabled={!renameValue.trim()}
+            >
+              Rename
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -89,19 +89,21 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
           const isFutureDay = isAfter(startOfDay(selectedDate), startOfDay(new Date()));
           const weekKey = getCurrentWeekKey(selectedDate);
           const isCompleted = isCurrentWeek && !isFutureDay && habit.completedWeeks?.[weekKey]?.[dayIndex];
-          if (!isActiveDay && isCurrentWeek) return null;
           return (
             <div 
               key={habit.id}
               className={cn(
                 "flex items-center justify-between p-4 rounded-xl border transition-all duration-200",
-                isCompleted 
-                  ? "bg-primary/10 border-primary/20" 
-                  : "bg-card border-border/50 hover:border-border",
-                isFutureDay && "opacity-50 cursor-not-allowed"
+                !isActiveDay
+                  ? "bg-muted/30 border-border/20 opacity-50"
+                  : isCompleted 
+                    ? "bg-primary/10 border-primary/20" 
+                    : "bg-card border-border/50 hover:border-border",
+                isFutureDay && "opacity-50 cursor-not-allowed",
+                !isActiveDay && "cursor-not-allowed"
               )}
               onClick={() => {
-                if (isCurrentWeek && !isFutureDay) {
+                if (isCurrentWeek && !isFutureDay && isActiveDay) {
                   onToggleDay(habit.id, dayIndex, weekKey);
                 }
               }}
@@ -110,21 +112,28 @@ const DailyHabitView = ({ habits, onToggleDay }: DailyHabitViewProps) => {
                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-background text-xl shadow-sm border border-border/30">
                   {habit.icon}
                 </div>
-                <span className={cn(
-                  "font-medium text-lg",
-                  isCompleted && "text-muted-foreground line-through decoration-primary/50"
-                )}>
-                  {habit.name}
-                </span>
+                <div className="flex flex-col">
+                  <span className={cn(
+                    "font-medium text-lg",
+                    isCompleted && "text-muted-foreground line-through decoration-primary/50"
+                  )}>
+                    {habit.name}
+                  </span>
+                  {!isActiveDay && (
+                    <span className="text-xs text-muted-foreground">Not scheduled for this day</span>
+                  )}
+                </div>
               </div>
 
               <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
-                isCompleted 
-                  ? "bg-primary border-primary text-primary-foreground" 
-                  : "border-muted-foreground/30"
+                !isActiveDay
+                  ? "border-muted-foreground/10 bg-muted/20"
+                  : isCompleted 
+                    ? "bg-primary border-primary text-primary-foreground" 
+                    : "border-muted-foreground/30"
               )}>
-                {isCompleted && <Check className="w-5 h-5" />}
+                {isCompleted && isActiveDay && <Check className="w-5 h-5" />}
               </div>
             </div>
           );
