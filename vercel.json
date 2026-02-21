@@ -2,20 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "headers": [
-    {
-      "source": "/sw.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/manifest.webmanifest",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
-    }
-  ],
   "routes": [
     {
       "src": "/habitency\\.apk",
@@ -31,6 +17,20 @@
       "dest": "/app-update.json",
       "headers": {
         "Cache-Control": "no-store"
+      }
+    },
+    {
+      "src": "/sw\\.js",
+      "dest": "/sw.js",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/manifest\\.webmanifest",
+      "dest": "/manifest.webmanifest",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
       }
     },
     { "src": "/install", "dest": "/install/index.html" },
