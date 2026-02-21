@@ -33,6 +33,13 @@
         "Cache-Control": "no-cache, no-store, must-revalidate"
       }
     },
+    {
+      "src": "/(pwa-.*\\.png)",
+      "dest": "/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      }
+    },
     { "src": "/install", "dest": "/install/index.html" },
     { "src": "/install/", "dest": "/install/index.html" },
     { "handle": "filesystem" },

@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => ({
         name: "Habitency",
         short_name: "Habitency",
         description: "Beautiful daily habit tracker to build consistency and track your weekly progress.",
+        id: "habitency-daily-habits",
         theme_color: "#2C4A6F",
         background_color: "#FFFFFF",
         display: "standalone",
@@ -39,19 +40,19 @@ export default defineConfig(({ mode }) => ({
         start_url: "./",
         icons: [
           {
-            src: "pwa-192x192.png",
+            src: "pwa-192x192.png?v=2",
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "pwa-512x512.png",
+            src: "pwa-512x512.png?v=2",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "pwa-512x512-maskable.png",
+            src: "pwa-512x512-maskable.png?v=2",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
@@ -59,7 +60,8 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
+        globIgnores: ["**/pwa-*.png"],
         // Prevent the service worker SPA fallback from hijacking APK/JSON requests.
         // Without this, navigating to /habitency.apk can return index.html (looks like the website).
         navigateFallbackDenylist: [/^\/habitency\.apk$/i, /^\/app-update\.json$/i, /\.apk$/i],
