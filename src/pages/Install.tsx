@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Share, Plus, Smartphone, CheckCircle, Monitor, Menu } from 'lucide-react';
+import { Download, Share, Plus, CheckCircle, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,12 +14,14 @@ const Install = () => {
   const [isIOS, setIsIOS] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [promptReady, setPromptReady] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
+      return;
     }
 
     // Check if iOS
@@ -30,41 +32,59 @@ const Install = () => {
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     setIsMobile(mobile);
 
-    // Check if prompt was already captured globally
+    // If prompt was already captured globally, store it
     if ((window as any).deferredInstallPrompt) {
-      setDeferredPrompt((window as any).deferredInstallPrompt);
+      setDeferredPrompt((window as any).deferredInstallPrompt as BeforeInstallPromptEvent);
+      setPromptReady(true);
     }
 
-    // Listen for install prompt
+    // Listen for install prompt — just capture it, don't auto-trigger (requires user gesture)
     const handler = (e: Event) => {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
-      // Store globally so it persists across navigation
       (window as any).deferredInstallPrompt = promptEvent;
+      setPromptReady(true);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
+    // For browsers that don't fire beforeinstallprompt, show instructions after a short delay
+    const fallbackTimer = setTimeout(() => {
+      if (!(window as any).deferredInstallPrompt && !iOS) {
+        setShowInstructions(true);
+      }
+    }, 2000);
+
+    // For iOS, show instructions immediately since it doesn't support beforeinstallprompt
+    if (iOS) {
+      setShowInstructions(true);
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      clearTimeout(fallbackTimer);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    // If we have the native prompt, use it
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-
-      if (outcome === 'accepted') {
-        setIsInstalled(true);
+    const prompt = deferredPrompt || (window as any).deferredInstallPrompt as BeforeInstallPromptEvent | null;
+    if (prompt) {
+      try {
+        prompt.prompt();
+        const { outcome } = await prompt.userChoice;
+        if (outcome === 'accepted') {
+          setIsInstalled(true);
+        }
+        setDeferredPrompt(null);
+        setPromptReady(false);
+        delete (window as any).deferredInstallPrompt;
+      } catch {
+        // prompt() already called once — show manual instructions
+        setShowInstructions(true);
       }
-      setDeferredPrompt(null);
-      // Clear global reference
-      delete (window as any).deferredInstallPrompt;
     } else {
-      // Otherwise, show instructions
+      // No native prompt available — show manual instructions
       setShowInstructions(true);
     }
   };
@@ -74,18 +94,16 @@ const Install = () => {
       <div className="max-w-md w-full space-y-8 text-center">
         {/* App Icon */}
         <div className="flex justify-center">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-accent to-primary flex items-center justify-center shadow-xl">
-            {isMobile ? (
-              <Smartphone className="w-12 h-12 text-accent-foreground" />
-            ) : (
-              <Monitor className="w-12 h-12 text-accent-foreground" />
-            )}
-          </div>
+          <img
+            src="/pwa-512x512.png"
+            alt="Habitency Logo"
+            className="w-24 h-24 rounded-3xl shadow-xl"
+          />
         </div>
 
         {/* Title */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Daily Habits</h1>
+          <h1 className="text-3xl font-bold text-foreground">Habitency | Daily Habits</h1>
           <p className="text-muted-foreground">Install the app for the best experience</p>
         </div>
 
@@ -192,7 +210,7 @@ const Install = () => {
                         <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
                           <span className="text-sm font-bold text-accent">2</span>
                         </div>
-                        <span className="text-sm text-foreground">Look for "Install Daily Habits" or "Add to Home screen"</span>
+                        <span className="text-sm text-foreground">Look for "Install Habitency" or "Add to Home screen"</span>
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
@@ -236,7 +254,7 @@ const Install = () => {
           onClick={() => navigate('/')}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          Continue in browser →
+          Go to App →
         </button>
       </div>
     </div>
