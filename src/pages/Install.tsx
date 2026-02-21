@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Share, Plus, CheckCircle, Menu, Globe, MonitorSmartphone } from 'lucide-react';
+import { Download, Share, Plus, CheckCircle, Menu, Globe, MonitorSmartphone, ArrowUpFromLine, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,6 +28,7 @@ const Install = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isIPad, setIsIPad] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [promptReady, setPromptReady] = useState(false);
   const [browser, setBrowser] = useState<BrowserType>('other');
@@ -41,8 +42,10 @@ const Install = () => {
     }
 
     // Detect platform & browser
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const iPad = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const iOS = /iPhone|iPod/.test(navigator.userAgent) || iPad;
     setIsIOS(iOS);
+    setIsIPad(iPad);
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     setIsMobile(mobile);
     setBrowser(detectBrowser());
@@ -151,9 +154,12 @@ const Install = () => {
         ) : (
           <div className="space-y-6">
             {/* Install Now Button */}
-            <Button onClick={handleInstallClick} className="w-full" size="lg">
-              <Download className="w-5 h-5 mr-2" />
-              Install Now
+            <Button onClick={isIOS ? () => setShowInstructions(true) : handleInstallClick} className="w-full" size="lg">
+              {isIOS ? (
+                <><ArrowUpFromLine className="w-5 h-5 mr-2" />Add to Home Screen</>
+              ) : (
+                <><Download className="w-5 h-5 mr-2" />Install Now</>
+              )}
             </Button>
 
             {/* Status indicator */}
@@ -167,25 +173,58 @@ const Install = () => {
             {/* Instructions */}
             {showInstructions && (
               <>
-                {/* iOS Safari */}
+                {/* iOS */}
                 {isIOS && (
                   <div className="space-y-6 bg-popover rounded-2xl border border-border/50 p-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <p className="text-sm text-foreground font-medium">To install on iOS Safari:</p>
-                    <div className="space-y-4 text-left">
-                      <StepItem step={1}>
-                        <span>Tap the</span>
-                        <Share className="w-5 h-5 text-accent inline mx-1" />
-                        <span>Share button at the bottom</span>
-                      </StepItem>
-                      <StepItem step={2}>
-                        <span>Scroll down and tap</span>
-                        <Plus className="w-5 h-5 text-accent inline mx-1" />
-                        <span><strong>"Add to Home Screen"</strong></span>
-                      </StepItem>
-                      <StepItem step={3}>
-                        <span>Tap <strong>"Add"</strong> to confirm</span>
-                      </StepItem>
-                    </div>
+                    {browser !== 'safari' ? (
+                      /* Non-Safari on iOS — cannot install PWA */
+                      <>
+                        <div className="flex items-center gap-2 justify-center">
+                          <Smartphone className="w-4 h-4 text-yellow-500" />
+                          <p className="text-sm text-foreground font-medium">Open in Safari to install</p>
+                        </div>
+                        <div className="space-y-4 text-left">
+                          <StepItem step={1}>
+                            <span>Copy this page URL from the address bar</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Open <strong>Safari</strong> and paste the URL</span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Follow the install steps in Safari</span>
+                          </StepItem>
+                        </div>
+                        <p className="text-xs text-muted-foreground text-center">
+                          ⚠️ {browserName} on iOS cannot install web apps — only <strong>Safari</strong> supports this
+                        </p>
+                      </>
+                    ) : (
+                      /* Safari on iOS — show Add to Home Screen steps */
+                      <>
+                        <div className="flex items-center gap-2 justify-center">
+                          <MonitorSmartphone className="w-4 h-4 text-accent" />
+                          <p className="text-sm text-foreground font-medium">Install via Safari:</p>
+                        </div>
+                        <div className="space-y-4 text-left">
+                          <StepItem step={1}>
+                            <span>Tap the</span>
+                            <ArrowUpFromLine className="w-5 h-5 text-accent inline mx-1" />
+                            <span><strong>Share</strong> button {isIPad ? 'at the top-right' : 'at the bottom of the screen'}</span>
+                          </StepItem>
+                          <StepItem step={2}>
+                            <span>Scroll down and tap</span>
+                            <Plus className="w-5 h-5 text-accent inline mx-1" />
+                            <span><strong>"Add to Home Screen"</strong></span>
+                          </StepItem>
+                          <StepItem step={3}>
+                            <span>Tap <strong>"Add"</strong> in the top-right corner</span>
+                          </StepItem>
+                        </div>
+                        <p className="text-xs text-muted-foreground text-center">
+                          The app will appear on your home screen like a native app
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
 
